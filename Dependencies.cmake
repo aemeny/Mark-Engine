@@ -1,5 +1,5 @@
 #
-# Dependencies (Vulkan + GLFW + GLM)
+# Dependencies/CMakeLists.txt (Vulkan + GLFW + GLM)
 #
 include(FetchContent)
 

@@ -1,5 +1,5 @@
 #
-# App
+# App/CMakeLists.txt
 #
 
 set(SOURCES

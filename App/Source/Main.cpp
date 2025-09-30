@@ -1,6 +1,7 @@
-#include <iostream>
+#include <Mark/Engine.h>
+using namespace Mark;
 
-int main() {
-    std::cout << "Hello, World!" << std::endl;
-    return 0;
+int main() 
+{
+    return Engine::Run();
 }
