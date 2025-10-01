@@ -2,6 +2,8 @@
 #include "Platform/WindowManager.h"
 #include "Platform/Window.h"
 
+#include <iostream>
+
 namespace Mark
 {
     int Engine::Run()
@@ -9,18 +11,11 @@ namespace Mark
         Platform::WindowManager windows;
         Platform::Window& mainWindow = windows.main();
 
-        windows.create(800, 800, "Second");
+        windows.create(300, 300, "Second");
+        windows.create(300, 300, "Third");
 
         while (windows.anyOpen())
         {
-            int fbw = 0, fbh = 0;
-            mainWindow.frameBufferSize(fbw, fbh);
-            if (fbw == 0 || fbh == 0) 
-            {
-                //glfwWaitEvents();
-                continue;
-            }
-
             windows.pollAll();
         }
 

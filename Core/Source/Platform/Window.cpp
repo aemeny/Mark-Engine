@@ -1,4 +1,5 @@
 #include "Window.h"
+#include "WindowManager.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -6,7 +7,7 @@
 
 namespace Mark::Platform
 {
-    Window::Window(int _width, int _height, const std::string_view& _title, bool _borderless)
+    Window::Window(int _width, int _height, std::string_view _title, bool _borderless)
         : m_borderless(_borderless), m_windowName(_title), m_width(_width), m_height(_height)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -15,22 +16,53 @@ namespace Mark::Platform
 
         m_window = glfwCreateWindow(_width, _height, m_windowName.c_str(), nullptr, nullptr);
         if (!m_window) throw std::runtime_error("Failed to create GLFW window");
+
+        glfwSetWindowUserPointer(m_window, this);
+        glfwSetKeyCallback(m_window, &Window::KeyCallback);
     }
 
     Window::~Window()
     {
         if (m_window)
         {
+            glfwSetWindowUserPointer(m_window, nullptr);
             glfwDestroyWindow(m_window);
             m_window = nullptr;
         }
     }
 
-    void Window::pollEvents() const { glfwPollEvents(); }
     bool Window::shouldClose() const { return glfwWindowShouldClose(m_window); }
+    void  Window::requestClose() { glfwSetWindowShouldClose(m_window, GLFW_TRUE); }
+
     void Window::frameBufferSize(int& _width, int& _height) const 
     {
         glfwGetFramebufferSize(m_window, &_width, &_height);
+    }
+
+    void Window::waitUntilFramebufferValid() const
+    {
+        int w = 0, h = 0;
+        do 
+        {
+            glfwGetFramebufferSize(m_window, &w, &h);
+            if (w == 0 || h == 0) {
+                glfwWaitEvents(); // sleep until the window is restored/resized
+            }
+        } 
+        while (w == 0 || h == 0);
+    }
+
+    void Window::KeyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
+    {
+        if (_action != GLFW_PRESS) return;
+
+        Window* self = static_cast<Window*>(glfwGetWindowUserPointer(_window));
+        if (!self) return;
+
+        if (_key == GLFW_KEY_F11)
+        {
+            self->toggleFullscreen(true);
+        }
     }
 
     void Window::setFullscreen(bool _enable, bool _borderless)
@@ -42,7 +74,7 @@ namespace Mark::Platform
             glfwGetWindowPos(m_window, &m_windowCordX, &m_windowCordY);
             glfwGetWindowSize(m_window, &m_width, &m_height);
 
-            GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+            GLFWmonitor* monitor = WindowManager::monitorForWindow(m_window);
             if (!monitor) throw std::runtime_error("No monitor available for fullscreen");
             const GLFWvidmode* mode = glfwGetVideoMode(monitor);
             if (!mode) throw std::runtime_error("Failed to get video mode");
@@ -67,4 +99,10 @@ namespace Mark::Platform
         }
         m_isFullscreen = _enable;
     }
+
+    void Window::toggleFullscreen(bool _borderless)
+    {
+        setFullscreen(!m_isFullscreen, _borderless);
+    }
+
 } // namespace Mark::Platform
