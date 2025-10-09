@@ -15,6 +15,8 @@ namespace Mark::Platform
     WindowManager::WindowManager() :
         m_impl(std::make_unique<Impl>())
     {
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+
         m_impl->m_windows.emplace_back(std::make_unique<Window>(1280, 720, "Mark Editor", true));
     }
     WindowManager::~WindowManager() = default;

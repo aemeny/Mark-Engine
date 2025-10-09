@@ -14,7 +14,7 @@ namespace Mark::Platform
     {
         if (g_ref.fetch_add(1) == 0)
         {
-            if (!glfwInit())
+            if (!glfwInit() || !glfwVulkanSupported())
             {
                 throw std::runtime_error("Failed to initialize GLFW");
             }

@@ -1,24 +1,26 @@
 #include <Mark/Engine.h>
-#include "Platform/WindowManager.h"
-#include "Platform/Window.h"
+#include "Core.h"
 
 #include <iostream>
 
 namespace Mark
 {
-    int Engine::Run()
+    int Engine::Run(const EngineAppInfo& _appInfo)
     {
-        Platform::WindowManager windows;
-        Platform::Window& mainWindow = windows.main();
+        // Initialize the engines core
+        Core engineCore(_appInfo);
 
-        windows.create(300, 300, "Second");
-        windows.create(300, 300, "Third");
-
-        while (windows.anyOpen())
+        // Run the main loop
+        try
         {
-            windows.pollAll();
+            engineCore.run();
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+            return EXIT_FAILURE;
         }
 
-        return 0;
+        return EXIT_SUCCESS;
     }
 } // namespace Mark

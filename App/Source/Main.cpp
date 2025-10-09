@@ -3,5 +3,11 @@ using namespace Mark;
 
 int main() 
 {
-    return Engine::Run();
+    EngineAppInfo appInfo{
+        .appName = "EngineTesting",
+        .appVersion = {0, 1, 0, 0},
+        .enableVulkanValidation = true
+    };
+
+    return Engine::Run(appInfo);
 }

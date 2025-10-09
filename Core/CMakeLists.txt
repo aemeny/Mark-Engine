@@ -15,8 +15,9 @@ Source/Platform/Window.h
 Source/Platform/Window.cpp
 Source/Platform/WindowManager.h
 Source/Platform/WindowManager.cpp
-Source/Renderer/Renderer.h
-Source/Renderer/Renderer.cpp
+Source/Renderer/MarkVulkanCore.h
+Source/Renderer/MarkVulkanCore.cpp
+Source/Renderer/MarkVulkanUtil.h
 )
 
 target_sources(Core PRIVATE ${SOURCES})
