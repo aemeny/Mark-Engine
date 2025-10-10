@@ -1,6 +1,5 @@
 #pragma once
-#define GLFW_INCLUDE_NONE
-#include <vulkan/vulkan.h>
+#include <volk.h>
 
 namespace Mark::RendererVK
 {
@@ -13,7 +12,9 @@ namespace Mark::RendererVK
 
     private:
         void createInstance(const EngineAppInfo& _appInfo);
+        void createDebugCallback();
 
         VkInstance m_instance{ VK_NULL_HANDLE };
+        VkDebugUtilsMessengerEXT m_debugMessenger{ VK_NULL_HANDLE };
     };
 } // namespace Mark::RendererVK

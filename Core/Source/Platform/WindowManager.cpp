@@ -2,6 +2,7 @@
 #include "GLFWContext.h"
 #include "Window.h"
 
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 namespace Mark::Platform

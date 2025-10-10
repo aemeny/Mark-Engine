@@ -6,6 +6,18 @@ include(FetchContent)
 # Vulkan
 find_package(Vulkan REQUIRED) # Vulkan::Vulkan
 
+# Volk (Vulkan function loader)
+find_package(volk QUIET)
+if (NOT volk_FOUND)
+  message(STATUS "volk not found; fetching...")
+  include(FetchContent)
+  FetchContent_Declare(volk
+    DOWNLOAD_EXTRACT_TIMESTAMP OFF
+    URL https://github.com/zeux/volk/archive/refs/tags/1.4.304.zip
+  )
+  FetchContent_MakeAvailable(volk)    # creates target: volk
+endif()
+
 # GLFW
 if (NOT TARGET glfw)
   find_package(glfw3 3.4 QUIET)     # package name glfw3, target is 'glfw'
@@ -39,11 +51,13 @@ if (NOT TARGET glm::glm)
   endif()
 endif()
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+if (TARGET volk)
+  set_target_properties(volk PROPERTIES FOLDER "Dependencies")
+endif()
 if (TARGET glfw)
   set_target_properties(glfw PROPERTIES FOLDER "Dependencies")
 endif()
 if (TARGET glm)
   set_target_properties(glm PROPERTIES FOLDER "Dependencies")
 endif()
-
-set_target_properties(glm PROPERTIES FOLDER "Dependencies")

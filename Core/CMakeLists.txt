@@ -38,6 +38,7 @@ target_compile_definitions(Core
 target_link_libraries(Core
 	PRIVATE
     	Vulkan::Vulkan
+        volk
    	glfw
   	glm::glm
 )
