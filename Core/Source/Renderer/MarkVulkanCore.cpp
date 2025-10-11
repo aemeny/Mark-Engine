@@ -17,6 +17,8 @@ namespace Mark::RendererVK
         {
             createDebugCallback();
         }
+        //m_physicalDevices.initialize(m_instance, VK_NULL_HANDLE);
+        //m_queueFamilyIndex = m_physicalDevices.selectDevice(VK_QUEUE_GRAPHICS_BIT, true);
     }
 
     VulkanCore::~VulkanCore()

@@ -1,10 +1,11 @@
 #pragma once
+#include <volk.h>
+
 #include <string_view>
+#include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <sstream>
-
-#include <volk.h>
 
 typedef unsigned int uint;
 #define CHECK_VK_RESULT(res, msg) \
@@ -83,5 +84,19 @@ namespace mark::error
         std::abort();
     }
 
+    // message + printf-style args
+    [[noreturn]] inline void errorf_impl(const char* file, int line, const char* fmt, ...) {
+        std::fprintf(stderr, "[ERROR CALL] %s:%d | ", file, line);
+        va_list args;
+        va_start(args, fmt);
+        std::vfprintf(stderr, fmt, args);
+        va_end(args);
+        if (fmt && *fmt && fmt[std::char_traits<char>::length(fmt) - 1] != '\n') {
+            std::fputc('\n', stderr);
+        }
+        std::fflush(stderr);
+        std::abort();
+    }
+
 } // namespace mark::error
-#define MARK_ERROR(...) ::mark::error::error_impl(__FILE__, __LINE__, __VA_ARGS__)
+#define MARK_ERROR(fmt, ...) ::mark::error::errorf_impl(__FILE__, __LINE__, (fmt), ##__VA_ARGS__)

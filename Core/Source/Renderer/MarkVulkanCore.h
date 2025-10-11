@@ -1,4 +1,6 @@
 #pragma once
+#include "MarkVulkanPhysicalDevices.h"
+
 #include <volk.h>
 
 namespace Mark { struct EngineAppInfo; }
@@ -20,5 +22,8 @@ namespace Mark::RendererVK
 
         VkInstance m_instance{ VK_NULL_HANDLE };
         VkDebugUtilsMessengerEXT m_debugMessenger{ VK_NULL_HANDLE };
+
+        VulkanPhysicalDevices m_physicalDevices;
+        uint32_t m_queueFamilyIndex{ 0 };
     };
 } // namespace Mark::RendererVK

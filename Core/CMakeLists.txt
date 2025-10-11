@@ -18,6 +18,8 @@ Source/Platform/WindowManager.cpp
 Source/Renderer/MarkVulkanCore.h
 Source/Renderer/MarkVulkanCore.cpp
 Source/Renderer/MarkVulkanUtil.h
+Source/Renderer/MarkVulkanPhysicalDevices.h
+Source/Renderer/MarkVulkanPhysicalDevices.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})
