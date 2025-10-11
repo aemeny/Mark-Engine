@@ -1,33 +1,46 @@
 #include "Window.h"
 #include "WindowManager.h"
+#include "../Renderer/MarkVulkanCore.h"
+#include "../Renderer/MarkVulkanUtil.h"
 
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include <stdexcept>
 
 namespace Mark::Platform
 {
-    Window::Window(int _width, int _height, std::string_view _title, bool _borderless)
-        : m_borderless(_borderless), m_windowName(_title), m_width(_width), m_height(_height)
+    Window::Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, bool _borderless)
+        : m_vulkanCoreRef(_vulkanCoreRef), m_borderless(_borderless), m_windowName(_title), m_width(_width), m_height(_height)
     {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
         m_window = glfwCreateWindow(_width, _height, m_windowName.c_str(), nullptr, nullptr);
-        if (!m_window) throw std::runtime_error("Failed to create GLFW window");
+        if (!m_window) MARK_ERROR("Failed to create GLFW window");
 
         glfwSetWindowUserPointer(m_window, this);
         glfwSetKeyCallback(m_window, &Window::KeyCallback);
+
+        printf("GLFW Window Created: %s (%dx%d)\n", m_windowName.c_str(), _width, _height);
     }
 
     Window::~Window()
     {
+        if (m_surface != VK_NULL_HANDLE)
+        {
+            if (m_vulkanCoreRef.expired()) 
+            {
+                MARK_ERROR("VulkanCore reference expired, cannot destroy surface");
+            }
+            vkDestroySurfaceKHR(m_vulkanCoreRef.lock()->instance(), m_surface, nullptr);
+            printf("GLFW Window Surface Destroyed\n");
+        }
+
         if (m_window)
         {
             glfwSetWindowUserPointer(m_window, nullptr);
             glfwDestroyWindow(m_window);
             m_window = nullptr;
+            printf("GLFW Window Destroyed: %s\n", m_windowName.c_str());
         }
     }
 
@@ -50,6 +63,20 @@ namespace Mark::Platform
             }
         } 
         while (w == 0 || h == 0);
+    }
+
+    void Window::createSurface()
+    {
+        if (m_surface != VK_NULL_HANDLE) return;
+        if (m_vulkanCoreRef.expired())
+        {
+            MARK_ERROR("VulkanCore reference expired, cannot create surface");
+        }
+
+        VkResult res = glfwCreateWindowSurface(m_vulkanCoreRef.lock()->instance(), m_window, nullptr, &m_surface);
+
+        CHECK_VK_RESULT(res, "Create window surface");
+        printf("GLFW Window Surface Created\n");
     }
 
     void Window::KeyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
@@ -75,9 +102,9 @@ namespace Mark::Platform
             glfwGetWindowSize(m_window, &m_width, &m_height);
 
             GLFWmonitor* monitor = WindowManager::monitorForWindow(m_window);
-            if (!monitor) throw std::runtime_error("No monitor available for fullscreen");
+            if (!monitor) MARK_ERROR("No monitor available for fullscreen");
             const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            if (!mode) throw std::runtime_error("Failed to get video mode");
+            if (!mode) MARK_ERROR("Failed to get video mode");
 
             m_borderless = _borderless;
             if (m_borderless)

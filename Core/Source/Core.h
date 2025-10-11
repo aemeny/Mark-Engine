@@ -21,11 +21,12 @@ namespace Mark
         bool m_terminateApplication{ false };
         const EngineAppInfo& m_appInfo;
 
-        // Members
-        Platform::WindowManager m_windows;
-        Platform::Window& coreWindow = m_windows.main();
+        /* --== Renderer ==--*/
+        // Must be created before any window, as windows will need the Vulkan instance
+        std::shared_ptr<RendererVK::VulkanCore> m_vulkanCore = std::make_shared<RendererVK::VulkanCore>(m_appInfo);
 
-        // Renderer
-        RendererVK::VulkanCore m_vulkanCore{ m_appInfo };
+        /* --== Members ==--*/
+        Platform::WindowManager m_windows{ m_vulkanCore };
+        Platform::Window& coreWindow = m_windows.main();
     };
 } // namespace Mark

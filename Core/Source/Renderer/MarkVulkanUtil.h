@@ -1,16 +1,19 @@
 #pragma once
 #include <string_view>
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <sstream>
+
+#include <volk.h>
 
 typedef unsigned int uint;
-
 #define CHECK_VK_RESULT(res, msg) \
     if (res != VK_SUCCESS){       \
         fprintf(stderr, "Error in %s:%d - %s, code %x\n", __FILE__, __LINE__, msg, res);  \
         exit(1);                  \
     }
 
-const char* GetDebugSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT _severity)
+inline const char* GetDebugSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT _severity)
 {
     switch (_severity)
     {
@@ -33,7 +36,7 @@ const char* GetDebugSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT _severity
     return "NOT REAL SEVERITY STRENGTH!";
 }
 
-const char* GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)
+inline const char* GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)
 {
     switch (_type)
     {

@@ -1,6 +1,8 @@
 #pragma once
 #include <volk.h>
 
+namespace Mark { struct EngineAppInfo; }
+
 namespace Mark::RendererVK
 {
     struct VulkanCore
@@ -9,6 +11,8 @@ namespace Mark::RendererVK
         ~VulkanCore();
         VulkanCore(const VulkanCore&) = delete;
         VulkanCore& operator=(const VulkanCore&) = delete;
+
+        const VkInstance& instance() const { return m_instance; }
 
     private:
         void createInstance(const EngineAppInfo& _appInfo);

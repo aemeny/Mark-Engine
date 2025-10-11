@@ -3,6 +3,7 @@
 #include <vector>
 #include <string_view>
 
+namespace Mark::RendererVK { struct VulkanCore; }
 struct GLFWmonitor;
 struct GLFWwindow;
 
@@ -12,7 +13,7 @@ namespace Mark::Platform
     
     struct WindowManager
     {
-        WindowManager();
+        WindowManager(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef);
         ~WindowManager();
 
         Window& main();
@@ -33,6 +34,7 @@ namespace Mark::Platform
     private:
         struct Impl;
         std::unique_ptr<Impl> m_impl;
+        std::weak_ptr<RendererVK::VulkanCore> m_vulkanCoreRef;
 
         void sweepClosedWindows();
 

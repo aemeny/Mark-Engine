@@ -1,15 +1,18 @@
 #pragma once
+#include <volk.h>
+
 #include <memory>
 #include <string>
 #include <algorithm>
 
+namespace Mark::RendererVK { struct VulkanCore; }
 struct GLFWwindow;
 
 namespace Mark::Platform
 {
     struct Window 
     {
-        Window(int _width, int _height, std::string_view _title, bool _borderless = true);
+        Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, bool _borderless = true);
         ~Window();
 
         GLFWwindow* handle() const { return m_window; }
@@ -26,12 +29,20 @@ namespace Mark::Platform
 
         void waitUntilFramebufferValid() const;
 
+        // Vulkan Renderering
+        void createSurface();
+        VkSurfaceKHR surface() const { return m_surface; }
+
     private:
-        /* Properties */
+        /* --== Properties ==-- */
         GLFWwindow* m_window{ nullptr };
         std::string m_windowName{ "Mark" };
         int m_width{ 0 };
         int m_height{ 0 };
+
+        // Vulkan Renderering
+        std::weak_ptr<RendererVK::VulkanCore> m_vulkanCoreRef;
+        VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
 
         // Window mode
         bool m_isFullscreen{ false };
@@ -39,6 +50,7 @@ namespace Mark::Platform
         int m_windowCordX{ 0 };
         int m_windowCordY{ 0 };
 
+        /* --== Functions ==-- */
         static void KeyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods);
     };
 } // namespace Mark::Platform

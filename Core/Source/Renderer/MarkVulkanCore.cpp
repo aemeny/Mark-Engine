@@ -21,17 +21,9 @@ namespace Mark::RendererVK
 
     VulkanCore::~VulkanCore()
     {
-        printf("----------------------------\n");
-
-        if (_appInfo.enableVulkanValidation)
+        if (m_debugMessenger != VK_NULL_HANDLE)
         {
-            PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessenger =
-                (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
-            vkDestroyDebugUtilsMessenger(m_instance, m_debugMessenger, nullptr);
-            if (!vkDestroyDebugUtilsMessenger)
-            {
-                MARK_ERROR("Cannot find address of vkDestroyDebugUtilsMessenger\n");
-            }
+            vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
             printf("Vulkan Debug Callback Destroyed\n");
         }
 

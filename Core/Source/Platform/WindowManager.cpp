@@ -1,8 +1,8 @@
 #include "WindowManager.h"
 #include "GLFWContext.h"
 #include "Window.h"
+#include "../Renderer/MarkVulkanCore.h"
 
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 namespace Mark::Platform
@@ -13,12 +13,12 @@ namespace Mark::Platform
         std::vector<std::unique_ptr<Window> > m_windows;
     };
 
-    WindowManager::WindowManager() :
-        m_impl(std::make_unique<Impl>())
+    WindowManager::WindowManager(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef) :
+        m_impl(std::make_unique<Impl>()), m_vulkanCoreRef(_vulkanCoreRef)
     {
+        // Create the main editor window
         glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-
-        m_impl->m_windows.emplace_back(std::make_unique<Window>(1280, 720, "Mark Editor", true));
+        create(1280, 720, "Mark Editor", true);
     }
     WindowManager::~WindowManager() = default;
 
@@ -26,13 +26,14 @@ namespace Mark::Platform
 
     Window& WindowManager::create(int _width, int _height, const char* _title, bool _borderless)
     {
-        m_impl->m_windows.emplace_back(std::make_unique<Window>(_width, _height, _title, _borderless));
+        m_impl->m_windows.emplace_back(std::make_unique<Window>(m_vulkanCoreRef, _width, _height, _title, _borderless));
+        m_impl->m_windows.back()->createSurface();
         return *m_impl->m_windows.back();
     }
 
     void WindowManager::pollAll()
     {
-        // poll GLFW once per frame
+        // Poll GLFW once per frame
         glfwPollEvents();
         // Remove any closed secondary windows
         sweepClosedWindows();
