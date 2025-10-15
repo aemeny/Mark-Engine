@@ -64,7 +64,7 @@ namespace Mark::RendererVK
         }
     }
 
-    void VulkanPhysicalDevices::initialize(const VkInstance& _instance, const VkSurfaceKHR& _surface)
+    void VulkanPhysicalDevices::initialize(const VkInstance& _instance)
     {
         uint32_t deviceCount = 0;
 
@@ -96,64 +96,6 @@ namespace Mark::RendererVK
                 VK_API_VERSION_MINOR(apiVersion),
                 VK_API_VERSION_PATCH(apiVersion));
 
-            uint32_t queueFamilyCount = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, nullptr);
-            printf("    Queue Family Count: %d\n", queueFamilyCount);
-
-            m_devices[i].m_queueFamilyProperties.resize(queueFamilyCount);
-            m_devices[i].m_qSupportsPresent.resize(queueFamilyCount);
-
-            vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, m_devices[i].m_queueFamilyProperties.data());
-
-            for (uint32_t q = 0; q < queueFamilyCount; q++)
-            {
-                const VkQueueFamilyProperties& qFamilyProps = m_devices[i].m_queueFamilyProperties[q];
-
-                printf("    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
-                VkQueueFlags flags = qFamilyProps.queueFlags;
-                printf("    GFX %s, Compute %s, Transfer %s, Sparse binding %s\n",
-                    (flags & VK_QUEUE_GRAPHICS_BIT) ? "Yes" : "No",
-                    (flags & VK_QUEUE_COMPUTE_BIT) ? "Yes" : "No", 
-                    (flags & VK_QUEUE_TRANSFER_BIT) ? "Yes" : "No", 
-                    (flags & VK_QUEUE_SPARSE_BINDING_BIT) ? "Yes" : "No");
-
-                res = vkGetPhysicalDeviceSurfaceSupportKHR(currentDevice, q, _surface, &(m_devices[i].m_qSupportsPresent[q]));
-                CHECK_VK_RESULT(res, "Get Physical Device Surface Support");
-            }
-
-            uint32_t formatCount = 0;
-            res = vkGetPhysicalDeviceSurfaceFormatsKHR(currentDevice, _surface, &formatCount, nullptr);
-            CHECK_VK_RESULT(res, "Get Physical Device Surface Formats Count");
-            assert(formatCount > 0);
-
-            m_devices[i].m_surfaceFormats.resize(formatCount);
-
-            res = vkGetPhysicalDeviceSurfaceFormatsKHR(currentDevice, _surface, &formatCount, m_devices[i].m_surfaceFormats.data());
-            CHECK_VK_RESULT(res, "Get Physical Device Surface Formats");
-
-            for (uint32_t j = 0; j < formatCount; j++)
-            {
-                const VkSurfaceFormatKHR& surfaceFormat = m_devices[i].m_surfaceFormats[j];
-                printf("    Format %d: %x colorspace %x\n", j, surfaceFormat.format, surfaceFormat.colorSpace);
-            }
-
-            res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(currentDevice, _surface, &(m_devices[i].m_surfaceCapabilities));
-            CHECK_VK_RESULT(res, "Get Physical Device Surface Capabilities");
-
-            printImageUsageFlags(m_devices[i].m_surfaceCapabilities.supportedUsageFlags);
-
-            uint32_t presentModeCount = 0;
-            res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, nullptr);
-            CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes Count");
-            assert(presentModeCount != 0);
-
-            m_devices[i].m_presentModes.resize(presentModeCount);
-
-            res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, m_devices[i].m_presentModes.data());
-            CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes");
-
-            printf("Number of presentation modes: %d\n", presentModeCount);
-
             vkGetPhysicalDeviceMemoryProperties(currentDevice, &(m_devices[i].m_memoryProperties));
 
             printf("Num memory types: %d\n", m_devices[i].m_memoryProperties.memoryTypeCount);
@@ -170,6 +112,77 @@ namespace Mark::RendererVK
 
             printf("Num memory heaps: %d\n", m_devices[i].m_memoryProperties.memoryHeapCount);
             printf("\n");
+
+            vkGetPhysicalDeviceFeatures(currentDevice, &m_devices[i].m_features);
+        }
+    }
+
+    void VulkanPhysicalDevices::querySurfaceProperties(const VkSurfaceKHR& _surface)
+    {
+        for (uint32_t i = 0; i < m_devices.size(); i++)
+        {
+            VkPhysicalDevice currentDevice = m_devices[i].m_device;
+            SurfaceProperties surfaceProps{};
+
+            uint32_t queueFamilyCount = 0;
+            vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, nullptr);
+            printf("    Queue Family Count: %d\n", queueFamilyCount);
+
+            m_devices[i].m_queueFamilyProperties.resize(queueFamilyCount);
+            surfaceProps.m_qSupportsPresent.resize(queueFamilyCount);
+
+            vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, m_devices[i].m_queueFamilyProperties.data());
+
+            for (uint32_t q = 0; q < queueFamilyCount; q++)
+            {
+                const VkQueueFamilyProperties& qFamilyProps = m_devices[i].m_queueFamilyProperties[q];
+
+                printf("    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
+                VkQueueFlags flags = qFamilyProps.queueFlags;
+                printf("    GFX %s, Compute %s, Transfer %s, Sparse binding %s\n",
+                    (flags & VK_QUEUE_GRAPHICS_BIT) ? "Yes" : "No",
+                    (flags & VK_QUEUE_COMPUTE_BIT) ? "Yes" : "No",
+                    (flags & VK_QUEUE_TRANSFER_BIT) ? "Yes" : "No",
+                    (flags & VK_QUEUE_SPARSE_BINDING_BIT) ? "Yes" : "No");
+
+                VkResult res = vkGetPhysicalDeviceSurfaceSupportKHR(currentDevice, q, _surface, &(surfaceProps.m_qSupportsPresent[q]));
+                CHECK_VK_RESULT(res, "Get Physical Device Surface Support");
+            }
+
+            uint32_t formatCount = 0;
+            VkResult res = vkGetPhysicalDeviceSurfaceFormatsKHR(currentDevice, _surface, &formatCount, nullptr);
+            CHECK_VK_RESULT(res, "Get Physical Device Surface Formats Count");
+            assert(formatCount > 0);
+
+            surfaceProps.m_surfaceFormats.resize(formatCount);
+
+            res = vkGetPhysicalDeviceSurfaceFormatsKHR(currentDevice, _surface, &formatCount, surfaceProps.m_surfaceFormats.data());
+            CHECK_VK_RESULT(res, "Get Physical Device Surface Formats");
+
+            for (uint32_t j = 0; j < formatCount; j++)
+            {
+                const VkSurfaceFormatKHR& surfaceFormat = surfaceProps.m_surfaceFormats[j];
+                printf("    Format %d: %x colorspace %x\n", j, surfaceFormat.format, surfaceFormat.colorSpace);
+            }
+
+            res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(currentDevice, _surface, &(surfaceProps.m_surfaceCapabilities));
+            CHECK_VK_RESULT(res, "Get Physical Device Surface Capabilities");
+
+            printImageUsageFlags(surfaceProps.m_surfaceCapabilities.supportedUsageFlags);
+
+            uint32_t presentModeCount = 0;
+            res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, nullptr);
+            CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes Count");
+            assert(presentModeCount != 0);
+
+            surfaceProps.m_presentModes.resize(presentModeCount);
+
+            res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, surfaceProps.m_presentModes.data());
+            CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes");
+
+            printf("Number of presentation modes: %d\n", presentModeCount);
+
+            m_devices[i].m_surfacesLinked.push_back(surfaceProps);
         }
     }
 
@@ -181,12 +194,18 @@ namespace Mark::RendererVK
             {
                 const VkQueueFamilyProperties& qFamilyProps = m_devices[i].m_queueFamilyProperties[j];
 
-                if ((qFamilyProps.queueFlags & _requiredQueueType) && ((bool)m_devices[i].m_qSupportsPresent[j] == _supportsPresent))
+                if (qFamilyProps.queueFlags & _requiredQueueType)
                 {
-                    m_selectedDeviceIndex = i;
-                    int queueFamily = j;
-                    printf("Using GFX device %d and queue family %d\n", m_selectedDeviceIndex, queueFamily);
-                    return queueFamily;
+                    for (uint32_t k = 0; k < m_devices[i].m_surfacesLinked.size(); k++)
+                    {
+                        if ((bool)m_devices[i].m_surfacesLinked[k].m_qSupportsPresent[j] == _supportsPresent)
+                        {
+                            m_selectedDeviceIndex = i;
+                            int queueFamily = j;
+                            printf("Using GFX device %d (%s) and queue family %d\n", m_selectedDeviceIndex, m_devices[i].m_properties.deviceName, queueFamily);
+                            return queueFamily;
+                        }
+                    }
                 }
             }
         }
@@ -196,7 +215,7 @@ namespace Mark::RendererVK
         return 0;
     }
 
-    const PhysicalDeviceProperties& VulkanPhysicalDevices::Selected() const
+    const VulkanPhysicalDevices::DeviceProperties& VulkanPhysicalDevices::selected() const
     {
         if (m_selectedDeviceIndex < 0)
         {

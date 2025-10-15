@@ -4,6 +4,7 @@
 
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
+#include <GLFW/glfw3.h>
 
 #include <vector>
 #include <inttypes.h>
@@ -17,15 +18,32 @@ namespace Mark::RendererVK
         {
             createDebugCallback();
         }
-        //m_physicalDevices.initialize(m_instance, VK_NULL_HANDLE);
-        //m_queueFamilyIndex = m_physicalDevices.selectDevice(VK_QUEUE_GRAPHICS_BIT, true);
+        m_physicalDevices.initialize(m_instance);
+    }
+
+    void VulkanCore::selectDevices()
+    {
+        // For now, just select the first device that supports graphics and can present to the main window surface
+        m_queueFamilyIndex = m_physicalDevices.selectDevice(VK_QUEUE_GRAPHICS_BIT, true);
+
+        // Create the logical device with this index
+        createLogicalDevice();
     }
 
     VulkanCore::~VulkanCore()
     {
+        if (m_device != VK_NULL_HANDLE)
+        {
+            vkDeviceWaitIdle(m_device);
+            vkDestroyDevice(m_device, nullptr);
+            m_device = VK_NULL_HANDLE;
+            printf("Vulkan Logical Device Destroyed\n");
+        }
+
         if (m_debugMessenger != VK_NULL_HANDLE)
         {
             vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+            m_debugMessenger = VK_NULL_HANDLE;
             printf("Vulkan Debug Callback Destroyed\n");
         }
 
@@ -46,18 +64,13 @@ namespace Mark::RendererVK
         // Create Vulkan Layer and Extension lists
         std::vector<const char*> layers = {};
 
-        std::vector<const char*> extensions = {
-            VK_KHR_SURFACE_EXTENSION_NAME,
-#if defined(_WIN32)
-            "VK_KHR_win32_surface",
-#endif
-#if defined(__APPLE__)
-            "VK_MVK_macos_surface",
-#endif
-#if defined(__linux__)
-            "VK_KHR_xcb_surface",
-#endif
-        };
+        uint32_t extCount = 0;
+        const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&extCount);
+        if (!glfwExtensions || extCount == 0)
+        {
+            MARK_ERROR("GLFW did not report required Vulkan instance extensions");
+        }
+        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + extCount);
 
         if (_appInfo.enableVulkanValidation)
         {
@@ -128,17 +141,84 @@ namespace Mark::RendererVK
             .pUserData = nullptr
         };
 
-        PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessenger = 
-            (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT");
-        if (!vkCreateDebugUtilsMessenger) {
-            
-            MARK_ERROR("Cannot find address of vkCreateDebugUtilsMessenger\n");
-        }
-
-        VkResult res = vkCreateDebugUtilsMessenger(m_instance, &messengerCreateInfo, nullptr, &m_debugMessenger);
+        VkResult res = vkCreateDebugUtilsMessengerEXT(m_instance, &messengerCreateInfo, nullptr, &m_debugMessenger);
         CHECK_VK_RESULT(res, "Create Debug Utils Messenger");
 
         printf("Vulkan Debug Callback Created\n");
+    }
+
+    void VulkanCore::createLogicalDevice()
+    {
+        float queuePriorities[] = { 1.0f }; // Priority must be between 0.0 and 1.0, higher is more important
+
+        // Information about the queue to create
+        VkDeviceQueueCreateInfo queueInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .queueFamilyIndex = m_queueFamilyIndex,
+            .queueCount = 1, // Controlls parallelism of the GPU, currently only one queue used
+            .pQueuePriorities = &queuePriorities[0]
+        };
+
+        // Any device extensions required by Vulkan, enabled here
+        std::vector<const char*> deviceExtensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+        // VK_KHR_shader_draw_parameters is needed for support in Vulkan under 1.1
+        uint32_t api = m_physicalDevices.selected().m_properties.apiVersion;
+        if (VK_API_VERSION_MAJOR(api) == 1 && VK_API_VERSION_MINOR(api) == 0) {
+            deviceExtensions.push_back(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+        }
+
+        // Ensure the selected device supports nessesary extensions
+        auto supportsExt = [&](const char* _name) 
+            {
+                uint32_t n = 0;
+                vkEnumerateDeviceExtensionProperties(m_physicalDevices.selected().m_device, nullptr, &n, nullptr);
+                std::vector<VkExtensionProperties> exts(n);
+                vkEnumerateDeviceExtensionProperties(m_physicalDevices.selected().m_device, nullptr, &n, exts.data());
+                for (const auto& e : exts) if (std::strcmp(e.extensionName, _name) == 0) return true;
+                return false;
+            };
+        for (const char* ext : deviceExtensions) 
+        {
+            if (!supportsExt(ext)) 
+            {
+                MARK_ERROR("Device does not support extension %s", ext);
+            }
+        }
+
+        // Ensure the selected device supports nessesary features
+        const VkPhysicalDeviceFeatures& feats = m_physicalDevices.selected().m_features;
+        REQ_FEATURE(feats, geometryShader);
+        REQ_FEATURE(feats, tessellationShader);
+
+        // Any device features required by Vulkan, enabled here
+        VkPhysicalDeviceFeatures deviceFeatures = { 0 };
+        deviceFeatures.geometryShader = VK_TRUE;
+        deviceFeatures.tessellationShader = VK_TRUE;
+
+        VkDeviceCreateInfo deviceCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .queueCreateInfoCount = 1,
+            .pQueueCreateInfos = &queueInfo,
+            .enabledLayerCount = 0,         // DEPRECATED
+            .ppEnabledLayerNames = nullptr, // DEPRECATED
+            .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+            .ppEnabledExtensionNames = deviceExtensions.data(),
+            .pEnabledFeatures = &deviceFeatures
+        };
+
+        VkResult res = vkCreateDevice(m_physicalDevices.selected().m_device, &deviceCreateInfo, nullptr, &m_device);
+        CHECK_VK_RESULT(res, "Create Logical Device\n");
+
+        // Load device for volk to be able to call device functions
+        volkLoadDevice(m_device);
+
+        printf("\nLogical Device Created\n");
     }
 
 } // namespace Mark::RendererVK

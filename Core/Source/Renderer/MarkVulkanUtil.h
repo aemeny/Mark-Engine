@@ -14,6 +14,11 @@ typedef unsigned int uint;
         exit(1);                  \
     }
 
+#define REQ_FEATURE(feats, member)                                                \
+    do { if ((feats).member != VK_TRUE)                                          \
+        MARK_ERROR("Required device feature not supported: %s", #member); } while(0)
+
+
 inline const char* GetDebugSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT _severity)
 {
     switch (_severity)

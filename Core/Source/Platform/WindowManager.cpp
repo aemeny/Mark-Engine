@@ -19,6 +19,10 @@ namespace Mark::Platform
         // Create the main editor window
         glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
         create(1280, 720, "Mark Editor", true);
+        glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
+
+        // Select the physical device now that we have a surface to query
+        m_vulkanCoreRef.lock()->selectDevices();
     }
     WindowManager::~WindowManager() = default;
 
@@ -28,6 +32,7 @@ namespace Mark::Platform
     {
         m_impl->m_windows.emplace_back(std::make_unique<Window>(m_vulkanCoreRef, _width, _height, _title, _borderless));
         m_impl->m_windows.back()->createSurface();
+        m_vulkanCoreRef.lock()->m_physicalDevices.querySurfaceProperties(m_impl->m_windows.back()->surface());
         return *m_impl->m_windows.back();
     }
 
