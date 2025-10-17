@@ -7,10 +7,11 @@ namespace Mark
 
     void Core::run()
     {
-        while (!m_terminateApplication && m_windows.anyOpen())
+        while (!m_terminateApplication && m_windows->anyOpen())
         {
-            m_windows.pollAll();
+            m_windows->pollAll();
         }
+        m_windows->destroyAllWindows();
     }
 
     void Core::stop()

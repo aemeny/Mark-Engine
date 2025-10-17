@@ -2,8 +2,10 @@
 #include <memory>
 #include <vector>
 #include <string_view>
+#include <optional>
 
 namespace Mark::RendererVK { struct VulkanCore; }
+namespace Mark { struct Core; }
 struct GLFWmonitor;
 struct GLFWwindow;
 
@@ -13,10 +15,10 @@ namespace Mark::Platform
     
     struct WindowManager
     {
-        WindowManager(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef);
+        WindowManager();
         ~WindowManager();
 
-        Window& main();
+        Window& main(std::optional<std::weak_ptr<RendererVK::VulkanCore>> _vulkanCoreRef = std::nullopt);
         Window& create(int _width, int _height, const char* _title, bool _borderless = true);
 
         void pollAll();
@@ -41,5 +43,9 @@ namespace Mark::Platform
         // Helper: choose the monitor the window is mostly on.
         static GLFWmonitor* monitorForWindow(GLFWwindow* _window);
         friend struct Window;
+        
+        // Destroy windows before VulkanCore to remove surfaces first
+        friend Core;
+        void destroyAllWindows();
     };
 } // namespace Mark::Platform

@@ -1,7 +1,8 @@
 #include "Window.h"
 #include "WindowManager.h"
-#include "../Renderer/MarkVulkanCore.h"
-#include "../Renderer/MarkVulkanUtil.h"
+#include "Renderer/MarkVulkanCore.h"
+#include "Utils/VulkanUtils.h"
+#include "Utils/ErrorHandling.h"
 
 #include <GLFW/glfw3.h>
 

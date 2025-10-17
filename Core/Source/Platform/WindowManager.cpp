@@ -1,7 +1,8 @@
 #include "WindowManager.h"
 #include "GLFWContext.h"
 #include "Window.h"
-#include "../Renderer/MarkVulkanCore.h"
+#include "Renderer/MarkVulkanCore.h"
+#include "Utils/ErrorHandling.h"
 
 #include <GLFW/glfw3.h>
 
@@ -13,20 +14,33 @@ namespace Mark::Platform
         std::vector<std::unique_ptr<Window> > m_windows;
     };
 
-    WindowManager::WindowManager(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef) :
-        m_impl(std::make_unique<Impl>()), m_vulkanCoreRef(_vulkanCoreRef)
-    {
-        // Create the main editor window
-        glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
-        create(1280, 720, "Mark Editor", true);
-        glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
+    WindowManager::WindowManager() : 
+        m_impl(std::make_unique<Impl>())
+    {}
 
-        // Select the physical device now that we have a surface to query
-        m_vulkanCoreRef.lock()->selectDevices();
-    }
     WindowManager::~WindowManager() = default;
 
-    Window& WindowManager::main() { return *m_impl->m_windows.front(); }
+    Window& WindowManager::main(std::optional<std::weak_ptr<RendererVK::VulkanCore>> _vulkanCoreRef) 
+    { 
+        if (_vulkanCoreRef.has_value())
+        {
+            m_vulkanCoreRef = _vulkanCoreRef.value();
+
+            // Create the main editor window
+            glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
+            create(1280, 720, "Mark Editor", true);
+            glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
+
+            // Select the physical device now that we have a surface to query
+            m_vulkanCoreRef.lock()->selectDevices();
+        }
+        else if (m_impl->m_windows.empty())
+        {
+            MARK_ERROR("Tried to return main window without creation first!");
+        }
+
+        return *m_impl->m_windows.front(); 
+    }
 
     Window& WindowManager::create(int _width, int _height, const char* _title, bool _borderless)
     {
@@ -165,5 +179,17 @@ namespace Mark::Platform
             }
         }
         return best ? best : glfwGetPrimaryMonitor();
+    }
+
+    void WindowManager::destroyAllWindows()
+    {
+        for (auto& window : m_impl->m_windows) 
+        {
+            if (window) 
+            {
+                window.reset(); // ~Window()
+            }
+        }
+        m_impl->m_windows.clear();
     }
 } // namespace Mark::Platform

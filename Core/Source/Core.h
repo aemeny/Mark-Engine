@@ -21,12 +21,14 @@ namespace Mark
         bool m_terminateApplication{ false };
         const EngineAppInfo& m_appInfo;
 
+        /* --== Window Manager ==-- */
+        // Must be created before any renderer, as they'll require glfwInit() call
+        std::shared_ptr<Platform::WindowManager> m_windows = std::make_shared<Platform::WindowManager>();
+
         /* --== Renderer ==--*/
-        // Must be created before any window, as windows will need the Vulkan instance
         std::shared_ptr<RendererVK::VulkanCore> m_vulkanCore = std::make_shared<RendererVK::VulkanCore>(m_appInfo);
 
         /* --== Members ==--*/
-        Platform::WindowManager m_windows{ m_vulkanCore };
-        Platform::Window& coreWindow = m_windows.main();
+        Platform::Window& coreWindow = m_windows->main(m_vulkanCore);
     };
 } // namespace Mark

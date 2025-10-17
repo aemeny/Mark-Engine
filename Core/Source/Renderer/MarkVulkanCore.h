@@ -2,6 +2,7 @@
 #include "MarkVulkanPhysicalDevices.h"
 
 #include <volk.h>
+#include <memory>
 
 namespace Mark { struct EngineAppInfo; }
 namespace Mark::Platform { struct WindowManager; }
@@ -19,7 +20,7 @@ namespace Mark::RendererVK
         const VkInstance& instance() const { return m_instance; }
 
     private:
-        friend struct ::Mark::Platform::WindowManager;
+        friend struct Platform::WindowManager;
 
         void createInstance(const EngineAppInfo& _appInfo);
         void createDebugCallback();

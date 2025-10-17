@@ -19,10 +19,10 @@ namespace Mark::RendererVK
             std::vector<SurfaceProperties> m_surfacesLinked;
 
             VkPhysicalDevice m_device{ VK_NULL_HANDLE };
-            VkPhysicalDeviceProperties m_properties;
+            VkPhysicalDeviceProperties m_properties{};
             std::vector<VkQueueFamilyProperties> m_queueFamilyProperties;
-            VkPhysicalDeviceMemoryProperties m_memoryProperties;
-            VkPhysicalDeviceFeatures m_features;
+            VkPhysicalDeviceMemoryProperties m_memoryProperties{};
+            VkPhysicalDeviceFeatures m_features{};
         };
 
         VulkanPhysicalDevices() = default;

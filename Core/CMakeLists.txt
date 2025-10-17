@@ -15,9 +15,10 @@ Source/Platform/Window.h
 Source/Platform/Window.cpp
 Source/Platform/WindowManager.h
 Source/Platform/WindowManager.cpp
+Source/Utils/VulkanUtils.h
+Source/Utils/ErrorHandling.h
 Source/Renderer/MarkVulkanCore.h
 Source/Renderer/MarkVulkanCore.cpp
-Source/Renderer/MarkVulkanUtil.h
 Source/Renderer/MarkVulkanPhysicalDevices.h
 Source/Renderer/MarkVulkanPhysicalDevices.cpp
 )

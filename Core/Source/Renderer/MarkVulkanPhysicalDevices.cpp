@@ -1,5 +1,6 @@
 #include "MarkVulkanPhysicalDevices.h"
-#include "MarkVulkanUtil.h"
+#include "Utils/VulkanUtils.h"
+#include "Utils/ErrorHandling.h"
 
 #include <assert.h>
 

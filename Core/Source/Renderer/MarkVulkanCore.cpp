@@ -1,6 +1,8 @@
 #include <Mark/Engine.h>
 #include "MarkVulkanCore.h"
-#include "MarkVulkanUtil.h"
+#include "Platform/WindowManager.h"
+#include "Utils/VulkanUtils.h"
+#include "Utils/ErrorHandling.h"
 
 #define VOLK_IMPLEMENTATION
 #include <volk.h>
@@ -131,7 +133,7 @@ namespace Mark::RendererVK
             .pNext = nullptr,
             .flags = 0,
             .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
-                               VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+                               //VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
                                VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
             .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | 
