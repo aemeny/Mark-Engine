@@ -16,8 +16,13 @@ namespace Mark::RendererVK
         VulkanCore(const VulkanCore&) = delete;
         VulkanCore& operator=(const VulkanCore&) = delete;
 
-        void selectDevices();
         const VkInstance& instance() const { return m_instance; }
+
+        void selectDevicesForSurface(VkSurfaceKHR _surface);
+        VulkanPhysicalDevices& physicalDevices() { return m_physicalDevices; }
+        VkDevice& device() { return m_device; }
+        uint32_t graphicsQueueFamilyIndex() const { return m_selectedDeviceResult.m_gtxQueueFamilyIndex; }
+        uint32_t presentQueueFamilyIndex()  const { return m_selectedDeviceResult.m_presentQueueFamilyIndex; }
 
     private:
         friend struct Platform::WindowManager;
@@ -29,8 +34,9 @@ namespace Mark::RendererVK
         VkInstance m_instance{ VK_NULL_HANDLE };
         VkDebugUtilsMessengerEXT m_debugMessenger{ VK_NULL_HANDLE };
 
+        // Devices and their properties
         VulkanPhysicalDevices m_physicalDevices;
-        uint32_t m_queueFamilyIndex{ 0 };
+        VulkanPhysicalDevices::selectDeviceResult m_selectedDeviceResult;
         VkDevice m_device{ VK_NULL_HANDLE };
     };
 } // namespace Mark::RendererVK

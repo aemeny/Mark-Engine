@@ -9,8 +9,9 @@
 namespace Mark::Platform
 {
     Window::Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, bool _borderless)
-        : m_vulkanCoreRef(_vulkanCoreRef), m_borderless(_borderless), m_windowName(_title), m_width(_width), m_height(_height)
+        : m_borderless(_borderless), m_windowName(_title), m_width(_width), m_height(_height)
     {
+        // Create GLFW window
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
         glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
@@ -22,18 +23,16 @@ namespace Mark::Platform
         glfwSetKeyCallback(m_window, &Window::KeyCallback);
 
         printf("GLFW Window Created: %s (%dx%d)\n", m_windowName.c_str(), _width, _height);
+
+        // Create Vulkan handler
+        m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, m_window);
     }
 
     Window::~Window()
     {
-        if (m_surface != VK_NULL_HANDLE)
+        if (m_vkHandler)
         {
-            if (m_vulkanCoreRef.expired()) 
-            {
-                MARK_ERROR("VulkanCore reference expired, cannot destroy surface");
-            }
-            vkDestroySurfaceKHR(m_vulkanCoreRef.lock()->instance(), m_surface, nullptr);
-            printf("GLFW Window Surface Destroyed\n");
+            m_vkHandler.reset();
         }
 
         if (m_window)
@@ -64,20 +63,6 @@ namespace Mark::Platform
             }
         } 
         while (w == 0 || h == 0);
-    }
-
-    void Window::createSurface()
-    {
-        if (m_surface != VK_NULL_HANDLE) return;
-        if (m_vulkanCoreRef.expired())
-        {
-            MARK_ERROR("VulkanCore reference expired, cannot create surface");
-        }
-
-        VkResult res = glfwCreateWindowSurface(m_vulkanCoreRef.lock()->instance(), m_window, nullptr, &m_surface);
-
-        CHECK_VK_RESULT(res, "Create window surface");
-        printf("GLFW Window Surface Created\n");
     }
 
     void Window::KeyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)

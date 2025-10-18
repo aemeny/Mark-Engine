@@ -9,6 +9,7 @@ namespace Mark::RendererVK
     {
         struct SurfaceProperties
         {
+            const VkSurfaceKHR& m_surface;
             std::vector<VkBool32> m_qSupportsPresent;
             std::vector<VkSurfaceFormatKHR> m_surfaceFormats;
             VkSurfaceCapabilitiesKHR m_surfaceCapabilities;
@@ -24,6 +25,13 @@ namespace Mark::RendererVK
             VkPhysicalDeviceMemoryProperties m_memoryProperties{};
             VkPhysicalDeviceFeatures m_features{};
         };
+        
+        struct selectDeviceResult
+        {
+            uint32_t m_deviceIndex{ UINT32_MAX };
+            uint32_t m_gtxQueueFamilyIndex{ UINT32_MAX };
+            uint32_t m_presentQueueFamilyIndex{ UINT32_MAX };
+        };
 
         VulkanPhysicalDevices() = default;
         ~VulkanPhysicalDevices() = default;
@@ -31,8 +39,7 @@ namespace Mark::RendererVK
         void initialize(const VkInstance& _instance);
         void querySurfaceProperties(const VkSurfaceKHR& _surface);
 
-        uint32_t selectDevice(VkQueueFlags _requiredQueueType, bool _supportsPresent);
-
+        selectDeviceResult selectDeviceForSurface(VkQueueFlags _requiredQueueFlags, VkSurfaceKHR _surface);
         const DeviceProperties& selected() const;
 
     private:

@@ -21,6 +21,10 @@ Source/Renderer/MarkVulkanCore.h
 Source/Renderer/MarkVulkanCore.cpp
 Source/Renderer/MarkVulkanPhysicalDevices.h
 Source/Renderer/MarkVulkanPhysicalDevices.cpp
+Source/Renderer/MarkVulkanSwapChain.h
+Source/Renderer/MarkVulkanSwapChain.cpp
+Source/Renderer/WindowToVulkanHandler.h
+Source/Renderer/WindowToVulkanHandler.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

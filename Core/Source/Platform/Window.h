@@ -1,5 +1,5 @@
 #pragma once
-#include <volk.h>
+#include "Renderer/WindowToVulkanHandler.h"
 
 #include <memory>
 #include <string>
@@ -30,8 +30,7 @@ namespace Mark::Platform
         void waitUntilFramebufferValid() const;
 
         // Vulkan Renderering
-        void createSurface();
-        VkSurfaceKHR surface() const { return m_surface; }
+        RendererVK::WindowToVulkanHandler& vkHandler() { return *m_vkHandler; }
 
     private:
         /* --== Properties ==-- */
@@ -41,9 +40,8 @@ namespace Mark::Platform
         int m_height{ 0 };
 
         // Vulkan Renderering
-        std::weak_ptr<RendererVK::VulkanCore> m_vulkanCoreRef;
-        VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
-
+        std::unique_ptr<RendererVK::WindowToVulkanHandler> m_vkHandler;
+        
         // Window mode
         bool m_isFullscreen{ false };
         bool m_borderless{ false };

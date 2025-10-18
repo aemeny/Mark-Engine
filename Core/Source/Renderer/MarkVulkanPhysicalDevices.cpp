@@ -123,7 +123,7 @@ namespace Mark::RendererVK
         for (uint32_t i = 0; i < m_devices.size(); i++)
         {
             VkPhysicalDevice currentDevice = m_devices[i].m_device;
-            SurfaceProperties surfaceProps{};
+            SurfaceProperties surfaceProps{ .m_surface = _surface };
 
             uint32_t queueFamilyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, nullptr);
@@ -187,33 +187,61 @@ namespace Mark::RendererVK
         }
     }
 
-    uint32_t VulkanPhysicalDevices::selectDevice(VkQueueFlags _requiredQueueType, bool _supportsPresent)
+    VulkanPhysicalDevices::selectDeviceResult VulkanPhysicalDevices::selectDeviceForSurface(VkQueueFlags _requiredQueueFlags, VkSurfaceKHR _surface)
     {
-        for (uint32_t i = 0; i < m_devices.size(); i++)
+        for (uint32_t i = 0; i < m_devices.size(); ++i) 
         {
-            for (uint32_t j = 0; j < m_devices[i].m_queueFamilyProperties.size(); j++)
-            {
-                const VkQueueFamilyProperties& qFamilyProps = m_devices[i].m_queueFamilyProperties[j];
+            DeviceProperties& deviceProps = m_devices[i];
 
-                if (qFamilyProps.queueFlags & _requiredQueueType)
+            // Find the SurfaceProperties entry for this surface on this device
+            const SurfaceProperties* surfaceProps = nullptr;
+            for (const auto& surfaceLinked : deviceProps.m_surfacesLinked)
+            {
+                if (surfaceLinked.m_surface == _surface)
                 {
-                    for (uint32_t k = 0; k < m_devices[i].m_surfacesLinked.size(); k++)
-                    {
-                        if ((bool)m_devices[i].m_surfacesLinked[k].m_qSupportsPresent[j] == _supportsPresent)
-                        {
-                            m_selectedDeviceIndex = i;
-                            int queueFamily = j;
-                            printf("Using GFX device %d (%s) and queue family %d\n", m_selectedDeviceIndex, m_devices[i].m_properties.deviceName, queueFamily);
-                            return queueFamily;
-                        }
-                    }
+                    surfaceProps = &surfaceLinked;
+                    break;
                 }
             }
+            if (!surfaceProps) continue;
+
+            // Pick first graphics family
+            uint32_t gfx = UINT32_MAX;
+            for (uint32_t q = 0; q < deviceProps.m_queueFamilyProperties.size(); q++)
+            {
+                if (deviceProps.m_queueFamilyProperties[q].queueFlags & _requiredQueueFlags) 
+                { 
+                    gfx = q; 
+                    break; 
+                }
+            }
+            if (gfx == UINT32_MAX) continue;
+
+            // Pick first present-capable family for this surface
+            uint32_t present = UINT32_MAX;
+            for (uint32_t q = 0; q < surfaceProps->m_qSupportsPresent.size(); q++) 
+            {
+                if (surfaceProps->m_qSupportsPresent[q]) 
+                { 
+                    present = q; 
+                    break; 
+                }
+            }
+            if (present == UINT32_MAX) continue;
+
+            m_selectedDeviceIndex = static_cast<int>(i);
+            printf("Using device %u (%s), gfx family %u, present family %u\n", i, deviceProps.m_properties.deviceName, gfx, present);
+
+            return selectDeviceResult{ 
+                .m_deviceIndex = i, 
+                .m_gtxQueueFamilyIndex = gfx, 
+                .m_presentQueueFamilyIndex = present
+            };
         }
 
-        MARK_ERROR("Required queue type %x and supports present %d not found\n", _requiredQueueType, _supportsPresent);
-
-        return 0;
+        // Unreachable
+        MARK_ERROR("No physical device satisfies required queue flags %x with present support for the surface", _requiredQueueFlags);
+        return selectDeviceResult();
     }
 
     const VulkanPhysicalDevices::DeviceProperties& VulkanPhysicalDevices::selected() const

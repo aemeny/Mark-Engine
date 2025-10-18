@@ -23,15 +23,6 @@ namespace Mark::RendererVK
         m_physicalDevices.initialize(m_instance);
     }
 
-    void VulkanCore::selectDevices()
-    {
-        // For now, just select the first device that supports graphics and can present to the main window surface
-        m_queueFamilyIndex = m_physicalDevices.selectDevice(VK_QUEUE_GRAPHICS_BIT, true);
-
-        // Create the logical device with this index
-        createLogicalDevice();
-    }
-
     VulkanCore::~VulkanCore()
     {
         if (m_device != VK_NULL_HANDLE)
@@ -54,6 +45,39 @@ namespace Mark::RendererVK
             vkDestroyInstance(m_instance, nullptr);
             m_instance = VK_NULL_HANDLE;
             printf("Vulkan Instance Destroyed\n");
+        }
+    }
+
+    void VulkanCore::selectDevicesForSurface(VkSurfaceKHR _surface)
+    {
+        if (m_device == VK_NULL_HANDLE)
+        {
+            // First window: pick families and create the device
+            m_selectedDeviceResult = m_physicalDevices.selectDeviceForSurface(VK_QUEUE_GRAPHICS_BIT, _surface);
+            createLogicalDevice();
+            return;
+        }
+
+        // Subsequent windows: verify existing families can present to new surface
+        const VulkanPhysicalDevices::DeviceProperties& selectedDeviceProps = m_physicalDevices.selected();
+        const VulkanPhysicalDevices::SurfaceProperties* cachedSurfaceProps = nullptr;
+        for (const auto& surfaceLinked : selectedDeviceProps.m_surfacesLinked)
+        {
+            if (surfaceLinked.m_surface == _surface)
+            { 
+                cachedSurfaceProps = &surfaceLinked;
+                break; 
+            }
+        }
+        if (!cachedSurfaceProps)
+        {
+            MARK_ERROR("Surface properties not cached for new window surface");
+        }
+
+        const uint32_t presentIdx = m_selectedDeviceResult.m_presentQueueFamilyIndex;
+        if (presentIdx >= cachedSurfaceProps->m_qSupportsPresent.size() || !cachedSurfaceProps->m_qSupportsPresent[presentIdx])
+        {
+            MARK_ERROR("Existing present queue family %u cannot present to the new surface", presentIdx);
         }
     }
 
@@ -151,17 +175,30 @@ namespace Mark::RendererVK
 
     void VulkanCore::createLogicalDevice()
     {
-        float queuePriorities[] = { 1.0f }; // Priority must be between 0.0 and 1.0, higher is more important
-
         // Information about the queue to create
-        VkDeviceQueueCreateInfo queueInfo = {
+        float queuePriorities = 1.0f; // // Priority must be between 0.0 and 1.0, higher is more important
+        VkDeviceQueueCreateInfo qInfos[2] {};
+        uint32_t qCount = 0;
+
+        qInfos[qCount++] = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
-            .queueFamilyIndex = m_queueFamilyIndex,
+            .queueFamilyIndex = m_selectedDeviceResult.m_gtxQueueFamilyIndex,
             .queueCount = 1, // Controlls parallelism of the GPU, currently only one queue used
-            .pQueuePriorities = &queuePriorities[0]
+            .pQueuePriorities = &queuePriorities
         };
+        if (m_selectedDeviceResult.m_presentQueueFamilyIndex != m_selectedDeviceResult.m_gtxQueueFamilyIndex)
+        {
+            qInfos[qCount++] = {
+                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .queueFamilyIndex = m_selectedDeviceResult.m_presentQueueFamilyIndex,
+                .queueCount = 1,
+                .pQueuePriorities = &queuePriorities
+            };
+        }
 
         // Any device extensions required by Vulkan, enabled here
         std::vector<const char*> deviceExtensions = {
@@ -174,7 +211,7 @@ namespace Mark::RendererVK
         }
 
         // Ensure the selected device supports nessesary extensions
-        auto supportsExt = [&](const char* _name) 
+        auto supportsExt = [&](const char* _name)
             {
                 uint32_t n = 0;
                 vkEnumerateDeviceExtensionProperties(m_physicalDevices.selected().m_device, nullptr, &n, nullptr);
@@ -183,9 +220,9 @@ namespace Mark::RendererVK
                 for (const auto& e : exts) if (std::strcmp(e.extensionName, _name) == 0) return true;
                 return false;
             };
-        for (const char* ext : deviceExtensions) 
+        for (const char* ext : deviceExtensions)
         {
-            if (!supportsExt(ext)) 
+            if (!supportsExt(ext))
             {
                 MARK_ERROR("Device does not support extension %s", ext);
             }
@@ -205,8 +242,8 @@ namespace Mark::RendererVK
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
-            .queueCreateInfoCount = 1,
-            .pQueueCreateInfos = &queueInfo,
+            .queueCreateInfoCount = qCount,
+            .pQueueCreateInfos = qInfos,
             .enabledLayerCount = 0,         // DEPRECATED
             .ppEnabledLayerNames = nullptr, // DEPRECATED
             .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
