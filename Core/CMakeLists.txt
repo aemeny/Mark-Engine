@@ -25,6 +25,8 @@ Source/Renderer/MarkVulkanSwapChain.h
 Source/Renderer/MarkVulkanSwapChain.cpp
 Source/Renderer/WindowToVulkanHandler.h
 Source/Renderer/WindowToVulkanHandler.cpp
+Source/Renderer/MarkVulkanCommandBuffers.h
+Source/Renderer/MarkVulkanCommandBuffers.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

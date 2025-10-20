@@ -5,10 +5,11 @@
 #include "Utils/ErrorHandling.h"
 
 #include <GLFW/glfw3.h>
+#include <volk.h>
 
 namespace Mark::Platform
 {
-    Window::Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, bool _borderless)
+    Window::Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, VkClearColorValue _clearColour, bool _borderless)
         : m_borderless(_borderless), m_windowName(_title), m_width(_width), m_height(_height)
     {
         // Create GLFW window
@@ -25,7 +26,7 @@ namespace Mark::Platform
         printf("GLFW Window Created: %s (%dx%d)\n", m_windowName.c_str(), _width, _height);
 
         // Create Vulkan handler
-        m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, m_window);
+        m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, m_window, _clearColour);
     }
 
     Window::~Window()

@@ -8,6 +8,7 @@ namespace Mark::RendererVK { struct VulkanCore; }
 namespace Mark { struct Core; }
 struct GLFWmonitor;
 struct GLFWwindow;
+union VkClearColorValue;
 
 namespace Mark::Platform
 {
@@ -19,7 +20,7 @@ namespace Mark::Platform
         ~WindowManager();
 
         Window& main(std::optional<std::weak_ptr<RendererVK::VulkanCore>> _vulkanCoreRef = std::nullopt);
-        Window& create(int _width, int _height, const char* _title, bool _borderless = true);
+        Window& create(int _width, int _height, const char* _title, VkClearColorValue _clearColour, bool _borderless = true);
 
         void pollAll();
         bool anyOpen() const;
