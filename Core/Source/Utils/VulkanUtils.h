@@ -1,15 +1,13 @@
 #pragma once
+#include "ErrorHandling.h"
 #include <volk.h>
 
-typedef unsigned int uint;
-#define CHECK_VK_RESULT(res, msg) \
-    if (res != VK_SUCCESS){       \
-        fprintf(stderr, "Error in %s:%d - %s, code %x\n", __FILE__, __LINE__, msg, res);  \
-        exit(1);                  \
-    }
+#define CHECK_VK_RESULT(res, msg)      \
+    do { if (res != VK_SUCCESS)        \
+        MARK_ERROR("Error in %s:%d - %s, code %x\n", __FILE__, __LINE__, msg, res); } while(0)
 
-#define REQ_FEATURE(feats, member)                                                \
-    do { if ((feats).member != VK_TRUE)                                          \
+#define REQ_FEATURE(feats, member)     \
+    do { if (feats.member != VK_TRUE)  \
         MARK_ERROR("Required device feature not supported: %s", #member); } while(0)
 
 
@@ -32,10 +30,8 @@ inline const char* GetDebugSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT _s
     default:
         return "Invalid severity code";
     }
-
     return "NOT REAL SEVERITY STRENGTH!";
 }
-
 inline const char* GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)
 {
     switch (_type)
@@ -52,6 +48,5 @@ inline const char* GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)
     default:
         return "Invalid type code";
     }
-
     return "NOT REAL TYPE!";
 }

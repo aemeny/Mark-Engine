@@ -132,6 +132,8 @@ namespace Mark::RendererVK
 
                 VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormatAndColourSpace(surfaceProps.m_surfaceFormats);
 
+                m_extent = surfaceCapabilities.currentExtent;
+
                 // Create the swap chain & info
                 VkSwapchainCreateInfoKHR swapChainCreateInfo{
                     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -141,7 +143,7 @@ namespace Mark::RendererVK
                     .minImageCount = numImages,
                     .imageFormat = surfaceFormat.format,
                     .imageColorSpace = surfaceFormat.colorSpace,
-                    .imageExtent = surfaceCapabilities.currentExtent,
+                    .imageExtent = m_extent,
                     .imageArrayLayers = 1,
                     .imageUsage = (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT),
 

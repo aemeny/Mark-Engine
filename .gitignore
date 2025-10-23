@@ -17,6 +17,15 @@
 # Mono auto generated files
 mono_crash.*
 
+# CMake / build folders
+# root build folder
+/build/
+
+# any nested or variant build dirs
+**/[Bb]uild*/
+cmake-build-*/
+_out/
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

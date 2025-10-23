@@ -10,6 +10,7 @@ namespace Mark
         while (!m_terminateApplication && m_windows->anyOpen())
         {
             m_windows->pollAll();
+            m_windows->renderAll();
         }
         m_windows->destroyAllWindows();
     }

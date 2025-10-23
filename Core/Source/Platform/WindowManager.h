@@ -22,6 +22,7 @@ namespace Mark::Platform
         Window& main(std::optional<std::weak_ptr<RendererVK::VulkanCore>> _vulkanCoreRef = std::nullopt);
         Window& create(int _width, int _height, const char* _title, VkClearColorValue _clearColour, bool _borderless = true);
 
+        void renderAll();
         void pollAll();
         bool anyOpen() const;
 

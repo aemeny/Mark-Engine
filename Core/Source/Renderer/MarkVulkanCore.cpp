@@ -27,6 +27,8 @@ namespace Mark::RendererVK
     {
         if (m_device != VK_NULL_HANDLE)
         {
+            m_graphicsQueue.destroy();
+
             vkDeviceWaitIdle(m_device);
             vkDestroyDevice(m_device, nullptr);
             m_device = VK_NULL_HANDLE;
@@ -258,6 +260,15 @@ namespace Mark::RendererVK
         volkLoadDevice(m_device);
 
         printf("\nLogical Device Created\n");
+
+        // Initialize queues now that device is created
+        initializeQueue();
+    }
+
+    void VulkanCore::initializeQueue()
+    {
+        m_graphicsQueue.initialize(m_device, m_selectedDeviceResult.m_gtxQueueFamilyIndex, 0);
+        printf("Vulkan Graphics Queue Initialized\n");
     }
 
 } // namespace Mark::RendererVK

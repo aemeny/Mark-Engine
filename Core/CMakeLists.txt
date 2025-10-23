@@ -27,6 +27,10 @@ Source/Renderer/WindowToVulkanHandler.h
 Source/Renderer/WindowToVulkanHandler.cpp
 Source/Renderer/MarkVulkanCommandBuffers.h
 Source/Renderer/MarkVulkanCommandBuffers.cpp
+Source/Renderer/MarkVulkanLogicalDevice.h
+Source/Renderer/MarkVulkanLogicalDevice.cpp
+Source/Renderer/MarkVulkanQueue.h
+Source/Renderer/MarkVulkanQueue.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

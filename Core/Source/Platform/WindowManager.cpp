@@ -5,7 +5,7 @@
 #include "Utils/ErrorHandling.h"
 
 #include <GLFW/glfw3.h>
-#include <Volk.h>
+#include <volk.h>
 
 namespace Mark::Platform
 {
@@ -45,6 +45,14 @@ namespace Mark::Platform
     {
         m_impl->m_windows.emplace_back(std::make_unique<Window>(m_vulkanCoreRef, _width, _height, _title, _clearColour, _borderless));
         return *m_impl->m_windows.back();
+    }
+
+    void WindowManager::renderAll()
+    {
+        for (auto& window : m_impl->m_windows)
+        {
+            window->vkHandler().renderToWindow();
+        }
     }
 
     void WindowManager::pollAll()
