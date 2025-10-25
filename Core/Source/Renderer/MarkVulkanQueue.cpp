@@ -65,4 +65,4 @@ namespace Mark::RendererVK
         VkResult res =  vkQueuePresentKHR(m_queue, &presentInfo);
         CHECK_VK_RESULT(res, "Queue Present");
     }
-}
+} // namespace Mark::RendererVK

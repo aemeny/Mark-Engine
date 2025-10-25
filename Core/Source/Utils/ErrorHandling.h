@@ -46,5 +46,5 @@ namespace Mark::Error
         std::abort();
     }
 
-} // namespace mark::error
+} // namespace Mark::Error
 #define MARK_ERROR(fmt, ...) ::Mark::Error::errorf_impl(__FILE__, __LINE__, (fmt), ##__VA_ARGS__)

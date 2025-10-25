@@ -252,4 +252,4 @@ namespace Mark::RendererVK
         }
         return m_devices[m_selectedDeviceIndex];
     }
-}
+} // namespace Mark::RendererVK

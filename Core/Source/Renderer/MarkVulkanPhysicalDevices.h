@@ -47,4 +47,4 @@ namespace Mark::RendererVK
 
         int m_selectedDeviceIndex{ -1 };
     };
-}
+} // namespace Mark::RendererVK

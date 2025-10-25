@@ -204,4 +204,4 @@ namespace Mark::RendererVK
         }
         MARK_ERROR("Failed to find matching surface for swap chain creation");
     }
-}
+} // namespace Mark::RendererVK
