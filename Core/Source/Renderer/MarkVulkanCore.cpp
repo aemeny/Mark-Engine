@@ -27,6 +27,7 @@ namespace Mark::RendererVK
     {
         if (m_device != VK_NULL_HANDLE)
         {
+            m_presentQueue.destroy();
             m_graphicsQueue.destroy();
 
             vkDeviceWaitIdle(m_device);
@@ -269,6 +270,16 @@ namespace Mark::RendererVK
     {
         m_graphicsQueue.initialize(m_device, m_selectedDeviceResult.m_gtxQueueFamilyIndex, 0);
         printf("Vulkan Graphics Queue Initialized\n");
+
+        if (m_selectedDeviceResult.m_presentQueueFamilyIndex != m_selectedDeviceResult.m_gtxQueueFamilyIndex) 
+        {
+            m_presentQueue.initialize(m_device, m_selectedDeviceResult.m_presentQueueFamilyIndex, 0);
+            printf("Vulkan Present Queue Initialized\n");
+        }
+        else 
+        {
+            printf("Vulkan Present Queue uses Graphics Queue\n");
+        }
     }
 
 } // namespace Mark::RendererVK

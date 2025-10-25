@@ -9,6 +9,7 @@ namespace Mark::RendererVK
     {
         VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef);
         ~VulkanCommandBuffers() = default;
+        void destroyCommandBuffers();
         VulkanCommandBuffers(const VulkanCommandBuffers&) = delete;
         VulkanCommandBuffers& operator=(const VulkanCommandBuffers&) = delete;
         

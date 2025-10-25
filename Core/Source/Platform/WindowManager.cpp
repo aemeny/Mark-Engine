@@ -67,10 +67,12 @@ namespace Mark::Platform
     {
         // Main window wants to close, stop running
         if (m_impl->m_windows.empty() || m_impl->m_windows.front()->shouldClose())
+        {
+            printf("\n\n\n---Main window closed, terminating application.---\n");
             return false;
+        }
         return true;
     }
-
 
     Window* WindowManager::findByTitle(std::string_view _title)
     {

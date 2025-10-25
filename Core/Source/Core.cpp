@@ -18,6 +18,7 @@ namespace Mark
     void Core::stop()
     {
         m_terminateApplication = true;
+        printf("\n\n\n---Mark Core Stop Called, terminating application.---\n");
     }
 
 } // namespace Mark

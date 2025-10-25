@@ -49,11 +49,16 @@ namespace Mark::RendererVK
         m_swapChain.createSwapChain();
 
         // Create frame data sync objects
+        m_imagesInFlight.assign(m_swapChain.numImages(), VK_NULL_HANDLE);
+        m_presentSems.resize(m_swapChain.numImages());
+        for (VkSemaphore& semaphore : m_presentSems)
+        {
+            semaphore = createSemaphore(VkCore->device());
+        }
         for (FrameSyncData& frameData : m_framesInFlight)
         {
             VkDevice& device = VkCore->device();
             frameData.m_imageAvailableSem = createSemaphore(device);
-            frameData.m_renderFinishedSem = createSemaphore(device);
             frameData.m_inFlightFence = createFence(device);
         }
 
@@ -64,28 +69,44 @@ namespace Mark::RendererVK
 
     WindowToVulkanHandler::~WindowToVulkanHandler()
     {
+        if (m_vulkanCoreRef.expired()) { MARK_ERROR("VulkanCore reference expired, cannot destroy surface"); }
+        auto VkCore = m_vulkanCoreRef.lock();
+
+        // Wait for device idle before destroying resources
+        VkCore->graphicsQueue().waitIdle();
+
         // Destroy frame data sync objects
-        for (FrameSyncData& frameData : m_framesInFlight)
-        {
-            VkDevice& device = m_vulkanCoreRef.lock()->device();
-            if (frameData.m_imageAvailableSem) vkDestroySemaphore(device, frameData.m_imageAvailableSem, nullptr);
-            if (frameData.m_renderFinishedSem) vkDestroySemaphore(device, frameData.m_renderFinishedSem, nullptr);
-            if (frameData.m_inFlightFence) vkDestroyFence(device, frameData.m_inFlightFence, nullptr);
-        }
+        destroyFrameSyncObjects(VkCore);
+
+        // Destroy command buffers and pool
+        m_commandBuffers.destroyCommandBuffers();
 
         // Explicitly destroy swap chain before surface
         m_swapChain.destroySwapChain();
 
         if (m_surface != VK_NULL_HANDLE)
         {
-            if (m_vulkanCoreRef.expired())
-            {
-                MARK_ERROR("VulkanCore reference expired, cannot destroy surface");
-            }
-            vkDestroySurfaceKHR(m_vulkanCoreRef.lock()->instance(), m_surface, nullptr);
+            vkDestroySurfaceKHR(VkCore->instance(), m_surface, nullptr);
             m_surface = VK_NULL_HANDLE;
             printf("GLFW Window Surface Destroyed\n");
         }
+    }
+
+    void WindowToVulkanHandler::destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef)
+    {
+        // Destroy frame data sync objects
+        for (FrameSyncData& frameData : m_framesInFlight)
+        {
+            VkDevice& device = _VkCoreRef->device();
+            if (frameData.m_imageAvailableSem) vkDestroySemaphore(device, frameData.m_imageAvailableSem, nullptr);
+            if (frameData.m_inFlightFence) vkDestroyFence(device, frameData.m_inFlightFence, nullptr);
+        }
+        for (VkSemaphore& semaphore : m_presentSems)
+        {
+            if (semaphore) vkDestroySemaphore(_VkCoreRef->device(), semaphore, nullptr);
+        }
+
+        printf("Window Frame Sync Objects Destroyed\n");
     }
 
     void WindowToVulkanHandler::renderToWindow()
@@ -96,28 +117,44 @@ namespace Mark::RendererVK
 
         auto VkCore = m_vulkanCoreRef.lock();
         if (!VkCore) { MARK_ERROR("VulkanCore expired during renderFrame()"); }
-        VulkanQueue& queue = VkCore->graphicsQueue();
+
+        VulkanQueue& graphicsQueue = VkCore->graphicsQueue();
+        VulkanQueue& presentQueue = VkCore->presentQueue();
 
         // Choose this frame slot's sync objects
         FrameSyncData& frameSyncData = m_framesInFlight[m_frame];
 
         // Wait for this frame slot to be free on GPU side
         vkWaitForFences(VkCore->device(), 1, &frameSyncData.m_inFlightFence, VK_TRUE, UINT64_MAX);
-        vkResetFences(VkCore->device(), 1, &frameSyncData.m_inFlightFence);
 
         // Acquire swapchain image for window
         uint32_t imageIndex = 0;
-        queue.acquireNextImage(m_swapChain.swapChain(), frameSyncData.m_imageAvailableSem, VK_NULL_HANDLE, &imageIndex);
+        graphicsQueue.acquireNextImage(m_swapChain.swapChain(), frameSyncData.m_imageAvailableSem, VK_NULL_HANDLE, &imageIndex);
+
+        // If this image is still in use by a previous frame, wait for that fence
+        VkFence oldFence = m_imagesInFlight[imageIndex];
+        if (oldFence != VK_NULL_HANDLE && oldFence != frameSyncData.m_inFlightFence)
+        {
+            vkWaitForFences(VkCore->device(), 1, &oldFence, VK_TRUE, UINT64_MAX);
+        }
+        // This frame's fence now owns this image
+        m_imagesInFlight[imageIndex] = frameSyncData.m_inFlightFence;
+
+        // Reset this frame's fence for the upcoming submit
+        vkResetFences(VkCore->device(), 1, &frameSyncData.m_inFlightFence);
 
         // Record the command buffer for this image
         VkCommandBuffer cmdBuffer = m_commandBuffers.commandBuffer(imageIndex);
 
         // Submit to graphics queue: wait on imageAvailable, signal renderFinished
+        VkSemaphore presentSem = m_presentSems[imageIndex];
+        if (presentSem == VK_NULL_HANDLE) MARK_ERROR("presentSem is VK_NULL_HANDLE!");
+
         VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        queue.submit(cmdBuffer, frameSyncData.m_imageAvailableSem, waitStage, frameSyncData.m_renderFinishedSem, frameSyncData.m_inFlightFence);
+        graphicsQueue.submit(cmdBuffer, frameSyncData.m_imageAvailableSem, waitStage, presentSem, frameSyncData.m_inFlightFence);
 
         // Present the window
-        queue.present(m_swapChain.swapChain(), imageIndex, frameSyncData.m_renderFinishedSem);
+        presentQueue.present(m_swapChain.swapChain(), imageIndex, presentSem);
 
         // Increment frames-in-flight index
         m_frame = (m_frame + 1) % static_cast<uint32_t>(m_framesInFlight.size());

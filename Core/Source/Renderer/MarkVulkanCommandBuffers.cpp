@@ -8,6 +8,35 @@ namespace Mark::RendererVK
         m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef)
     {}
 
+    void VulkanCommandBuffers::destroyCommandBuffers()
+    {
+        if (m_vulkanCoreRef.expired())
+        {
+            MARK_ERROR("VulkanCore reference expired, cannot destroy command buffers");
+        }
+        auto VkCore = m_vulkanCoreRef.lock();
+
+        if (m_commandPool != VK_NULL_HANDLE)
+        {
+            if (!m_commandBuffers.empty())
+            {
+                vkFreeCommandBuffers(VkCore->device(),
+                    m_commandPool,
+                    static_cast<uint32_t>(m_commandBuffers.size()),
+                    m_commandBuffers.data()
+                );
+                m_commandBuffers.clear();
+            }
+
+            vkDestroyCommandPool(VkCore->device(), m_commandPool, nullptr);
+            m_commandPool = VK_NULL_HANDLE;
+        }
+
+        m_firstUseFlags.clear();
+
+        printf("Vulkan Command Buffers & Pool Destroyed\n");
+    }
+
     void VulkanCommandBuffers::createCommandPool()
     {
         VkCommandPoolCreateInfo cmdPoolCreateInfo = {

@@ -25,6 +25,13 @@ namespace Mark::RendererVK
         uint32_t graphicsQueueFamilyIndex() const { return m_selectedDeviceResult.m_gtxQueueFamilyIndex; }
         uint32_t presentQueueFamilyIndex()  const { return m_selectedDeviceResult.m_presentQueueFamilyIndex; }
         VulkanQueue& graphicsQueue() { return m_graphicsQueue; }
+        VulkanQueue& presentQueue() {
+            // If families are the same, reuse the graphics queue
+            return (m_selectedDeviceResult.m_presentQueueFamilyIndex == m_selectedDeviceResult.m_gtxQueueFamilyIndex)
+                ? m_graphicsQueue
+                : m_presentQueue;
+        }
+
 
     private:
         friend struct Platform::WindowManager;
@@ -37,6 +44,7 @@ namespace Mark::RendererVK
         VkInstance m_instance{ VK_NULL_HANDLE };
         VkDebugUtilsMessengerEXT m_debugMessenger{ VK_NULL_HANDLE };
         VulkanQueue m_graphicsQueue;
+        VulkanQueue m_presentQueue;
 
         // Devices and their properties
         VulkanPhysicalDevices m_physicalDevices;
