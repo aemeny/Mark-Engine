@@ -1,5 +1,6 @@
 #pragma once
 #include "ErrorHandling.h"
+#include "MarkUtils.h"
 #include <volk.h>
 
 #define CHECK_VK_RESULT(res, msg)      \
@@ -15,38 +16,33 @@ inline const char* GetDebugSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT _s
 {
     switch (_severity)
     {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        return "Verbose";
-
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        return "Info";
-
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        return "Warning";
-
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        return "Error";
-
-    default:
-        return "Invalid severity code";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: return "Verbose";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:    return "Info";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: return "Warning";
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:   return "Error";
+    default:                                              return "Invalid severity code";
     }
     return "NOT REAL SEVERITY STRENGTH!";
+}
+inline ::Mark::Utils::Level VkSeverityToLevel(VkDebugUtilsMessageSeverityFlagBitsEXT _seversity)
+{
+    switch (_seversity)
+    {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: return ::Mark::Utils::Level::Debug;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:    return ::Mark::Utils::Level::Info;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: return ::Mark::Utils::Level::Warn;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:   return ::Mark::Utils::Level::Error;
+    default:                                              return ::Mark::Utils::Level::Trace;
+    }
 }
 inline const char* GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)
 {
     switch (_type)
     {
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-        return "General";
-
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-        return "Validation";
-
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-        return "Performance";
-
-    default:
-        return "Invalid type code";
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:     return "General";
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:  return "Validation";
+    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT: return "Performance";
+    default:                                              return "Invalid type code";
     }
     return "NOT REAL TYPE!";
 }

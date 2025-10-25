@@ -1,6 +1,6 @@
 #include "MarkVulkanPhysicalDevices.h"
 #include "Utils/VulkanUtils.h"
-#include "Utils/ErrorHandling.h"
+#include "Utils/MarkUtils.h"
 
 #include <assert.h>
 
@@ -10,59 +10,61 @@ namespace Mark::RendererVK
     {
         if (_flags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
         {
-            printf("Image usage transfer src is supported\n");
+            MARK_DEBUG("Image usage transfer src is supported");
         }
         if (_flags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
         {
-            printf("Image usage transfer dest is supported\n");
+            MARK_DEBUG("Image usage transfer dest is supported");
         }
         if (_flags & VK_IMAGE_USAGE_SAMPLED_BIT)
         {
-            printf("Image usage sampled is supported\n");
+            MARK_DEBUG("Image usage sampled is supported");
         }
         if (_flags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
         {
-            printf("Image usage color attachment is supported\n");
+            MARK_DEBUG("Image usage color attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
-            printf("Image usage depth stencil attachment is supported\n");
+            MARK_DEBUG("Image usage depth stencil attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
         {
-            printf("Image usage transient attachment is supported\n");
+            MARK_DEBUG("Image usage transient attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
         {
-            printf("Image usage input attachment is supported\n");
+            MARK_DEBUG("Image usage input attachment is supported");
         }
     }
     static void printMemoryProperty(VkMemoryPropertyFlags _PropertyFlags)
     {
+        std::string out = "    ";
         if (_PropertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
         {
-            printf("DEVICE LOCAL ");
+            out += "DEVICE LOCAL ";
         }
         if (_PropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
         {
-            printf("HOST VISIBLE ");
+            out += "HOST VISIBLE ";
         }
         if (_PropertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
         {
-            printf("HOST COHERENT ");
+            out += "HOST COHERENT ";
         }
         if (_PropertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
         {
-            printf("HOST CACHED ");
+            out += "HOST CACHED ";
         }
         if (_PropertyFlags & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT)
         {
-            printf("LAZILY ALLOCATED ");
+            out += "LAZILY ALLOCATED ";
         }
         if (_PropertyFlags & VK_MEMORY_PROPERTY_PROTECTED_BIT)
         {
-            printf("PROTECTED ");
+            out += "PROTECTED ";
         }
+        MARK_DEBUG("%s", out.c_str());
     }
 
     void VulkanPhysicalDevices::initialize(const VkInstance& _instance)
@@ -72,7 +74,7 @@ namespace Mark::RendererVK
         VkResult res = vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
         CHECK_VK_RESULT(res, "Enumerate Physical Devices Count");
 
-        printf("Found %u Physical Devices\n\n", deviceCount);
+        MARK_DEBUG("Found %u Physical Devices", deviceCount);
 
         m_devices.resize(deviceCount);
 
@@ -89,9 +91,9 @@ namespace Mark::RendererVK
 
             vkGetPhysicalDeviceProperties(currentDevice, &m_devices[i].m_properties);
 
-            printf("Device name: %s\n", m_devices[i].m_properties.deviceName);
+            MARK_DEBUG("Device name: %s", m_devices[i].m_properties.deviceName);
             uint32_t apiVersion = m_devices[i].m_properties.apiVersion;
-            printf("    API Version: %d.%d.%d.%d\n",
+            MARK_DEBUG("    API Version: %d.%d.%d.%d",
                 VK_API_VERSION_VARIANT(apiVersion),
                 VK_API_VERSION_MAJOR(apiVersion),
                 VK_API_VERSION_MINOR(apiVersion),
@@ -99,20 +101,18 @@ namespace Mark::RendererVK
 
             vkGetPhysicalDeviceMemoryProperties(currentDevice, &(m_devices[i].m_memoryProperties));
 
-            printf("Num memory types: %d\n", m_devices[i].m_memoryProperties.memoryTypeCount);
+            MARK_DEBUG("    Num memory types: %d", m_devices[i].m_memoryProperties.memoryTypeCount);
 
             for (uint32_t j = 0; j < m_devices[i].m_memoryProperties.memoryTypeCount; j++)
             {
-                printf("%d: flags %x heap %d ", j,
+                MARK_DEBUG("    %d: flags %x heap %d ", j,
                     m_devices[i].m_memoryProperties.memoryTypes[j].propertyFlags,
                     m_devices[i].m_memoryProperties.memoryTypes[j].heapIndex);
 
                 printMemoryProperty(m_devices[i].m_memoryProperties.memoryTypes[j].propertyFlags);
-                printf("\n");
             }
 
-            printf("Num memory heaps: %d\n", m_devices[i].m_memoryProperties.memoryHeapCount);
-            printf("\n");
+            MARK_DEBUG("    Num memory heaps: %d", m_devices[i].m_memoryProperties.memoryHeapCount);
 
             vkGetPhysicalDeviceFeatures(currentDevice, &m_devices[i].m_features);
         }
@@ -127,7 +127,7 @@ namespace Mark::RendererVK
 
             uint32_t queueFamilyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, nullptr);
-            printf("    Queue Family Count: %d\n", queueFamilyCount);
+            MARK_DEBUG("    Queue Family Count: %d", queueFamilyCount);
 
             m_devices[i].m_queueFamilyProperties.resize(queueFamilyCount);
             surfaceProps.m_qSupportsPresent.resize(queueFamilyCount);
@@ -138,9 +138,9 @@ namespace Mark::RendererVK
             {
                 const VkQueueFamilyProperties& qFamilyProps = m_devices[i].m_queueFamilyProperties[q];
 
-                printf("    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
+                MARK_DEBUG("    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
                 VkQueueFlags flags = qFamilyProps.queueFlags;
-                printf("    GFX %s, Compute %s, Transfer %s, Sparse binding %s\n",
+                MARK_DEBUG("    GFX %s, Compute %s, Transfer %s, Sparse binding %s",
                     (flags & VK_QUEUE_GRAPHICS_BIT) ? "Yes" : "No",
                     (flags & VK_QUEUE_COMPUTE_BIT) ? "Yes" : "No",
                     (flags & VK_QUEUE_TRANSFER_BIT) ? "Yes" : "No",
@@ -163,7 +163,7 @@ namespace Mark::RendererVK
             for (uint32_t j = 0; j < formatCount; j++)
             {
                 const VkSurfaceFormatKHR& surfaceFormat = surfaceProps.m_surfaceFormats[j];
-                printf("    Format %d: %x colorspace %x\n", j, surfaceFormat.format, surfaceFormat.colorSpace);
+                MARK_DEBUG("    Format %d: %x colorspace %x", j, surfaceFormat.format, surfaceFormat.colorSpace);
             }
 
             res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(currentDevice, _surface, &(surfaceProps.m_surfaceCapabilities));
@@ -181,7 +181,7 @@ namespace Mark::RendererVK
             res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, surfaceProps.m_presentModes.data());
             CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes");
 
-            printf("Number of presentation modes: %d\n", presentModeCount);
+            MARK_DEBUG("Number of presentation modes: %d", presentModeCount);
 
             m_devices[i].m_surfacesLinked.push_back(surfaceProps);
         }
@@ -230,7 +230,7 @@ namespace Mark::RendererVK
             if (present == UINT32_MAX) continue;
 
             m_selectedDeviceIndex = static_cast<int>(i);
-            printf("Using device %u (%s), gfx family %u, present family %u\n", i, deviceProps.m_properties.deviceName, gfx, present);
+            MARK_INFO("Using device %u (%s), gfx family %u, present family %u", i, deviceProps.m_properties.deviceName, gfx, present);
 
             return selectDeviceResult{ 
                 .m_deviceIndex = i, 
@@ -248,9 +248,8 @@ namespace Mark::RendererVK
     {
         if (m_selectedDeviceIndex < 0)
         {
-            MARK_ERROR("A physical device has not been selected\n");
+            MARK_ERROR("A physical device has not been selected");
         }
-
         return m_devices[m_selectedDeviceIndex];
     }
 }

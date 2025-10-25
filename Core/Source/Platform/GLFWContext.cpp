@@ -1,4 +1,5 @@
 #include "GLFWContext.h"
+#include "Utils/MarkUtils.h"
 
 #include <GLFW/glfw3.h>
 
@@ -16,10 +17,12 @@ namespace Mark::Platform
         {
             if (!glfwInit() || !glfwVulkanSupported())
             {
-                throw std::runtime_error("Failed to initialize GLFW");
+                MARK_FATAL("Failed to initialize GLFW");
             }
-            glfwSetErrorCallback(+[](int e, const char* d){
-                std::fprintf(stderr, "[GLFW] (%d) %s\n", e, d);
+            glfwSetErrorCallback(+[](int _code, const char* _desc) noexcept {
+                if (_code == GLFW_OUT_OF_MEMORY) MARK_FATAL("[GLFW] Out of memory: %s", _desc);
+                if (_code == GLFW_PLATFORM_ERROR) MARK_LOG_ERROR("[GLFW] (%d) %s", _code, _desc);
+                else MARK_WARN("[GLFW] (%d) %s", _code, _desc);
             });
         }
     }

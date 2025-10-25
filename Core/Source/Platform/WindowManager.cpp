@@ -2,7 +2,7 @@
 #include "GLFWContext.h"
 #include "Window.h"
 #include "Renderer/MarkVulkanCore.h"
-#include "Utils/ErrorHandling.h"
+#include "Utils/MarkUtils.h"
 
 #include <GLFW/glfw3.h>
 #include <volk.h>
@@ -68,7 +68,7 @@ namespace Mark::Platform
         // Main window wants to close, stop running
         if (m_impl->m_windows.empty() || m_impl->m_windows.front()->shouldClose())
         {
-            printf("\n\n\n---Main window closed, terminating application.---\n");
+            MARK_INFO("---Main window closed, terminating application---");
             return false;
         }
         return true;

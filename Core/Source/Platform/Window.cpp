@@ -2,7 +2,7 @@
 #include "WindowManager.h"
 #include "Renderer/MarkVulkanCore.h"
 #include "Utils/VulkanUtils.h"
-#include "Utils/ErrorHandling.h"
+#include "Utils/MarkUtils.h"
 
 #include <GLFW/glfw3.h>
 #include <volk.h>
@@ -23,7 +23,7 @@ namespace Mark::Platform
         glfwSetWindowUserPointer(m_window, this);
         glfwSetKeyCallback(m_window, &Window::KeyCallback);
 
-        printf("GLFW Window Created: %s (%dx%d)\n", m_windowName.c_str(), _width, _height);
+        MARK_INFO("GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
 
         // Create Vulkan handler
         m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, m_window, _clearColour);
@@ -41,7 +41,7 @@ namespace Mark::Platform
             glfwSetWindowUserPointer(m_window, nullptr);
             glfwDestroyWindow(m_window);
             m_window = nullptr;
-            printf("GLFW Window Destroyed: %s\n", m_windowName.c_str());
+            MARK_INFO("GLFW Window Destroyed: %s", m_windowName.c_str());
         }
     }
 

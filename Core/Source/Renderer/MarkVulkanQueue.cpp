@@ -1,5 +1,6 @@
 #include "MarkVulkanQueue.h"
 #include "Utils/VulkanUtils.h"
+#include "Utils/MarkUtils.h"
 
 #include <stdio.h>
 
@@ -11,13 +12,13 @@ namespace Mark::RendererVK
 
         // Create the queue
         vkGetDeviceQueue(m_device, _queueFamily, _queueIndex, &m_queue);
-        printf("Vulkan queue acquired\n");
+        MARK_INFO("Vulkan queue acquired");
     }
 
     void VulkanQueue::destroy()
     {
         m_device = VK_NULL_HANDLE;
-        printf("Vulkan queue destroyed\n");
+        MARK_INFO("Vulkan queue destroyed");
     }
 
     void VulkanQueue::waitIdle()

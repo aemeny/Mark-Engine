@@ -1,6 +1,7 @@
 #include "MarkVulkanCommandBuffers.h"
 #include "MarkVulkanCore.h"
 #include "Utils/VulkanUtils.h"
+#include "Utils/MarkUtils.h"
 
 namespace Mark::RendererVK
 {
@@ -34,7 +35,7 @@ namespace Mark::RendererVK
 
         m_firstUseFlags.clear();
 
-        printf("Vulkan Command Buffers & Pool Destroyed\n");
+        MARK_INFO("Vulkan Command Buffers & Pool Destroyed");
     }
 
     void VulkanCommandBuffers::createCommandPool()
@@ -48,7 +49,7 @@ namespace Mark::RendererVK
         VkResult res = vkCreateCommandPool(m_vulkanCoreRef.lock()->device(), &cmdPoolCreateInfo, nullptr, &m_commandPool);
         CHECK_VK_RESULT(res, "Create command pool");
 
-        printf("Vulkan Command Pool Created\n");
+        MARK_INFO("Vulkan Command Pool Created");
     }
 
     void VulkanCommandBuffers::createCommandBuffers()
@@ -66,7 +67,7 @@ namespace Mark::RendererVK
         VkResult res = vkAllocateCommandBuffers(m_vulkanCoreRef.lock()->device(), &cmdBufferAllocInfo, m_commandBuffers.data());
         CHECK_VK_RESULT(res, "Allocate command buffers");
 
-        printf("Vulkan Command Buffers Allocated: %zu\n", m_commandBuffers.size());
+        MARK_DEBUG("Vulkan Command Buffers Allocated: %zu", m_commandBuffers.size());
     }
 
     void VulkanCommandBuffers::recordCommandBuffers(VkClearColorValue _clearColour)
@@ -81,7 +82,7 @@ namespace Mark::RendererVK
             CHECK_VK_RESULT(res, "End command buffer recording");
         }
 
-        printf("Vulkan Command Buffers Recorded\n");
+        MARK_INFO("Vulkan Command Buffers Recorded");
     }
 
     void VulkanCommandBuffers::beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags)

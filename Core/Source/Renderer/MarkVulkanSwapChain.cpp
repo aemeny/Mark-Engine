@@ -109,8 +109,8 @@ namespace Mark::RendererVK
         {
             vkDestroySwapchainKHR(m_vulkanCoreRef.lock()->device(), m_swapChain, nullptr);
             m_swapChain = VK_NULL_HANDLE;
-            printf("Vulkan Swap Chain Destroyed\n");
         }
+        MARK_INFO("Vulkan Swap Chain Destroyed");
     }
 
     void VulkanSwapChain::createSwapChain()
@@ -169,14 +169,14 @@ namespace Mark::RendererVK
                 VkResult res = vkCreateSwapchainKHR(m_vulkanCoreRef.lock()->device(), &swapChainCreateInfo, nullptr, &m_swapChain);
                 CHECK_VK_RESULT(res, "Create Swap Chain");
 
-                printf("Vulkan Swap Chain Created\n");
+                MARK_INFO("Vulkan Swap Chain Created");
 
                 uint32_t numSwapChainImages = 0;
                 res = vkGetSwapchainImagesKHR(m_vulkanCoreRef.lock()->device(), m_swapChain, &numSwapChainImages, nullptr);
                 CHECK_VK_RESULT(res, "Get Swap Chain Images Count");
                 assert(numImages == numSwapChainImages);
 
-                printf("Vulkan Swap Chain number of images: %u\n", numSwapChainImages);
+                MARK_DEBUG("Vulkan Swap Chain number of images: %u", numSwapChainImages);
 
                 m_swapChainImages.resize(numSwapChainImages);
                 m_swapChainImageViews.resize(numSwapChainImages);
