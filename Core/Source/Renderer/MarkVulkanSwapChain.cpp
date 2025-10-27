@@ -130,7 +130,7 @@ namespace Mark::RendererVK
 
                 VkPresentModeKHR presentMode = choosePresentMode(surfaceProps.m_presentModes);
 
-                VkSurfaceFormatKHR surfaceFormat = chooseSurfaceFormatAndColourSpace(surfaceProps.m_surfaceFormats);
+                m_surfaceFormat = chooseSurfaceFormatAndColourSpace(surfaceProps.m_surfaceFormats);
 
                 m_extent = surfaceCapabilities.currentExtent;
 
@@ -141,8 +141,8 @@ namespace Mark::RendererVK
                     .flags = 0,
                     .surface = m_surfaceRef,
                     .minImageCount = numImages,
-                    .imageFormat = surfaceFormat.format,
-                    .imageColorSpace = surfaceFormat.colorSpace,
+                    .imageFormat = m_surfaceFormat.format,
+                    .imageColorSpace = m_surfaceFormat.colorSpace,
                     .imageExtent = m_extent,
                     .imageArrayLayers = 1,
                     .imageUsage = (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT),
@@ -191,7 +191,7 @@ namespace Mark::RendererVK
                     m_swapChainImageViews[imgIdx] = createImageView(
                         m_vulkanCoreRef.lock()->device(),
                         m_swapChainImages[imgIdx],
-                        surfaceFormat.format,
+                        m_surfaceFormat.format,
                         VK_IMAGE_ASPECT_COLOR_BIT,
                         VK_IMAGE_VIEW_TYPE_2D,
                         layerCount,

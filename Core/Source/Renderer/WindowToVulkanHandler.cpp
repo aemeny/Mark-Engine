@@ -1,5 +1,6 @@
 #include "WindowToVulkanHandler.h"
 #include "MarkVulkanCore.h"
+#include "Platform/Window.h"
 #include "Utils/ErrorHandling.h"
 #include "Utils/VulkanUtils.h"
 
@@ -37,8 +38,8 @@ namespace Mark::RendererVK
         return fence; 
     }
 
-    WindowToVulkanHandler::WindowToVulkanHandler(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, GLFWwindow* _windowRef, VkClearColorValue _clearColour) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_window(_windowRef)
+    WindowToVulkanHandler::WindowToVulkanHandler(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_windowRef(_windowRef)
     {
         createSurface();
 
@@ -168,7 +169,7 @@ namespace Mark::RendererVK
             MARK_ERROR("VulkanCore reference expired, cannot create surface");
         }
 
-        VkResult res = glfwCreateWindowSurface(m_vulkanCoreRef.lock()->instance(), m_window, nullptr, &m_surface);
+        VkResult res = glfwCreateWindowSurface(m_vulkanCoreRef.lock()->instance(), m_windowRef.handle(), nullptr, &m_surface);
 
         CHECK_VK_RESULT(res, "Create window surface");
         MARK_INFO("GLFW Window Surface Created");

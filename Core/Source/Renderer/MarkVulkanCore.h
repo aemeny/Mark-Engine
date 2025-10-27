@@ -1,5 +1,6 @@
 #pragma once
 #include "MarkVulkanPhysicalDevices.h"
+#include "MarkVulkanRenderPassCache.h"
 #include "MarkVulkanQueue.h"
 
 namespace Mark { struct EngineAppInfo; }
@@ -50,5 +51,8 @@ namespace Mark::RendererVK
         VulkanPhysicalDevices m_physicalDevices;
         VulkanPhysicalDevices::selectDeviceResult m_selectedDeviceResult;
         VkDevice m_device{ VK_NULL_HANDLE };
+
+        // Shared across all windows on this device
+        std::unique_ptr<VulkanRenderPassCache> m_renderPassCache;
     };
 } // namespace Mark::RendererVK

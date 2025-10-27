@@ -21,7 +21,10 @@ namespace Mark::RendererVK
         int numImages() const { return static_cast<int>(m_swapChainImages.size()); }
         std::vector<VkImage>& swapChainImages() { return m_swapChainImages; }
         VkImage& swapChainImageAt(int _index) { return m_swapChainImages[_index]; }
+        std::vector<VkImageView>& swapChainImageViews() { return m_swapChainImageViews; }
+        VkImageView& swapChainImageViewAt(int _index) { return m_swapChainImageViews[_index]; }
         VkExtent2D extent() const { return m_extent; }
+        VkSurfaceFormatKHR surfaceFormat() const { return m_surfaceFormat; }
 
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
@@ -32,5 +35,6 @@ namespace Mark::RendererVK
         std::vector<VkImageView> m_swapChainImageViews;
 
         VkExtent2D m_extent{ 0, 0 };
+        VkSurfaceFormatKHR m_surfaceFormat;
     };
 } // namespace Mark::RendererVK

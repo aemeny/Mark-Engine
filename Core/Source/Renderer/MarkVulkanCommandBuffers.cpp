@@ -5,8 +5,8 @@
 
 namespace Mark::RendererVK
 {
-    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef)
+    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_renderPassRef(_renderPassRef)
     {}
 
     void VulkanCommandBuffers::destroyCommandBuffers()
@@ -72,11 +72,32 @@ namespace Mark::RendererVK
 
     void VulkanCommandBuffers::recordCommandBuffers(VkClearColorValue _clearColour)
     {
+        VkClearValue clearValue{ .color = _clearColour };
+        VkRenderPassBeginInfo renderPassBeginInfo = {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .pNext = nullptr,
+            .renderPass = m_renderPassRef.renderPass(),
+            .renderArea = {
+                .offset = {
+                    .x = 0,
+                    .y = 0
+                },
+                .extent = m_swapChainRef.extent()
+            },
+            .clearValueCount = 1,
+            .pClearValues = &clearValue
+        };
+
+        // Record each command buffer
         for (uint32_t i = 0; i < m_commandBuffers.size(); i++)
         {
             beginCommandBuffer(m_commandBuffers[i], VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
 
-            recordClearForImage(i, _clearColour);
+            renderPassBeginInfo.framebuffer = m_renderPassRef.frameBufferAt(i);
+
+            vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            vkCmdEndRenderPass(m_commandBuffers[i]);
 
             VkResult res = vkEndCommandBuffer(m_commandBuffers[i]);
             CHECK_VK_RESULT(res, "End command buffer recording");
@@ -97,68 +118,4 @@ namespace Mark::RendererVK
         VkResult res = vkBeginCommandBuffer(_cmdBuffer, &cmdBufferBeginInfo);
         CHECK_VK_RESULT(res, "Begin command buffer recording");
     }
-
-    void VulkanCommandBuffers::recordClearForImage(uint32_t _imageIndex, VkClearColorValue _clearColour)
-    {
-        if (_imageIndex >= m_commandBuffers.size())
-            MARK_ERROR("recordClearForImage: image index %u out of range (max %zu)", _imageIndex, m_commandBuffers.size());
-
-        const VkImage image = m_swapChainRef.swapChainImageAt(static_cast<int>(_imageIndex));
-        VkCommandBuffer cmdBuffer = m_commandBuffers[_imageIndex];
-
-        VkImageSubresourceRange imageRange{
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0, 
-            .levelCount = 1,
-            .baseArrayLayer = 0, 
-            .layerCount = 1
-        };
-
-        // Barrier: OLD -> TRANSFER_DST
-        VkImageMemoryBarrier toTransfer{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .pNext = nullptr,
-            .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .oldLayout = m_firstUseFlags[_imageIndex] ? VK_IMAGE_LAYOUT_UNDEFINED
-             : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = imageRange
-        };
-        vkCmdPipelineBarrier(cmdBuffer,
-            m_firstUseFlags[_imageIndex] ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT : VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            0, // Dependency Flags
-            0, nullptr, // Memory Barriers
-            0, nullptr, // Buffer Memory Barriers
-            1, &toTransfer // Image Memory Barriers
-        ); 
-
-        m_firstUseFlags[_imageIndex] = 0u; // Mark image as used
-
-        // Clear Image
-        vkCmdClearColorImage(cmdBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &_clearColour, 1, &imageRange);
-
-        // Barrier: TRANSFER_DST -> PRESENT
-        VkImageMemoryBarrier toPresent{
-            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-            .pNext = nullptr,
-            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-            .dstAccessMask = 0,
-            .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = image,
-            .subresourceRange = imageRange
-        };
-        vkCmdPipelineBarrier(cmdBuffer,
-            VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-            0, 0, nullptr, 0, nullptr, 1, &toPresent);
-    }
-
 } // namespace Mark::RendererVK

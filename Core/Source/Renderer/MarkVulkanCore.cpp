@@ -27,6 +27,12 @@ namespace Mark::RendererVK
     {
         if (m_device != VK_NULL_HANDLE)
         {
+            if (m_renderPassCache) 
+            {
+                m_renderPassCache->destroyAll(); 
+                m_renderPassCache.reset();
+            }
+
             m_presentQueue.destroy();
             m_graphicsQueue.destroy();
 
@@ -265,6 +271,9 @@ namespace Mark::RendererVK
 
         // Initialize queues now that device is created
         initializeQueue();
+
+        // Initialize render pass cache now that device is created
+        m_renderPassCache = std::make_unique<VulkanRenderPassCache>(m_device);
     }
 
     void VulkanCore::initializeQueue()

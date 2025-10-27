@@ -27,6 +27,7 @@ namespace Mark::Platform
         bool isFullscreen() const { return m_isFullscreen; }
 
         void frameBufferSize(int& _width, int& _height) const;
+        std::array<int, 2> windowSize() const { return { m_width, m_height }; };
 
         void waitUntilFramebufferValid() const;
 

@@ -26,7 +26,7 @@ namespace Mark::Platform
         MARK_INFO("GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
 
         // Create Vulkan handler
-        m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, m_window, _clearColour);
+        m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, *this, _clearColour);
     }
 
     Window::~Window()

@@ -6,12 +6,12 @@
 #include <array>
 
 struct GLFWwindow;
-
+namespace Mark::Platform { struct Window; }
 namespace Mark::RendererVK
 {
     struct WindowToVulkanHandler 
     {
-        WindowToVulkanHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef, GLFWwindow* _window, VkClearColorValue _clearColour);
+        WindowToVulkanHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour);
         ~WindowToVulkanHandler();
         WindowToVulkanHandler(const WindowToVulkanHandler&) = delete;
         WindowToVulkanHandler& operator=(const WindowToVulkanHandler&) = delete;
@@ -25,11 +25,12 @@ namespace Mark::RendererVK
         void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
 
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
-        GLFWwindow* m_window;
+        Platform::Window& m_windowRef;
 
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
-        VulkanCommandBuffers m_commandBuffers{ m_vulkanCoreRef, m_swapChain };
+        VulkanRenderPass m_renderPass{ m_vulkanCoreRef, m_swapChain, m_windowRef };
+        VulkanCommandBuffers m_commandBuffers{ m_vulkanCoreRef, m_swapChain, m_renderPass };
 
         struct FrameSyncData
         {

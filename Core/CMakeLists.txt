@@ -30,6 +30,10 @@ Source/Renderer/MarkVulkanCommandBuffers.h
 Source/Renderer/MarkVulkanCommandBuffers.cpp
 Source/Renderer/MarkVulkanQueue.h
 Source/Renderer/MarkVulkanQueue.cpp
+Source/Renderer/MarkVulkanRenderPassCache.h
+Source/Renderer/MarkVulkanRenderPassCache.cpp
+Source/Renderer/MarkVulkanRenderPass.h
+Source/Renderer/MarkVulkanRenderPass.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})
