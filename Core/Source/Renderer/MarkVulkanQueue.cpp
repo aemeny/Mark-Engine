@@ -17,13 +17,14 @@ namespace Mark::RendererVK
 
     void VulkanQueue::destroy()
     {
+        m_queue = VK_NULL_HANDLE;
         m_device = VK_NULL_HANDLE;
         MARK_INFO("Vulkan queue destroyed");
     }
 
     void VulkanQueue::waitIdle()
     {
-        vkQueueWaitIdle(m_queue);
+        if (m_queue) vkQueueWaitIdle(m_queue);
     }
 
     void VulkanQueue::acquireNextImage(VkSwapchainKHR _swapchain, VkSemaphore _imageAvailable, VkFence _fence, uint32_t* _outImageIndex)

@@ -24,9 +24,9 @@ inline const char* GetDebugSeverityStr(VkDebugUtilsMessageSeverityFlagBitsEXT _s
     }
     return "NOT REAL SEVERITY STRENGTH!";
 }
-inline ::Mark::Utils::Level VkSeverityToLevel(VkDebugUtilsMessageSeverityFlagBitsEXT _seversity)
+inline ::Mark::Utils::Level VkSeverityToLevel(VkDebugUtilsMessageSeverityFlagBitsEXT _severity)
 {
-    switch (_seversity)
+    switch (_severity)
     {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: return ::Mark::Utils::Level::Debug;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:    return ::Mark::Utils::Level::Info;
@@ -35,14 +35,13 @@ inline ::Mark::Utils::Level VkSeverityToLevel(VkDebugUtilsMessageSeverityFlagBit
     default:                                              return ::Mark::Utils::Level::Trace;
     }
 }
-inline const char* GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)
+inline std::string GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)
 {
-    switch (_type)
-    {
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:     return "General";
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:  return "Validation";
-    case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT: return "Performance";
-    default:                                              return "Invalid type code";
-    }
-    return "NOT REAL TYPE!";
+    std::string s;
+    if (_type & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)     s += "General|";
+    if (_type & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)  s += "Validation|";
+    if (_type & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) s += "Performance|";
+    if (s.empty()) s = "Unknown";
+    else s.pop_back(); // drop ending '|'
+    return s;
 }

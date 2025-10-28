@@ -120,7 +120,7 @@ namespace Mark::RendererVK
             .applicationVersion = VK_MAKE_API_VERSION(_appInfo.appVersion[0], _appInfo.appVersion[1], _appInfo.appVersion[2], _appInfo.appVersion[3]),
             .pEngineName = "Mark",
             .engineVersion = VK_MAKE_API_VERSION(0, 1, 0, 0),
-            .apiVersion = VK_API_VERSION_1_4
+            .apiVersion = VK_API_VERSION_1_3
         };
 
         VkInstanceCreateInfo createInfo = {

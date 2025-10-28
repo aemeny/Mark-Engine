@@ -1,4 +1,5 @@
 #pragma once
+#include "MarkVulkanRenderPassCache.h"
 #include "Utils/MarkUtils.h"
 #include <volk.h>
 #include <memory>
@@ -16,16 +17,16 @@ namespace Mark::RendererVK
         VulkanRenderPass(const VulkanRenderPass&) = delete;
         VulkanRenderPass& operator=(const VulkanRenderPass&) = delete;
 
-        const VkRenderPass& renderPass() const { return m_renderPass; }
-        const VkFramebuffer& frameBufferAt(uint32_t _index) const 
-        { 
-            if (_index >= m_frameBuffers.size()) 
-                MARK_ERROR("Framebuffer index %u out of range (max %zu)", _index, m_frameBuffers.size()); 
-            return m_frameBuffers[_index]; 
+        VkRenderPass renderPass() const { return m_renderPassRef.get(); }
+        const VkFramebuffer& frameBufferAt(uint32_t _index) const
+        {
+            if (_index >= m_frameBuffers.size()) MARK_ERROR("Framebuffer index %u out of range (max %zu)", _index, m_frameBuffers.size());
+            return m_frameBuffers[_index];
         }
 
-        // Create simple render pass with one sub-pass
-        VkRenderPass createSimpleRenderPass();
+        // Acquire a VkRenderPass from the device cache, then build framebuffers
+        void initWithCache(VulkanRenderPassCache& _cache, const VulkanRenderPassKey& _key);
+        void destroyFrameBuffers();
         std::vector<VkFramebuffer> createFrameBuffers(VkRenderPass _renderPass);
 
     private:
@@ -33,7 +34,10 @@ namespace Mark::RendererVK
         VulkanSwapChain& m_swapChainRef;
         Platform::Window& m_windowRef;
 
-        VkRenderPass m_renderPass = VK_NULL_HANDLE;
+        VulkanRenderPassRef m_renderPassRef; // From cache
         std::vector<VkFramebuffer> m_frameBuffers;
     };
+
+    // Factory used by the cache to create the pass for a given key
+    VkRenderPass CreateSimpleRenderPassForKey(VkDevice _device, const VulkanRenderPassKey& _key);
 } // namespace Mark::RendererVK

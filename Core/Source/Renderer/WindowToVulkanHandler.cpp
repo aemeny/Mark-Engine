@@ -49,6 +49,16 @@ namespace Mark::RendererVK
 
         m_swapChain.createSwapChain();
 
+        // Acquire or share a render pass from the device cache
+        {
+            VulkanRenderPassKey key = VulkanRenderPassKey::Make(
+                m_swapChain.surfaceFormat().format,   // Colour format for this window
+                VK_FORMAT_UNDEFINED,                  // No depth
+                VK_SAMPLE_COUNT_1_BIT
+            );
+            m_renderPass.initWithCache(VkCore->renderPassCache(), key);
+        }
+
         // Create frame data sync objects
         m_imagesInFlight.assign(m_swapChain.numImages(), VK_NULL_HANDLE);
         m_presentSems.resize(m_swapChain.numImages());
@@ -73,14 +83,18 @@ namespace Mark::RendererVK
         if (m_vulkanCoreRef.expired()) { MARK_ERROR("VulkanCore reference expired, cannot destroy surface"); }
         auto VkCore = m_vulkanCoreRef.lock();
 
-        // Wait for device idle before destroying resources
+        // Ensure GPU finished with this window's work before destroying resources
         VkCore->graphicsQueue().waitIdle();
+        VkCore->presentQueue().waitIdle();
 
         // Destroy frame data sync objects
         destroyFrameSyncObjects(VkCore);
 
         // Destroy command buffers and pool
         m_commandBuffers.destroyCommandBuffers();
+
+        // Destroy framebuffers before swap chain for references used there
+        m_renderPass.destroyFrameBuffers();
 
         // Explicitly destroy swap chain before surface
         m_swapChain.destroySwapChain();
@@ -151,7 +165,7 @@ namespace Mark::RendererVK
         VkSemaphore presentSem = m_presentSems[imageIndex];
         if (presentSem == VK_NULL_HANDLE) MARK_ERROR("presentSem is VK_NULL_HANDLE!");
 
-        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         graphicsQueue.submit(cmdBuffer, frameSyncData.m_imageAvailableSem, waitStage, presentSem, frameSyncData.m_inFlightFence);
 
         // Present the window

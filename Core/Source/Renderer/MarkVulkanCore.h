@@ -21,6 +21,7 @@ namespace Mark::RendererVK
         void selectDevicesForSurface(VkSurfaceKHR _surface);
         VulkanPhysicalDevices& physicalDevices() { return m_physicalDevices; }
         VkDevice& device() { return m_device; }
+        VulkanRenderPassCache& renderPassCache() { return *m_renderPassCache; }
 
         // Queue getters
         uint32_t graphicsQueueFamilyIndex() const { return m_selectedDeviceResult.m_gtxQueueFamilyIndex; }

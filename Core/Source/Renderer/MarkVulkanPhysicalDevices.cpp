@@ -74,6 +74,8 @@ namespace Mark::RendererVK
         VkResult res = vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
         CHECK_VK_RESULT(res, "Enumerate Physical Devices Count");
 
+        if (deviceCount == 0) 
+            MARK_ERROR("No Vulkan physical devices found");
         MARK_DEBUG("Found %u Physical Devices", deviceCount);
 
         m_devices.resize(deviceCount);
@@ -153,7 +155,8 @@ namespace Mark::RendererVK
             uint32_t formatCount = 0;
             VkResult res = vkGetPhysicalDeviceSurfaceFormatsKHR(currentDevice, _surface, &formatCount, nullptr);
             CHECK_VK_RESULT(res, "Get Physical Device Surface Formats Count");
-            assert(formatCount > 0);
+            if (formatCount == 0)
+                MARK_ERROR("No surface formats reported for device '%s'", m_devices[i].m_properties.deviceName);
 
             surfaceProps.m_surfaceFormats.resize(formatCount);
 
@@ -174,7 +177,8 @@ namespace Mark::RendererVK
             uint32_t presentModeCount = 0;
             res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, nullptr);
             CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes Count");
-            assert(presentModeCount != 0);
+            if (presentModeCount == 0)
+                MARK_ERROR("No present modes reported for device '%s'", m_devices[i].m_properties.deviceName);
 
             surfaceProps.m_presentModes.resize(presentModeCount);
 

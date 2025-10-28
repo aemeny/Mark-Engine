@@ -9,7 +9,7 @@ namespace Mark::RendererVK
     {
         struct SurfaceProperties
         {
-            const VkSurfaceKHR& m_surface;
+            VkSurfaceKHR m_surface;
             std::vector<VkBool32> m_qSupportsPresent;
             std::vector<VkSurfaceFormatKHR> m_surfaceFormats;
             VkSurfaceCapabilitiesKHR m_surfaceCapabilities;

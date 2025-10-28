@@ -13,16 +13,16 @@ namespace Mark::RendererVK
         void destroyCommandBuffers();
         VulkanCommandBuffers(const VulkanCommandBuffers&) = delete;
         VulkanCommandBuffers& operator=(const VulkanCommandBuffers&) = delete;
-        
+
         void createCommandPool();
-        void createCommandBuffers(); 
+        void createCommandBuffers();
         void recordCommandBuffers(VkClearColorValue _clearColour);
 
-        VkCommandBuffer commandBuffer(uint32_t _index) 
-        { 
-            if (_index >= m_commandBuffers.size()) 
-                MARK_ERROR("Command buffer index %u out of range (max %zu)", _index, m_commandBuffers.size()); 
-            return m_commandBuffers[_index]; 
+        VkCommandBuffer commandBuffer(uint32_t _index)
+        {
+            if (_index >= m_commandBuffers.size())
+                MARK_ERROR("Command buffer index %u out of range (max %zu)", _index, m_commandBuffers.size());
+            return m_commandBuffers[_index];
         }
 
     private:
@@ -34,8 +34,5 @@ namespace Mark::RendererVK
         std::vector<VkCommandBuffer> m_commandBuffers;
 
         void beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags);
-        
-        // Track first-use per image so we know the correct oldLayout
-        std::vector<uint8_t> m_firstUseFlags; // 1 = first use, 0 = used before
     };
 } // namespace Mark::RendererVK

@@ -5,6 +5,9 @@
 #include <thread>
 #include <string>
 #include <ctime>
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
 #if defined(_WIN32)
     #ifndef NOMINMAX
         #define NOMINMAX
@@ -13,6 +16,9 @@
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <windows.h>
+    #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+    #endif
 #endif
 
 namespace Mark::Utils
