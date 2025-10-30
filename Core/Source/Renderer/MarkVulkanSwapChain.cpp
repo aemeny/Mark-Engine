@@ -53,7 +53,7 @@ namespace Mark::RendererVK
         // Otherwise use FIFO which is guaranteed to be supported
         return VK_PRESENT_MODE_FIFO_KHR;
     }
-    VkImageView createImageView(VkDevice _device, VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags, 
+    static VkImageView createImageView(VkDevice _device, VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags, 
         VkImageViewType _viewType, uint32_t _layerCount, uint32_t _mipLevels)
     {
         VkImageViewCreateInfo viewCreateInfo{
@@ -110,7 +110,7 @@ namespace Mark::RendererVK
             vkDestroySwapchainKHR(m_vulkanCoreRef.lock()->device(), m_swapChain, nullptr);
             m_swapChain = VK_NULL_HANDLE;
         }
-        MARK_INFO("Vulkan Swap Chain Destroyed");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Swap Chain Destroyed");
     }
 
     void VulkanSwapChain::createSwapChain()
@@ -169,14 +169,14 @@ namespace Mark::RendererVK
                 VkResult res = vkCreateSwapchainKHR(m_vulkanCoreRef.lock()->device(), &swapChainCreateInfo, nullptr, &m_swapChain);
                 CHECK_VK_RESULT(res, "Create Swap Chain");
 
-                MARK_INFO("Vulkan Swap Chain Created");
+                MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Swap Chain Created");
 
                 uint32_t numSwapChainImages = 0;
                 res = vkGetSwapchainImagesKHR(m_vulkanCoreRef.lock()->device(), m_swapChain, &numSwapChainImages, nullptr);
                 CHECK_VK_RESULT(res, "Get Swap Chain Images Count");
                 assert(numImages == numSwapChainImages);
 
-                MARK_DEBUG("Vulkan Swap Chain number of images: %u", numSwapChainImages);
+                MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Swap Chain number of images: %u", numSwapChainImages);
 
                 m_swapChainImages.resize(numSwapChainImages);
                 m_swapChainImageViews.resize(numSwapChainImages);

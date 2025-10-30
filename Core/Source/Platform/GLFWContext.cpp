@@ -21,8 +21,8 @@ namespace Mark::Platform
             }
             glfwSetErrorCallback(+[](int _code, const char* _desc) noexcept {
                 if (_code == GLFW_OUT_OF_MEMORY) MARK_FATAL("[GLFW] Out of memory: %s", _desc);
-                if (_code == GLFW_PLATFORM_ERROR) MARK_LOG_ERROR("[GLFW] (%d) %s", _code, _desc);
-                else MARK_WARN("[GLFW] (%d) %s", _code, _desc);
+                if (_code == GLFW_PLATFORM_ERROR) MARK_LOG_ERROR_C(Utils::Category::GLFW, "(%d) %s", _code, _desc);
+                else MARK_WARN_C(Utils::Category::GLFW, "(%d) %s", _code, _desc);
             });
         }
     }

@@ -103,7 +103,7 @@ namespace Mark::RendererVK
         {
             vkDestroySurfaceKHR(VkCore->instance(), m_surface, nullptr);
             m_surface = VK_NULL_HANDLE;
-            MARK_INFO("GLFW Window Surface Destroyed");
+            MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Destroyed");
         }
     }
 
@@ -121,7 +121,7 @@ namespace Mark::RendererVK
             if (semaphore) vkDestroySemaphore(_VkCoreRef->device(), semaphore, nullptr);
         }
 
-        MARK_INFO("Window Frame Sync Objects Destroyed");
+        MARK_INFO_C(Utils::Category::Vulkan, "Window Frame Sync Objects Destroyed");
     }
 
     void WindowToVulkanHandler::renderToWindow()
@@ -186,6 +186,6 @@ namespace Mark::RendererVK
         VkResult res = glfwCreateWindowSurface(m_vulkanCoreRef.lock()->instance(), m_windowRef.handle(), nullptr, &m_surface);
 
         CHECK_VK_RESULT(res, "Create window surface");
-        MARK_INFO("GLFW Window Surface Created");
+        MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Created");
     }
 } // namespace Mark::RendererVK

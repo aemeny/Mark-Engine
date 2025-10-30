@@ -35,6 +35,6 @@ namespace Mark::RendererVK
         std::vector<VkImageView> m_swapChainImageViews;
 
         VkExtent2D m_extent{ 0, 0 };
-        VkSurfaceFormatKHR m_surfaceFormat;
+        VkSurfaceFormatKHR m_surfaceFormat{ VK_FORMAT_UNDEFINED };
     };
 } // namespace Mark::RendererVK

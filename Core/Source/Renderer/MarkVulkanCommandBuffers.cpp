@@ -13,7 +13,7 @@ namespace Mark::RendererVK
     {
         if (m_vulkanCoreRef.expired())
         {
-            MARK_LOG_ERROR("VulkanCore reference expired, cannot destroy command buffers");
+            MARK_LOG_ERROR_C(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy command buffers");
         }
         auto VkCore = m_vulkanCoreRef.lock();
 
@@ -33,7 +33,7 @@ namespace Mark::RendererVK
             m_commandPool = VK_NULL_HANDLE;
         }
 
-        MARK_INFO("Vulkan Command Buffers & Pool Destroyed");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Buffers & Pool Destroyed");
     }
 
     void VulkanCommandBuffers::createCommandPool()
@@ -47,7 +47,7 @@ namespace Mark::RendererVK
         VkResult res = vkCreateCommandPool(m_vulkanCoreRef.lock()->device(), &cmdPoolCreateInfo, nullptr, &m_commandPool);
         CHECK_VK_RESULT(res, "Create command pool");
 
-        MARK_INFO("Vulkan Command Pool Created");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Pool Created");
     }
 
     void VulkanCommandBuffers::createCommandBuffers()
@@ -64,7 +64,7 @@ namespace Mark::RendererVK
         VkResult res = vkAllocateCommandBuffers(m_vulkanCoreRef.lock()->device(), &cmdBufferAllocInfo, m_commandBuffers.data());
         CHECK_VK_RESULT(res, "Allocate command buffers");
 
-        MARK_DEBUG("Vulkan Command Buffers Allocated: %zu", m_commandBuffers.size());
+        MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Command Buffers Allocated: %zu", m_commandBuffers.size());
     }
 
     void VulkanCommandBuffers::recordCommandBuffers(VkClearColorValue _clearColour)
@@ -100,7 +100,7 @@ namespace Mark::RendererVK
             CHECK_VK_RESULT(res, "End command buffer recording");
         }
 
-        MARK_INFO("Vulkan Command Buffers Recorded");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Buffers Recorded");
     }
 
     void VulkanCommandBuffers::beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags)

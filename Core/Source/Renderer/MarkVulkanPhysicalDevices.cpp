@@ -10,31 +10,31 @@ namespace Mark::RendererVK
     {
         if (_flags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
         {
-            MARK_DEBUG("Image usage transfer src is supported");
+            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage transfer src is supported");
         }
         if (_flags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
         {
-            MARK_DEBUG("Image usage transfer dest is supported");
+            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage transfer dest is supported");
         }
         if (_flags & VK_IMAGE_USAGE_SAMPLED_BIT)
         {
-            MARK_DEBUG("Image usage sampled is supported");
+            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage sampled is supported");
         }
         if (_flags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
         {
-            MARK_DEBUG("Image usage color attachment is supported");
+            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage color attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
-            MARK_DEBUG("Image usage depth stencil attachment is supported");
+            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage depth stencil attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
         {
-            MARK_DEBUG("Image usage transient attachment is supported");
+            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage transient attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
         {
-            MARK_DEBUG("Image usage input attachment is supported");
+            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage input attachment is supported");
         }
     }
     static void printMemoryProperty(VkMemoryPropertyFlags _PropertyFlags)
@@ -64,7 +64,7 @@ namespace Mark::RendererVK
         {
             out += "PROTECTED ";
         }
-        MARK_DEBUG("%s", out.c_str());
+        MARK_DEBUG_C(Utils::Category::Vulkan, "%s", out.c_str());
     }
 
     void VulkanPhysicalDevices::initialize(const VkInstance& _instance)
@@ -76,7 +76,7 @@ namespace Mark::RendererVK
 
         if (deviceCount == 0) 
             MARK_ERROR("No Vulkan physical devices found");
-        MARK_DEBUG("Found %u Physical Devices", deviceCount);
+        MARK_DEBUG_C(Utils::Category::Vulkan, "Found %u Physical Devices", deviceCount);
 
         m_devices.resize(deviceCount);
 
@@ -93,9 +93,9 @@ namespace Mark::RendererVK
 
             vkGetPhysicalDeviceProperties(currentDevice, &m_devices[i].m_properties);
 
-            MARK_DEBUG("Device name: %s", m_devices[i].m_properties.deviceName);
+            MARK_SCOPE_C_L(Utils::Category::Vulkan, Utils::Level::Debug, "Device name: %s", m_devices[i].m_properties.deviceName);
             uint32_t apiVersion = m_devices[i].m_properties.apiVersion;
-            MARK_DEBUG("    API Version: %d.%d.%d.%d",
+            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    API Version: %d.%d.%d.%d",
                 VK_API_VERSION_VARIANT(apiVersion),
                 VK_API_VERSION_MAJOR(apiVersion),
                 VK_API_VERSION_MINOR(apiVersion),
@@ -103,18 +103,18 @@ namespace Mark::RendererVK
 
             vkGetPhysicalDeviceMemoryProperties(currentDevice, &(m_devices[i].m_memoryProperties));
 
-            MARK_DEBUG("    Num memory types: %d", m_devices[i].m_memoryProperties.memoryTypeCount);
+            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory types: %d", m_devices[i].m_memoryProperties.memoryTypeCount);
 
             for (uint32_t j = 0; j < m_devices[i].m_memoryProperties.memoryTypeCount; j++)
             {
-                MARK_DEBUG("    %d: flags %x heap %d ", j,
+                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    %d: flags %x heap %d ", j,
                     m_devices[i].m_memoryProperties.memoryTypes[j].propertyFlags,
                     m_devices[i].m_memoryProperties.memoryTypes[j].heapIndex);
 
                 printMemoryProperty(m_devices[i].m_memoryProperties.memoryTypes[j].propertyFlags);
             }
 
-            MARK_DEBUG("    Num memory heaps: %d", m_devices[i].m_memoryProperties.memoryHeapCount);
+            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory heaps: %d", m_devices[i].m_memoryProperties.memoryHeapCount);
 
             vkGetPhysicalDeviceFeatures(currentDevice, &m_devices[i].m_features);
         }
@@ -129,7 +129,7 @@ namespace Mark::RendererVK
 
             uint32_t queueFamilyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, nullptr);
-            MARK_DEBUG("    Queue Family Count: %d", queueFamilyCount);
+            MARK_SCOPE_C_L(Utils::Category::Vulkan, Utils::Level::Debug, "    Queue Family Count: %d", queueFamilyCount);
 
             m_devices[i].m_queueFamilyProperties.resize(queueFamilyCount);
             surfaceProps.m_qSupportsPresent.resize(queueFamilyCount);
@@ -140,9 +140,9 @@ namespace Mark::RendererVK
             {
                 const VkQueueFamilyProperties& qFamilyProps = m_devices[i].m_queueFamilyProperties[q];
 
-                MARK_DEBUG("    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
+                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
                 VkQueueFlags flags = qFamilyProps.queueFlags;
-                MARK_DEBUG("    GFX %s, Compute %s, Transfer %s, Sparse binding %s",
+                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    GFX %s, Compute %s, Transfer %s, Sparse binding %s",
                     (flags & VK_QUEUE_GRAPHICS_BIT) ? "Yes" : "No",
                     (flags & VK_QUEUE_COMPUTE_BIT) ? "Yes" : "No",
                     (flags & VK_QUEUE_TRANSFER_BIT) ? "Yes" : "No",
@@ -166,7 +166,7 @@ namespace Mark::RendererVK
             for (uint32_t j = 0; j < formatCount; j++)
             {
                 const VkSurfaceFormatKHR& surfaceFormat = surfaceProps.m_surfaceFormats[j];
-                MARK_DEBUG("    Format %d: %x colorspace %x", j, surfaceFormat.format, surfaceFormat.colorSpace);
+                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Format %d: %x colorspace %x", j, surfaceFormat.format, surfaceFormat.colorSpace);
             }
 
             res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(currentDevice, _surface, &(surfaceProps.m_surfaceCapabilities));
@@ -185,7 +185,7 @@ namespace Mark::RendererVK
             res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, surfaceProps.m_presentModes.data());
             CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes");
 
-            MARK_DEBUG("Number of presentation modes: %d", presentModeCount);
+            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "Number of presentation modes: %d", presentModeCount);
 
             m_devices[i].m_surfacesLinked.push_back(surfaceProps);
         }
@@ -234,7 +234,7 @@ namespace Mark::RendererVK
             if (present == UINT32_MAX) continue;
 
             m_selectedDeviceIndex = static_cast<int>(i);
-            MARK_INFO("Using device %u (%s), gfx family %u, present family %u", i, deviceProps.m_properties.deviceName, gfx, present);
+            MARK_INFO_C(Utils::Category::Vulkan, "Using device %u (%s), gfx family %u, present family %u", i, deviceProps.m_properties.deviceName, gfx, present);
 
             return selectDeviceResult{ 
                 .m_deviceIndex = i, 

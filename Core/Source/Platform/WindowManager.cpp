@@ -68,7 +68,7 @@ namespace Mark::Platform
         // Main window wants to close, stop running
         if (m_impl->m_windows.empty() || m_impl->m_windows.front()->shouldClose())
         {
-            MARK_INFO("---Main window closed, terminating application---");
+            MARK_INFO_C(Utils::Category::Engine, "---Main window closed, terminating application---");
             return false;
         }
         return true;

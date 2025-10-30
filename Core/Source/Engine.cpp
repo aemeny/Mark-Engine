@@ -15,16 +15,15 @@ namespace Mark
             true, // Use colour in logs
             false // Append to file?
         );
-        MARK_INFO("Program Boot");
 
         // Initialize the engines core
-        MARK_INFO("Core Initialization");
+        MARK_INFO_C(Utils::Category::Engine, "Core Initialization");
         Core engineCore(_appInfo);
 
         // Run the main loop
         try
         {
-            MARK_INFO("Core Run() Called");
+            MARK_INFO_C(Utils::Category::Engine, "Core Run() Called");
             engineCore.run();
         }
         catch (const std::exception& e)

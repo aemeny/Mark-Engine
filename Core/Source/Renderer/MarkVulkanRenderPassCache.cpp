@@ -34,7 +34,7 @@ namespace Mark::RendererVK
         if (it != m_map.end()) 
         {
             it->second.refCount++;
-            MARK_DEBUG("RenderPass-Cache reuse: refs=%u (entries=%zu)", it->second.refCount, m_map.size());
+            MARK_DEBUG_C(Utils::Category::Vulkan, "RenderPass-Cache reuse: refs=%u (entries=%zu)", it->second.refCount, m_map.size());
             return VulkanRenderPassRef(this, _key, it->second.renderPass);
         }
 
@@ -42,7 +42,7 @@ namespace Mark::RendererVK
         VkRenderPass rp = _creator ? _creator(_key) : VK_NULL_HANDLE;
         if (rp == VK_NULL_HANDLE) 
         {
-            MARK_LOG_ERROR("RenderPass-Cache: creator returned null render pass");
+            MARK_LOG_ERROR_C(Utils::Category::Vulkan, "RenderPass-Cache: creator returned null render pass");
             return VulkanRenderPassRef{};
         }
 
@@ -51,7 +51,7 @@ namespace Mark::RendererVK
         e.refCount = 1;
         m_map.emplace(_key, e);
 
-        MARK_INFO("RenderPass-Cache create: entries=%zu", m_map.size());
+        MARK_INFO_C(Utils::Category::Vulkan, "RenderPass-Cache create: entries=%zu", m_map.size());
         return VulkanRenderPassRef(this, _key, rp);
     }
 

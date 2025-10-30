@@ -39,21 +39,21 @@ namespace Mark::RendererVK
             vkDeviceWaitIdle(m_device);
             vkDestroyDevice(m_device, nullptr);
             m_device = VK_NULL_HANDLE;
-            MARK_INFO("Vulkan Logical Device Destroyed");
+            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Logical Device Destroyed");
         }
 
         if (m_debugMessenger != VK_NULL_HANDLE)
         {
             vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
             m_debugMessenger = VK_NULL_HANDLE;
-            MARK_INFO("Vulkan Debug Callback Destroyed");
+            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Debug Callback Destroyed");
         }
 
         if (m_instance != VK_NULL_HANDLE)
         {
             vkDestroyInstance(m_instance, nullptr);
             m_instance = VK_NULL_HANDLE;
-            MARK_INFO("Vulkan Instance Destroyed");
+            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Destroyed");
         }
     }
 
@@ -137,7 +137,7 @@ namespace Mark::RendererVK
         res = vkCreateInstance(&createInfo, nullptr, &m_instance);
         CHECK_VK_RESULT(res, "Create Vk Instance");
         volkLoadInstance(m_instance);
-        MARK_INFO("Vulkan Instance Created");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Created");
     }
 
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
@@ -147,14 +147,16 @@ namespace Mark::RendererVK
         void* _pUserData)
     {
         const auto severityLevel = VkSeverityToLevel(_severity);
-        MARK_LOG_WRITE(severityLevel, "Vulkan Debug Callback: %s", _pCallbackData->pMessage);
-        MARK_LOG_WRITE(severityLevel, "    Severity: %s", GetDebugSeverityStr(_severity));
-        MARK_LOG_WRITE(severityLevel, "    Type: %s", GetDebugType(_type));
-        MARK_LOG_WRITE(severityLevel, "    Objects ");
+
+        MARK_SCOPE_C_L(Utils::Category::Vulkan, severityLevel, "Vulkan Debug Callback:");
+        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    %s", _pCallbackData->pMessage);
+        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    Severity: %s", GetDebugSeverityStr(_severity));
+        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    Type: %s", GetDebugType(_type));
+        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    Objects ");
 
         for (uint32_t i = 0; i < _pCallbackData->objectCount; i++)
         {
-            MARK_LOG_WRITE(severityLevel, "%" PRIx64 " ", _pCallbackData->pObjects[i].objectHandle);
+            MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "%" PRIx64 " ", _pCallbackData->pObjects[i].objectHandle);
         }
 
         return VK_FALSE; // VK_FALSE indicates that the Vulkan call that triggered the validation layer message should not be aborted
@@ -180,7 +182,7 @@ namespace Mark::RendererVK
         VkResult res = vkCreateDebugUtilsMessengerEXT(m_instance, &messengerCreateInfo, nullptr, &m_debugMessenger);
         CHECK_VK_RESULT(res, "Create Debug Utils Messenger");
 
-        MARK_INFO("Vulkan Debug Callback Created");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Debug Callback Created");
     }
 
     void VulkanCore::createLogicalDevice()
@@ -267,7 +269,7 @@ namespace Mark::RendererVK
         // Load device for volk to be able to call device functions
         volkLoadDevice(m_device);
 
-        MARK_INFO("Logical Device Created");
+        MARK_INFO_C(Utils::Category::Vulkan, "Logical Device Created");
 
         // Initialize queues now that device is created
         initializeQueue();
@@ -279,16 +281,16 @@ namespace Mark::RendererVK
     void VulkanCore::initializeQueue()
     {
         m_graphicsQueue.initialize(m_device, m_selectedDeviceResult.m_gtxQueueFamilyIndex, 0);
-        MARK_INFO("Vulkan Graphics Queue Initialized");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Queue Initialized");
 
         if (m_selectedDeviceResult.m_presentQueueFamilyIndex != m_selectedDeviceResult.m_gtxQueueFamilyIndex) 
         {
             m_presentQueue.initialize(m_device, m_selectedDeviceResult.m_presentQueueFamilyIndex, 0);
-            MARK_INFO("Vulkan Present Queue Initialized");
+            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Present Queue Initialized");
         }
         else 
         {
-            MARK_INFO("Vulkan Present Queue uses Graphics Queue");
+            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Present Queue uses Graphics Queue");
         }
     }
 

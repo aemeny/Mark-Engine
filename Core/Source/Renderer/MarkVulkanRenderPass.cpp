@@ -69,7 +69,7 @@ namespace Mark::RendererVK
             CHECK_VK_RESULT(res, "Create framebuffer");
         }
 
-        MARK_INFO("Vulkan Framebuffers Created: %zu", m_frameBuffers.size());
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Framebuffers Created: %zu", m_frameBuffers.size());
 
         return m_frameBuffers;
     }
@@ -132,7 +132,7 @@ namespace Mark::RendererVK
         VkResult res = vkCreateRenderPass(_device, &renderPassInfo, nullptr, &renderPass);
         CHECK_VK_RESULT(res, "Create render pass");
 
-        MARK_INFO("Vulkan Render Pass Created");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Render Pass Created");
 
         return renderPass;
     }

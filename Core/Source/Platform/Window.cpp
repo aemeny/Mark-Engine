@@ -23,7 +23,7 @@ namespace Mark::Platform
         glfwSetWindowUserPointer(m_window, this);
         glfwSetKeyCallback(m_window, &Window::KeyCallback);
 
-        MARK_INFO("GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
+        MARK_INFO_C(Utils::Category::GLFW, "GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
 
         // Create Vulkan handler
         m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, *this, _clearColour);
@@ -41,7 +41,7 @@ namespace Mark::Platform
             glfwSetWindowUserPointer(m_window, nullptr);
             glfwDestroyWindow(m_window);
             m_window = nullptr;
-            MARK_INFO("GLFW Window Destroyed: %s", m_windowName.c_str());
+            MARK_INFO_C(Utils::Category::GLFW, "GLFW Window Destroyed: %s", m_windowName.c_str());
         }
     }
 
