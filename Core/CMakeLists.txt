@@ -34,6 +34,8 @@ Source/Renderer/MarkVulkanRenderPassCache.h
 Source/Renderer/MarkVulkanRenderPassCache.cpp
 Source/Renderer/MarkVulkanRenderPass.h
 Source/Renderer/MarkVulkanRenderPass.cpp
+Source/Renderer/MarkVulkanShader.h
+Source/Renderer/MarkVulkanShader.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})
@@ -57,4 +59,5 @@ target_link_libraries(Core
         volk
    	glfw
   	glm::glm
+	${MARK_GLSLANG_TARGETS}
 )

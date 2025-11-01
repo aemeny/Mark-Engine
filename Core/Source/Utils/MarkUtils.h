@@ -24,7 +24,7 @@
 namespace Mark::Utils
 {
     enum class Level : uint32_t { Trace = 0, Debug, Info, Warn, Error, Fatal };
-    enum class Category : uint32_t { General = 0, Vulkan, GLFW, Window, Engine, System };
+    enum class Category : uint32_t { General = 0, Vulkan, GLFW, Window, Engine, System, Shader };
     constexpr uint64_t categoryBit(Category _c) { return 1ull << static_cast<uint32_t>(_c); }
 
     // Compile-time toggle (on in Debug, off in Release by default)
@@ -158,7 +158,7 @@ namespace Mark::Utils
             constexpr int kCatW = 7;
             char prefix[200];
             std::snprintf(prefix, sizeof(prefix),
-                "%02d:%02d:%02d.%03d [%-*s] %-5s ",
+                "%02d:%02d:%02d.%03d [%-*s] [%-5s] ",
                 tm.tm_hour, tm.tm_min, tm.tm_sec, (int)ms.count(), kCatW, cat, name
             );
 
@@ -238,6 +238,7 @@ namespace Mark::Utils
             case Category::Window:  return "Window";
             case Category::Engine:  return "Engine";
             case Category::System:  return "System";
+            case Category::Shader:  return "Shader";
             default:                return "Other";
             }
         }
