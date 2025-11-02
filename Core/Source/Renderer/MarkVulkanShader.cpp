@@ -1,12 +1,14 @@
-#include "MarkVulkanShader.h"
+﻿#include "MarkVulkanShader.h"
 #include "Utils/ErrorHandling.h"
 #include "Utils/MarkUtils.h"
 #include "Utils/VulkanUtils.h"
 
 #include <string>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 #include <iterator>
+#include <filesystem>
 
 namespace Mark::RendererVK
 {
@@ -111,6 +113,18 @@ namespace Mark::RendererVK
             MARK_LOG_ERROR_C(Utils::Category::Shader, "DebugLog: %s", dbg);
         }
     }
+    // Write compiled SPIR-V next to the source (simple cache).
+    static bool writeWordsToSpv(const std::filesystem::path& _outPath, const std::vector<uint32_t>& _words)
+    {
+        std::ofstream file(_outPath, std::ios::binary | std::ios::trunc);
+        if (!file)
+        {
+            MARK_LOG_ERROR("Failed to open for write: {}", _outPath.string().c_str());
+            return false;
+        }
+        file.write(reinterpret_cast<const char*>(_words.data()), static_cast<std::streamsize>(_words.size() * sizeof(uint32_t)));
+        return static_cast<bool>(file);
+    }
 
     static bool compileShader(VkDevice& _device, glslang_stage_t _stage, const char* _sourceCode, ShaderModuleInfo& _shaderModule)
     {
@@ -188,62 +202,173 @@ namespace Mark::RendererVK
         return _shaderModule.m_SPIRV.size() > 0 && _shaderModule.m_shaderModule != VK_NULL_HANDLE;
     }
 
-    VkShaderModule createShaderModuleFromText(VkDevice& _device, const char* _fileName)
+    // VulkanShaderCache implementation
+    VulkanShaderCache::VulkanShaderCache(VkDevice& _device) :
+        m_device(_device)
     {
-        std::string sourceCode;
-
-        if (!readFileToString(_fileName, sourceCode))
-        {
-            MARK_ERROR("Failed to read shader source code from file: {}", _fileName);
-        }
-
-        ShaderModuleInfo shaderModuleInfo;
-        glslang_stage_t shaderStage = shaderStageFromFileName(_fileName);
-        VkShaderModule rtn = VK_NULL_HANDLE;
-
         glslang_initialize_process();
-
-        bool success = compileShader(_device, shaderStage, sourceCode.c_str(), shaderModuleInfo);
-
-        if (success)
-        {
-            MARK_INFO_C(Utils::Category::Shader, "Shader compiled successfully: {}", _fileName);
-            rtn = shaderModuleInfo.m_shaderModule;
-            std::string binaryFileName = std::string(_fileName) + ".spv";
-            // TODO: Write SPIR-V binary to file for caching here
-        }
-        else
-        {
-            MARK_ERROR("Shader compilation failed: {}", _fileName);
-        }
-
+    }
+    VulkanShaderCache::~VulkanShaderCache()
+    {
+        destroyAll();
         glslang_finalize_process();
-
-        return rtn;
     }
 
-    VkShaderModule createShaderModuleFromBinary(VkDevice& _device, const char* _fileName)
+    std::string VulkanShaderCache::makeSiblingSpvName(const std::filesystem::path& _glsl)
     {
-        std::vector<uint32_t> shaderCode;
-        if (!readSPIRVFileToWords(_fileName, shaderCode))
+        return (_glsl.string() + ".spv");
+    }
+
+    bool VulkanShaderCache::tryLoadSiblingSpv(const std::filesystem::path& _glsl, std::vector<uint32_t>& _outWords, std::filesystem::file_time_type& _spvTime) const
+    {
+        const auto spvPath = makeSiblingSpvName(_glsl);
+        std::error_code ec;
+        if (!std::filesystem::exists(spvPath, ec)) return false;
+        if (!readSPIRVFileToWords(spvPath.c_str(), _outWords)) return false;
+        _spvTime = std::filesystem::last_write_time(spvPath, ec);
+        return true;
+    }
+
+    VkShaderModule VulkanShaderCache::getOrCreateFromGLSL(const char* _glslPath, const char* _entry)
+    {
+        std::filesystem::path path(_glslPath);
+        std::error_code ec;
+        auto abs = std::filesystem::weakly_canonical(path, ec);
+        const std::string absString = ec ? path.string() : abs.string();
+        const auto stage = shaderStageFromFileName(_glslPath);
+
+        Key k{ absString, stage, _entry ? _entry : "main" };
+        if (auto it = m_map.find(k); it != m_map.end()) 
+        {
+            auto nowSrc = std::filesystem::exists(path, ec) ? 
+                std::filesystem::last_write_time(path, ec) : std::filesystem::file_time_type::min();
+
+            if (nowSrc == it->second.m_srcTime) 
+            {
+                return it->second.m_module; // up-to-date
+            }
+            // Drop and rebuild
+            vkDestroyShaderModule(m_device, it->second.m_module, nullptr);
+            m_map.erase(it);
+        }
+
+        // Try sibling .spv if it's up-to-date
+        std::filesystem::file_time_type srcTime{}, spvTime{};
+        if (std::filesystem::exists(path, ec)) 
+            srcTime = std::filesystem::last_write_time(path, ec);
+
+        std::vector<uint32_t> words;
+        if (tryLoadSiblingSpv(path, words, spvTime) && spvTime >= srcTime) 
+        {
+            // Use cached SPIR-V
+            VkShaderModuleCreateInfo moduleCreateInfo = { 
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = 0,
+                .codeSize = words.size() * sizeof(uint32_t),
+                .pCode = words.data()
+            };
+
+            Entry entry{};
+
+            VkResult res = vkCreateShaderModule(m_device, &moduleCreateInfo, nullptr, &entry.m_module);
+            CHECK_VK_RESULT(res, "Failed to create shader module");
+
+            entry.m_spirv = std::move(words);
+            entry.m_srcTime = srcTime;
+            entry.m_spvTime = spvTime;
+            m_map.emplace(k, std::move(entry));
+
+            MARK_INFO_C(Utils::Category::Shader, "Loaded cached SPIR-V: {}", makeSiblingSpvName(path).c_str());
+            return m_map.find(k)->second.m_module;
+        }
+
+        // Compile from GLSL
+        std::string src;
+        if (!readFileToString(_glslPath, src))
         {
             return VK_NULL_HANDLE;
         }
 
-        VkShaderModuleCreateInfo shaderModuleCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        ShaderModuleInfo info;
+        if (!compileShader(m_device, stage, src.c_str(), info)) 
+        {
+            return VK_NULL_HANDLE;
+        }
+
+        // Write sibling cache and store entry
+        writeWordsToSpv(makeSiblingSpvName(path), info.m_SPIRV);
+
+        Entry entry = {
+            .m_module = info.m_shaderModule,
+            .m_spirv = std::move(info.m_SPIRV),
+            .m_srcTime = srcTime,
+            .m_spvTime = std::filesystem::last_write_time(makeSiblingSpvName(path), ec)
+        };
+        m_map.emplace(k, std::move(entry));
+
+        MARK_INFO_C(Utils::Category::Shader, "Compiled GLSL → SPIR-V: {}", _glslPath);
+
+        return m_map.find(k)->second.m_module;
+    }
+
+    VkShaderModule VulkanShaderCache::getOrCreateFromSPV(const char* _spvPath, glslang_stage_t _stage)
+    {
+        std::filesystem::path path(_spvPath);
+        std::error_code ec;
+        auto abs = std::filesystem::weakly_canonical(path, ec);
+        const std::string absString = ec ? path.string() : abs.string();
+
+        Key k{ absString, _stage, "main" };
+        if (auto it = m_map.find(k); it != m_map.end()) 
+            return it->second.m_module;
+
+        std::vector<uint32_t> words;
+        if (!readSPIRVFileToWords(_spvPath, words)) 
+            return VK_NULL_HANDLE;
+
+        VkShaderModuleCreateInfo moduleCreateInfo = { 
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO ,
             .pNext = nullptr,
             .flags = 0,
-            .codeSize = shaderCode.size() * sizeof(uint32_t),
-            .pCode = shaderCode.data()
+            .codeSize = words.size() * sizeof(uint32_t),
+            .pCode = words.data(),
         };
 
-        VkShaderModule shaderModule = VK_NULL_HANDLE;
-        VkResult res = vkCreateShaderModule(_device, &shaderModuleCreateInfo, nullptr, &shaderModule);
-        CHECK_VK_RESULT(res, "Create Shader Module from binary");
+        Entry entry{};
 
-        MARK_INFO_C(Utils::Category::Shader, "Shader module created from binary: {}", _fileName);
+        VkResult res = vkCreateShaderModule(m_device, &moduleCreateInfo, nullptr, &entry.m_module);
+        CHECK_VK_RESULT(res, "Failed to create shader module");
 
-        return shaderModule;
+        entry.m_spirv = std::move(words);
+        entry.m_spvTime = std::filesystem::last_write_time(path, ec);
+        m_map.emplace(k, std::move(entry));
+
+        MARK_INFO_C(Utils::Category::Shader, "Loaded SPIR-V: {}", _spvPath);
+
+        return m_map.find(k)->second.m_module;
+    }
+
+    void VulkanShaderCache::invalidatePath(const char* _path)
+    {
+        std::vector<Key> toErase;
+        for (auto& [k, e] : m_map) 
+        {
+            if (k.m_absPath == _path)
+            {
+                vkDestroyShaderModule(m_device, e.m_module, nullptr);
+                toErase.push_back(k);
+            }
+        }
+        for (auto& k : toErase) 
+            m_map.erase(k);
+    }
+
+    void VulkanShaderCache::destroyAll()
+    {
+        for (auto& [k, e] : m_map) 
+            if (e.m_module)
+                vkDestroyShaderModule(m_device, e.m_module, nullptr);
+        m_map.clear();
     }
 } // namespace Mark::RendererVK
