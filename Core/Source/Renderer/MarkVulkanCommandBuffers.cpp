@@ -5,8 +5,8 @@
 
 namespace Mark::RendererVK
 {
-    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_renderPassRef(_renderPassRef)
+    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, VulkanGraphicsPipeline& _graphicsPipelineRef) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_renderPassRef(_renderPassRef), m_graphicsPipelineRef(_graphicsPipelineRef)
     {}
 
     void VulkanCommandBuffers::destroyCommandBuffers()
@@ -93,6 +93,16 @@ namespace Mark::RendererVK
             renderPassBeginInfo.framebuffer = m_renderPassRef.frameBufferAt(i);
 
             vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            m_graphicsPipelineRef.bindPipeline(m_commandBuffers[i]);
+
+            // Verbose for now to test draw a simple triangle
+            uint32_t vertexCount = 3;
+            uint32_t instanceCount = 1;
+            uint32_t firstVertex = 0;
+            uint32_t firstInstance = 0;
+
+            vkCmdDraw(m_commandBuffers[i], vertexCount, instanceCount, firstVertex, firstInstance);
 
             vkCmdEndRenderPass(m_commandBuffers[i]);
 

@@ -12,7 +12,7 @@ namespace Mark::RendererVK
     struct VulkanCore;
     struct VulkanRenderPass
     {
-        VulkanRenderPass(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, Platform::Window& _windowRef);
+        VulkanRenderPass(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef);
         ~VulkanRenderPass();
         VulkanRenderPass(const VulkanRenderPass&) = delete;
         VulkanRenderPass& operator=(const VulkanRenderPass&) = delete;
@@ -32,7 +32,6 @@ namespace Mark::RendererVK
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         VulkanSwapChain& m_swapChainRef;
-        Platform::Window& m_windowRef;
 
         VulkanRenderPassRef m_renderPassRef; // From cache
         std::vector<VkFramebuffer> m_frameBuffers;

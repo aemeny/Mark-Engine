@@ -6,8 +6,8 @@
 
 namespace Mark::RendererVK
 {
-    VulkanRenderPass::VulkanRenderPass(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, Platform::Window& _windowRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_windowRef(_windowRef) 
+    VulkanRenderPass::VulkanRenderPass(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef)
     {}
 
     VulkanRenderPass::~VulkanRenderPass()
@@ -78,10 +78,10 @@ namespace Mark::RendererVK
     {
         VkAttachmentDescription attachDesc = {
             .flags = 0,
-            .format = _key.colorFormat,
-            .samples = _key.samples,
-            .loadOp = _key.colorLoad,
-            .storeOp = _key.colorStore,
+            .format = _key.m_colorFormat,
+            .samples = _key.m_samples,
+            .loadOp = _key.m_colorLoad,
+            .storeOp = _key.m_colorStore,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,

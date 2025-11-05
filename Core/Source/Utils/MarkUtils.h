@@ -290,7 +290,15 @@ namespace Mark::Utils
         Category    m_cat;
         Level       m_lvl;
     };
+
+
+     // --------- Array size helper  ---------
+     template <typename T, size_t N>
+     constexpr size_t ArrayCount(const T(&)[N]) noexcept { return N; }
 } // namespace Mark::Utils
+
+
+#define ARRAY_COUNT(arr) static_cast<uint32_t>(::Mark::Utils::ArrayCount(arr))
 
 // --------- Logger macros ---------
 #if MARK_LOG_ENABLED

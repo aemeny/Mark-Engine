@@ -1,6 +1,7 @@
 #pragma once
 #include "MarkVulkanSwapChain.h"
 #include "MarkVulkanRenderPass.h"
+#include "MarkVulkanGraphicsPipeline.h"
 #include "Utils/ErrorHandling.h"
 
 namespace Mark::RendererVK
@@ -8,7 +9,7 @@ namespace Mark::RendererVK
     struct VulkanCore;
     struct VulkanCommandBuffers
     {
-        VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef);
+        VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, VulkanGraphicsPipeline& _graphicsPipelineRef);
         ~VulkanCommandBuffers() = default;
         void destroyCommandBuffers();
         VulkanCommandBuffers(const VulkanCommandBuffers&) = delete;
@@ -29,6 +30,7 @@ namespace Mark::RendererVK
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         VulkanSwapChain& m_swapChainRef;
         VulkanRenderPass& m_renderPassRef;
+        VulkanGraphicsPipeline& m_graphicsPipelineRef;
 
         VkCommandPool m_commandPool{ VK_NULL_HANDLE };
         std::vector<VkCommandBuffer> m_commandBuffers;

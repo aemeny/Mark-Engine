@@ -27,10 +27,20 @@ namespace Mark::RendererVK
     {
         if (m_device != VK_NULL_HANDLE)
         {
-            if (m_renderPassCache) 
+            if (m_renderPassCache)
             {
-                m_renderPassCache->destroyAll(); 
+                m_renderPassCache->destroyAll();
                 m_renderPassCache.reset();
+            }
+            if (m_shaderCache)
+            {
+                m_shaderCache->destroy();
+                m_shaderCache.reset();
+            }
+            if (m_graphicsPipelineCache)
+            {
+                m_graphicsPipelineCache->destroyAll();
+                m_graphicsPipelineCache.reset();
             }
 
             m_presentQueue.destroy();
@@ -271,11 +281,13 @@ namespace Mark::RendererVK
 
         MARK_INFO_C(Utils::Category::Vulkan, "Logical Device Created");
 
-        // Initialize queues now that device is created
+
+        // -- After device creation, we can initialize queues and caches --
         initializeQueue();
 
-        // Initialize render pass cache now that device is created
         m_renderPassCache = std::make_unique<VulkanRenderPassCache>(m_device);
+        m_shaderCache = std::make_unique<VulkanShaderCache>(m_device);
+        m_graphicsPipelineCache = std::make_unique<VulkanGraphicsPipelineCache>(m_device);
     }
 
     void VulkanCore::initializeQueue()

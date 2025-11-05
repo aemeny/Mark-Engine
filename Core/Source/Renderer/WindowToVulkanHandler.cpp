@@ -73,6 +73,12 @@ namespace Mark::RendererVK
             frameData.m_inFlightFence = createFence(device);
         }
 
+        // Create graphics pipeline
+        {
+            m_graphicsPipeline.createGraphicsPipeline();
+        }
+
+        // Create command buffers
         m_commandBuffers.createCommandPool();
         m_commandBuffers.createCommandBuffers();
         m_commandBuffers.recordCommandBuffers(_clearColour);
@@ -92,6 +98,9 @@ namespace Mark::RendererVK
 
         // Destroy command buffers and pool
         m_commandBuffers.destroyCommandBuffers();
+
+        // Destroy graphics pipeline
+        m_graphicsPipeline.destroyGraphicsPipeline();
 
         // Destroy framebuffers before swap chain for references used there
         m_renderPass.destroyFrameBuffers();

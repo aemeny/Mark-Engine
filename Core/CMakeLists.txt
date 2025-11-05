@@ -36,6 +36,10 @@ Source/Renderer/MarkVulkanRenderPass.h
 Source/Renderer/MarkVulkanRenderPass.cpp
 Source/Renderer/MarkVulkanShader.h
 Source/Renderer/MarkVulkanShader.cpp
+Source/Renderer/MarkVulkanGraphicsPipeline.h
+Source/Renderer/MarkVulkanGraphicsPipeline.cpp
+Source/Renderer/MarkVulkanGraphicsPipelineCache.h
+Source/Renderer/MarkVulkanGraphicsPipelineCache.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

@@ -29,6 +29,9 @@ namespace Mark
         std::shared_ptr<RendererVK::VulkanCore> m_vulkanCore = std::make_shared<RendererVK::VulkanCore>(m_appInfo);
 
         /* --== Members ==--*/
+        // Load shaders before any windows are created with graphics pipelines and command buffers
+
+        // References and creates the main window
         Platform::Window& coreWindow = m_windows->main(m_vulkanCore);
     };
 } // namespace Mark

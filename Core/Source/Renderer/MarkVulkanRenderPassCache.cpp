@@ -33,9 +33,9 @@ namespace Mark::RendererVK
         auto it = m_map.find(_key);
         if (it != m_map.end()) 
         {
-            it->second.refCount++;
-            MARK_DEBUG_C(Utils::Category::Vulkan, "RenderPass-Cache reuse: refs=%u (entries=%zu)", it->second.refCount, m_map.size());
-            return VulkanRenderPassRef(this, _key, it->second.renderPass);
+            it->second.m_refCount++;
+            MARK_DEBUG_C(Utils::Category::Vulkan, "RenderPass-Cache reuse: refs=%u (entries=%zu)", it->second.m_refCount, m_map.size());
+            return VulkanRenderPassRef(this, _key, it->second.m_renderPass);
         }
 
         // Create new via user-provided function
@@ -47,8 +47,8 @@ namespace Mark::RendererVK
         }
 
         Entry e;
-        e.renderPass = rp;
-        e.refCount = 1;
+        e.m_renderPass = rp;
+        e.m_refCount = 1;
         m_map.emplace(_key, e);
 
         MARK_INFO_C(Utils::Category::Vulkan, "RenderPass-Cache create: entries=%zu", m_map.size());
@@ -62,8 +62,8 @@ namespace Mark::RendererVK
         if (it == m_map.end()) return;
 
         Entry& e = it->second;
-        if (e.refCount > 0) 
-            e.refCount--;
+        if (e.m_refCount > 0) 
+            e.m_refCount--;
     }
 
     void VulkanRenderPassCache::destroyAll()
@@ -71,11 +71,11 @@ namespace Mark::RendererVK
         std::lock_guard<std::mutex> lock(m_mutex);
         for (auto& [k, e] : m_map) 
         {
-            if (e.renderPass) 
+            if (e.m_renderPass) 
             {
-                vkDestroyRenderPass(m_device, e.renderPass, nullptr);
-                e.renderPass = VK_NULL_HANDLE;
-                e.refCount = 0;
+                vkDestroyRenderPass(m_device, e.m_renderPass, nullptr);
+                e.m_renderPass = VK_NULL_HANDLE;
+                e.m_refCount = 0;
             }
         }
         m_map.clear();
@@ -86,9 +86,9 @@ namespace Mark::RendererVK
         std::lock_guard<std::mutex> lock(m_mutex);
         for (auto it = m_map.begin(); it != m_map.end(); ) 
         {
-            if (it->second.refCount == 0) 
+            if (it->second.m_refCount == 0) 
             {
-                vkDestroyRenderPass(m_device, it->second.renderPass, nullptr);
+                vkDestroyRenderPass(m_device, it->second.m_renderPass, nullptr);
                 it = m_map.erase(it);
             }
             else 

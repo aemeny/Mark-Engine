@@ -29,8 +29,9 @@ namespace Mark::RendererVK
 
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
-        VulkanRenderPass m_renderPass{ m_vulkanCoreRef, m_swapChain, m_windowRef };
-        VulkanCommandBuffers m_commandBuffers{ m_vulkanCoreRef, m_swapChain, m_renderPass };
+        VulkanRenderPass m_renderPass{ m_vulkanCoreRef, m_swapChain };
+        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_renderPass };
+        VulkanCommandBuffers m_commandBuffers{ m_vulkanCoreRef, m_swapChain, m_renderPass, m_graphicsPipeline };
 
         struct FrameSyncData
         {

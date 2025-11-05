@@ -208,7 +208,7 @@ namespace Mark::RendererVK
     {
         glslang_initialize_process();
     }
-    VulkanShaderCache::~VulkanShaderCache()
+    void VulkanShaderCache::destroy()
     {
         destroyAll();
         glslang_finalize_process();
@@ -225,7 +225,17 @@ namespace Mark::RendererVK
         std::error_code ec;
         if (!std::filesystem::exists(spvPath, ec)) return false;
         if (!readSPIRVFileToWords(spvPath.c_str(), _outWords)) return false;
-        _spvTime = std::filesystem::last_write_time(spvPath, ec);
+        auto lwt = std::filesystem::last_write_time(spvPath, ec);
+        if (ec) 
+        {
+            MARK_WARN_C(Utils::Category::Shader, "last_write_time failed for '%s': %s",
+                spvPath.c_str(), ec.message().c_str());
+            _spvTime = {};
+        }
+        else 
+        {
+            _spvTime = lwt;
+        }
         return true;
     }
 
@@ -240,8 +250,13 @@ namespace Mark::RendererVK
         Key k{ absString, stage, _entry ? _entry : "main" };
         if (auto it = m_map.find(k); it != m_map.end()) 
         {
-            auto nowSrc = std::filesystem::exists(path, ec) ? 
-                std::filesystem::last_write_time(path, ec) : std::filesystem::file_time_type::min();
+            std::filesystem::file_time_type nowSrc{};
+            if (std::filesystem::exists(path, ec)) 
+            {
+                auto tmp = std::filesystem::last_write_time(path, ec);
+                if (!ec) 
+                    nowSrc = tmp;
+            }
 
             if (nowSrc == it->second.m_srcTime) 
             {
@@ -299,15 +314,31 @@ namespace Mark::RendererVK
         // Write sibling cache and store entry
         writeWordsToSpv(makeSiblingSpvName(path), info.m_SPIRV);
 
+        const std::string spvPath = makeSiblingSpvName(path);
+        auto lwt = std::filesystem::last_write_time(spvPath, ec);
+        if (ec)
+        {
+            MARK_WARN_C(Utils::Category::Shader,
+                "last_write_time failed for '%s': %s",
+                spvPath.c_str(), ec.message().c_str()
+            );
+            spvTime = {};
+        }
+        else 
+        {
+            spvTime = lwt;
+        }
+
+        auto lwt2 = std::filesystem::last_write_time(spvPath, ec);
         Entry entry = {
             .m_module = info.m_shaderModule,
             .m_spirv = std::move(info.m_SPIRV),
             .m_srcTime = srcTime,
-            .m_spvTime = std::filesystem::last_write_time(makeSiblingSpvName(path), ec)
+            .m_spvTime = ec ? std::filesystem::file_time_type{} : lwt2
         };
         m_map.emplace(k, std::move(entry));
 
-        MARK_INFO_C(Utils::Category::Shader, "Compiled GLSL → SPIR-V: {}", _glslPath);
+        MARK_INFO_C(Utils::Category::Shader, "Compiled GLSL -> SPIR-V: {}", _glslPath);
 
         return m_map.find(k)->second.m_module;
     }

@@ -1,7 +1,9 @@
 #pragma once
 #include "MarkVulkanPhysicalDevices.h"
 #include "MarkVulkanRenderPassCache.h"
+#include "MarkVulkanShader.h"
 #include "MarkVulkanQueue.h"
+#include "MarkVulkanGraphicsPipelineCache.h"
 
 namespace Mark { struct EngineAppInfo; }
 namespace Mark::Platform { struct WindowManager; }
@@ -34,6 +36,9 @@ namespace Mark::RendererVK
                 : m_presentQueue;
         }
 
+        // Cache getters
+        VulkanShaderCache& shaderCache() { return *m_shaderCache; }
+        VulkanGraphicsPipelineCache& graphicsPipelineCache() { return *m_graphicsPipelineCache; }
 
     private:
         friend struct Platform::WindowManager;
@@ -55,5 +60,9 @@ namespace Mark::RendererVK
 
         // Shared across all windows on this device
         std::unique_ptr<VulkanRenderPassCache> m_renderPassCache;
+
+        // Cache
+        std::unique_ptr<VulkanShaderCache> m_shaderCache;
+        std::unique_ptr<VulkanGraphicsPipelineCache> m_graphicsPipelineCache;
     };
 } // namespace Mark::RendererVK

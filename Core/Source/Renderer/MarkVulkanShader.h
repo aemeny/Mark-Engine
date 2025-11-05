@@ -30,7 +30,8 @@ namespace Mark::RendererVK
     struct VulkanShaderCache
     {
         explicit VulkanShaderCache(VkDevice& _device);
-        ~VulkanShaderCache();
+        ~VulkanShaderCache() = default;
+        void destroy();
 
         // Compile from GLSL if needed; otherwise use up-to-date sibling .spv (e.g., "file.vert.spv")
         VkShaderModule getOrCreateFromGLSL(const char* _glslPath, const char* _entry = "main");
@@ -40,9 +41,9 @@ namespace Mark::RendererVK
         // Invalidate one path (forces recompile on next request)
         void invalidatePath(const char* _path);
 
+    private:
         void destroyAll();
 
-    private:
         struct Key
         {
             std::string m_absPath;
@@ -71,7 +72,7 @@ namespace Mark::RendererVK
             std::filesystem::file_time_type m_spvTime{};
         };
 
-        VkDevice& m_device;
+        VkDevice m_device;
         std::unordered_map<Key, Entry, KeyHasher> m_map;
         bool tryLoadSiblingSpv(const std::filesystem::path& _glsl, std::vector<uint32_t>& _outWords,
             std::filesystem::file_time_type& _spvTime) const;
