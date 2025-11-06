@@ -122,6 +122,25 @@ namespace Mark::Utils
 #endif
         }
 
+        // Continuation/body line (no timestamp/category/level header). Uses current indent
+        static void writeCont(const char* _fmt, ...)
+        {
+#if MARK_LOG_ENABLED
+            // Format user message
+            char buf[2048];
+            va_list args; va_start(args, _fmt);
+            std::vsnprintf(buf, sizeof(buf), _fmt, args);
+            va_end(args);
+
+            std::lock_guard<std::mutex> lock(mutexRef());
+            const char* indent = indentStr();
+            std::fputs(indent, stdout);
+            std::fputs(buf, stdout);
+            std::fputc('\n', stdout);
+            std::fflush(stdout);
+#endif
+        }
+
     private:
 #if MARK_LOG_ENABLED
         // -------- core sink (shared by write / writeCategory) --------
@@ -250,10 +269,11 @@ namespace Mark::Utils
         static bool& colorRef() { static bool c = true; return c; }
         // Per-thread indent (scopes)
         static int& indentRef() { static thread_local int s = 0; return s; }
-        static const char* indentStr() {
+        static const char* indentStr() 
+        {
             static thread_local char buf[128];
             int n = indentRef(); if (n < 0) n = 0;
-            int count = n * 1; if (count > 120) count = 120;
+            int count = n * 2; if (count > 120) count = 120;
             for (int i = 0; i < count; ++i) buf[i] = ' ';
             buf[count] = '\0';
             return buf;
@@ -267,14 +287,12 @@ namespace Mark::Utils
         ScopedIndent(Category _cat = Category::General, Level _lvl = Level::Info, const char* _title = nullptr) :
             m_title(_title), m_cat(_cat), m_lvl(_lvl)
         {
-            Logger::pushIndent();
             if (_title) 
                 Logger::writeCategory(_lvl, _cat, __FILE__, __LINE__, __func__, "%s", _title);
         }
         ScopedIndent(ScopeFmtTag, Category _cat, Level _lvl, const char* _fmt, ...)
             : m_title(nullptr), m_cat(_cat), m_lvl(_lvl)
         {
-            Logger::pushIndent();
             if (_fmt)
             {
                 char buf[512];
@@ -285,7 +303,7 @@ namespace Mark::Utils
                 Logger::writeCategory(_lvl, _cat, __FILE__, __LINE__, __func__, "%s", buf);
             }
         }
-        ~ScopedIndent() { Logger::popIndent(); }
+        ~ScopedIndent() = default;
     private:
         const char* m_title;
         Category    m_cat;
@@ -340,6 +358,17 @@ namespace Mark::Utils
 
 
 // --------- Logger macros ---------
+#ifndef MARK_LOG_COLOR
+    #define MARK_LOG_COLOR 1
+#endif
+#if MARK_LOG_COLOR
+    #define MARK_COL_RESET  "\x1b[0m"
+    #define MARK_COL_LABEL  "\x1b[38;5;88m"
+#else
+    #define MARK_COL_RESET  ""
+    #define MARK_COL_LABEL  ""
+#endif
+
 #if MARK_LOG_ENABLED
     #define MARK_LOG_WRITE(lvl, fmt, ...) ::Mark::Utils::Logger::write((lvl), __FILE__, __LINE__, __func__, (fmt), ##__VA_ARGS__)
     #define MARK_TRACE(fmt, ...)   MARK_LOG_WRITE(::Mark::Utils::Level::Trace, fmt, ##__VA_ARGS__)
@@ -360,10 +389,11 @@ namespace Mark::Utils
     #define MARK_INFO_C(cat, fmt, ...)      MARK_LOG_WRITE_C(::Mark::Utils::Level::Info, (cat), fmt, ##__VA_ARGS__)
     #define MARK_WARN_C(cat, fmt, ...)      MARK_LOG_WRITE_C(::Mark::Utils::Level::Warn, (cat), fmt, ##__VA_ARGS__)
     #define MARK_LOG_ERROR_C(cat, fmt, ...)      MARK_LOG_WRITE_C(::Mark::Utils::Level::Error, (cat), fmt, ##__VA_ARGS__)
-    
+
     // Indented section (prints a title once, indents all inner logs)
     #define MARK_SCOPE(title)         ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__((title), ::Mark::Utils::Category::General)
     #define MARK_SCOPE_C(cat, title)  ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__((title), (cat))
+    #define MARK_IN_SCOPE(fmt, ...) ::Mark::Utils::Logger::writeCont((fmt), ##__VA_ARGS__)    
     // Scopes with a dynamic log level
 #ifdef MARK_SCOPE_C_L
     #undef  MARK_SCOPE_C_L
@@ -385,5 +415,6 @@ namespace Mark::Utils
     #define MARK_SCOPE_C(c, t)      ((void)0)
     #define MARK_SCOPE_L(l, t)      ((void)0)
     #define MARK_SCOPE_C_L(c, l, t) ((void)0)
+    #define MARK_IN_SCOPE(...)      ((void)0)
 #endif
 // --------- End Logger macros ---------

@@ -8,8 +8,8 @@ namespace Mark
 
     void Core::run()
     {
-        m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
-        m_windows->create(600, 600, "Third", VkClearColorValue{ {0.0f, 0.0f, 1.0f, 1.0f} }, false);
+        //m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
+        //m_windows->create(600, 600, "Third", VkClearColorValue{ {0.0f, 0.0f, 1.0f, 1.0f} }, false);
         while (!m_terminateApplication && m_windows->anyOpen())
         {
             m_windows->pollAll();

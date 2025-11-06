@@ -182,14 +182,23 @@ namespace Mark::RendererVK
         const auto severityLevel = VkSeverityToLevel(_severity);
 
         MARK_SCOPE_C_L(Utils::Category::Vulkan, severityLevel, "Vulkan Debug Callback:");
-        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    %s", _pCallbackData->pMessage);
-        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    Severity: %s", GetDebugSeverityStr(_severity));
-        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    Type: %s", GetDebugType(_type));
-        MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "    Objects ");
+        MARK_IN_SCOPE("%s", _pCallbackData->pMessage);
+        MARK_IN_SCOPE(MARK_COL_LABEL "Severity: " MARK_COL_RESET "%s", GetDebugSeverityStr(_severity));
+        const std::string typeStr = GetDebugType(_type);
+        MARK_IN_SCOPE(MARK_COL_LABEL "Type: " MARK_COL_RESET "%s", typeStr.c_str());
 
-        for (uint32_t i = 0; i < _pCallbackData->objectCount; i++)
-        {
-            MARK_LOG_WRITE_C(severityLevel, Utils::Category::Vulkan, "%" PRIx64 " ", _pCallbackData->pObjects[i].objectHandle);
+        if (_pCallbackData->objectCount == 0) {
+            MARK_IN_SCOPE(MARK_COL_LABEL "Objects: " MARK_COL_RESET "<none>");
+        }
+        else {
+            MARK_IN_SCOPE(MARK_COL_LABEL "Objects: " MARK_COL_RESET);
+            for (uint32_t i = 0; i < _pCallbackData->objectCount; i++)
+            {
+                const auto& object = _pCallbackData->pObjects[i];
+                const char* typeStr = VkObjectTypeToStr(object.objectType);
+                const char* nameStr = (object.pObjectName && *object.pObjectName) ? object.pObjectName : "<unnamed>";
+                MARK_IN_SCOPE("    [%s] %s (0x%" PRIx64 ")", typeStr, nameStr, object.objectHandle);
+            }
         }
 
         return VK_FALSE; // VK_FALSE indicates that the Vulkan call that triggered the validation layer message should not be aborted
