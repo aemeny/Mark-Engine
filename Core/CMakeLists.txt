@@ -55,6 +55,8 @@ target_include_directories(Core
 target_compile_definitions(Core 
 	PRIVATE 
 	GLFW_INCLUDE_NONE
+	MARK_ASSETS_DIR="${MARK_ASSETS_DIR}"
+	MARK_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
 )
 
 target_link_libraries(Core

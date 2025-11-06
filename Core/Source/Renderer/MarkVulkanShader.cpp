@@ -17,7 +17,7 @@ namespace Mark::RendererVK
         std::ifstream file(_fileName, std::ios::binary);
         if (!file)
         {
-            MARK_LOG_ERROR("Failed to open file: {}", _fileName);
+            MARK_LOG_ERROR("Failed to open file: %s", _fileName);
             return false;
         }
 
@@ -29,14 +29,14 @@ namespace Mark::RendererVK
         std::ifstream file(_fileName, std::ios::binary | std::ios::ate);
         if (!file)
         {
-            MARK_LOG_ERROR("Failed to open SPIR-V binary: {}", _fileName);
+            MARK_LOG_ERROR("Failed to open SPIR-V binary: %s", _fileName);
             return false;
         }
 
         std::streamsize sz = file.tellg();
         if (sz <= 0)
         {
-            MARK_LOG_ERROR("Empty SPIR-V file: {}", _fileName);
+            MARK_LOG_ERROR("Empty SPIR-V file: %s", _fileName);
             return false;
         }
 
@@ -44,12 +44,12 @@ namespace Mark::RendererVK
         std::vector<char> bytes(static_cast<size_t>(sz));
         if (!file.read(bytes.data(), sz))
         {
-            MARK_LOG_ERROR("Failed to read SPIR-V file: {}", _fileName);
+            MARK_LOG_ERROR("Failed to read SPIR-V file: %s", _fileName);
             return false;
         }
         if ((bytes.size() % 4) != 0)
         {
-            MARK_LOG_ERROR("SPIR-V file size is not a multiple of 4: {}", _fileName);
+            MARK_LOG_ERROR("SPIR-V file size is not a multiple of 4: %s", _fileName);
             return false;
         }
 
@@ -73,7 +73,7 @@ namespace Mark::RendererVK
         if (fileStr.ends_with(".tese"))
             return GLSLANG_STAGE_TESSEVALUATION;
 
-        MARK_ERROR("Unknown shader stage for file: {}", _fileName);
+        MARK_ERROR("Unknown shader stage for file: %s", _fileName);
         return GLSLANG_STAGE_VERTEX; // Default
     }
     // Pretty logging for glslang shader failures (preprocess/parse)
@@ -119,7 +119,7 @@ namespace Mark::RendererVK
         std::ofstream file(_outPath, std::ios::binary | std::ios::trunc);
         if (!file)
         {
-            MARK_LOG_ERROR("Failed to open for write: {}", _outPath.string().c_str());
+            MARK_LOG_ERROR("Failed to open for write: %s", _outPath.string().c_str());
             return false;
         }
         file.write(reinterpret_cast<const char*>(_words.data()), static_cast<std::streamsize>(_words.size() * sizeof(uint32_t)));
@@ -294,7 +294,9 @@ namespace Mark::RendererVK
             entry.m_spvTime = spvTime;
             m_map.emplace(k, std::move(entry));
 
-            MARK_INFO_C(Utils::Category::Shader, "Loaded cached SPIR-V: {}", makeSiblingSpvName(path).c_str());
+            const std::string spvName = makeSiblingSpvName(path);
+            const std::string pretty = Utils::ShortPathForLog(spvName);
+            MARK_INFO_C(Utils::Category::Shader, "Loaded cached SPIR-V: %s", pretty.c_str());
             return m_map.find(k)->second.m_module;
         }
 
@@ -338,7 +340,8 @@ namespace Mark::RendererVK
         };
         m_map.emplace(k, std::move(entry));
 
-        MARK_INFO_C(Utils::Category::Shader, "Compiled GLSL -> SPIR-V: {}", _glslPath);
+        const std::string pretty = Utils::ShortPathForLog(_glslPath);
+        MARK_INFO_C(Utils::Category::Shader, "Compiled GLSL -> SPIR-V: %s", pretty.c_str());
 
         return m_map.find(k)->second.m_module;
     }
@@ -375,7 +378,8 @@ namespace Mark::RendererVK
         entry.m_spvTime = std::filesystem::last_write_time(path, ec);
         m_map.emplace(k, std::move(entry));
 
-        MARK_INFO_C(Utils::Category::Shader, "Loaded SPIR-V: {}", _spvPath);
+        const std::string pretty = Utils::ShortPathForLog(_spvPath);
+        MARK_INFO_C(Utils::Category::Shader, "Loaded SPIR-V: %s", pretty.c_str());
 
         return m_map.find(k)->second.m_module;
     }

@@ -50,14 +50,12 @@ namespace Mark::RendererVK
         m_swapChain.createSwapChain();
 
         // Acquire or share a render pass from the device cache
-        {
-            VulkanRenderPassKey key = VulkanRenderPassKey::Make(
-                m_swapChain.surfaceFormat().format,   // Colour format for this window
-                VK_FORMAT_UNDEFINED,                  // No depth
-                VK_SAMPLE_COUNT_1_BIT
-            );
-            m_renderPass.initWithCache(VkCore->renderPassCache(), key);
-        }
+        VulkanRenderPassKey key = VulkanRenderPassKey::Make(
+            m_swapChain.surfaceFormat().format,   // Colour format for this window
+            VK_FORMAT_UNDEFINED,                  // No depth
+            VK_SAMPLE_COUNT_1_BIT
+        );
+        m_renderPass.initWithCache(VkCore->renderPassCache(), key);
 
         // Create frame data sync objects
         m_imagesInFlight.assign(m_swapChain.numImages(), VK_NULL_HANDLE);
@@ -74,9 +72,7 @@ namespace Mark::RendererVK
         }
 
         // Create graphics pipeline
-        {
-            m_graphicsPipeline.createGraphicsPipeline();
-        }
+        m_graphicsPipeline.createGraphicsPipeline();
 
         // Create command buffers
         m_commandBuffers.createCommandPool();

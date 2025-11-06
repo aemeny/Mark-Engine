@@ -8,6 +8,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #if defined(_WIN32)
     #ifndef NOMINMAX
         #define NOMINMAX
@@ -23,6 +24,7 @@
 
 namespace Mark::Utils
 {
+    // --------- CONSOLE LOGGING  ---------
     enum class Level : uint32_t { Trace = 0, Debug, Info, Warn, Error, Fatal };
     enum class Category : uint32_t { General = 0, Vulkan, GLFW, Window, Engine, System, Shader };
     constexpr uint64_t categoryBit(Category _c) { return 1ull << static_cast<uint32_t>(_c); }
@@ -36,7 +38,6 @@ namespace Mark::Utils
     #endif
 #endif
 
-// --------- Logger core ---------
     struct Logger
     {
         static void init(const char* _filePath = nullptr, Level _minLevel = Level::Info, bool _useColor = true, bool _appendFile = false)
@@ -290,15 +291,53 @@ namespace Mark::Utils
         Category    m_cat;
         Level       m_lvl;
     };
+    // --------- End CONSOLE LOGGING  ---------
 
 
-     // --------- Array size helper  ---------
+
+     // --------- ARRAY SIZE HELPER  ---------
      template <typename T, size_t N>
      constexpr size_t ArrayCount(const T(&)[N]) noexcept { return N; }
+     // --------- End ARRAY SIZE HELPER  ---------
+
+
+
+     // --------- SHORT PATH FOR LOGGING HELPER  ---------
+     inline std::string ShortPathForLog(std::string_view _absPath)
+     {
+         namespace fs = std::filesystem;
+         fs::path path{ std::string(_absPath) };
+         path = path.lexically_normal();
+
+#ifdef MARK_PROJECT_ROOT
+         fs::path root{ MARK_PROJECT_ROOT };
+         root = root.lexically_normal();
+
+         std::error_code ec;
+         fs::path relative = fs::relative(path, root, ec);
+         if (!ec && !relative.empty())
+         {
+             const std::string proj = root.filename().string();
+             return proj + "/" + relative.generic_string();
+         }
+#endif
+         // Fallback: look for common repo folder name in the string
+         std::string s = path.string();
+         if (size_t pos = s.find("Mark-Engine"); pos != std::string::npos)
+             return s.substr(pos);
+
+         // Last resort: just the filename
+         return path.filename().string();
+     }
+     // --------- End SHORT PATH FOR LOGGING HELPER  ---------
+
 } // namespace Mark::Utils
 
 
+//  --------- Array count macro ---------
 #define ARRAY_COUNT(arr) static_cast<uint32_t>(::Mark::Utils::ArrayCount(arr))
+// --------- End Array count macro ---------
+
 
 // --------- Logger macros ---------
 #if MARK_LOG_ENABLED
@@ -347,3 +386,4 @@ namespace Mark::Utils
     #define MARK_SCOPE_L(l, t)      ((void)0)
     #define MARK_SCOPE_C_L(c, l, t) ((void)0)
 #endif
+// --------- End Logger macros ---------

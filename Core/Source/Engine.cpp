@@ -11,7 +11,7 @@ namespace Mark
         // Initialize Error handling if used
         Utils::Logger::init(
             nullptr, // File path
-            Utils::Level::Trace, // Debug Level
+            Utils::Level::Info, // Debug Level
             true, // Use colour in logs
             false // Append to file?
         );

@@ -25,8 +25,10 @@ namespace Mark::RendererVK
         VkDevice device = VkCore->device();
 
         // Get shader modules from the device shader cache
-        VkShaderModule vs = VkCore->shaderCache().getOrCreateFromGLSL("Assets/Shaders/Triangle.vert");
-        VkShaderModule fs = VkCore->shaderCache().getOrCreateFromGLSL("Assets/Shaders/Triangle.frag");
+        const auto vsPath = VkCore->shaderPath("TriangleTest.vert");
+        const auto fsPath = VkCore->shaderPath("TriangleTest.frag");
+        VkShaderModule vs = VkCore->shaderCache().getOrCreateFromGLSL(vsPath.string().c_str());
+        VkShaderModule fs = VkCore->shaderCache().getOrCreateFromGLSL(fsPath.string().c_str());
         if (!vs || !fs)
         {
             MARK_LOG_ERROR_C(Utils::Category::Vulkan, "Failed to load shaders");
@@ -37,11 +39,13 @@ namespace Mark::RendererVK
         const VkRenderPass renderPass = m_renderPassRef.renderPass();
 
         const auto samples = VK_SAMPLE_COUNT_1_BIT;
+        const uint32_t dynMask = (1u << 0) | (1u << 1); // viewport|scissor
         auto key = VulkanGraphicsPipelineKey::Make(
             renderPass, 
             vs, fs,
             VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 
-            samples
+            samples,
+            dynMask
         );
 
         // Acquire from the device graphics-pipeline cache with a creation lambda
@@ -139,6 +143,7 @@ namespace Mark::RendererVK
                     .pRasterizationState = &rasterizeCreateInfo,
                     .pMultisampleState = &multisampleInfo,
                     .pColorBlendState = &colorBlendCreateInfo,
+                    .pDynamicState = &dynamicStateCreateInfo,
                     .layout = layout,
                     .renderPass = _key.m_renderPass,
                     .subpass = 0,
@@ -161,7 +166,7 @@ namespace Mark::RendererVK
 
         // Keep convenience handle for existing callers
         m_pipelineLayout = m_cachedRef.layout();
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Created (cached)");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Created");
     }
 
     void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer)

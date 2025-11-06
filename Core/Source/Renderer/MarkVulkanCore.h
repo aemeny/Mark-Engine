@@ -5,6 +5,8 @@
 #include "MarkVulkanQueue.h"
 #include "MarkVulkanGraphicsPipelineCache.h"
 
+#include <filesystem>
+
 namespace Mark { struct EngineAppInfo; }
 namespace Mark::Platform { struct WindowManager; }
 
@@ -40,7 +42,17 @@ namespace Mark::RendererVK
         VulkanShaderCache& shaderCache() { return *m_shaderCache; }
         VulkanGraphicsPipelineCache& graphicsPipelineCache() { return *m_graphicsPipelineCache; }
 
+
+        // TEMP SHADER FILE PATH
+        // --- Asset root / path helpers ---
+        const std::filesystem::path& assetRoot() const { return m_assetRoot; }
+        // Returns "<assetRoot>/shaders/<file>"
+        std::filesystem::path shaderPath(const std::string& _file) const;
+
     private:
+        // TEMP SHADER FILE PATH
+        std::filesystem::path m_assetRoot;
+
         friend struct Platform::WindowManager;
 
         void createInstance(const EngineAppInfo& _appInfo);

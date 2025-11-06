@@ -34,7 +34,7 @@ namespace Mark::RendererVK
         if (it != m_map.end()) 
         {
             it->second.m_refCount++;
-            MARK_DEBUG_C(Utils::Category::Vulkan, "RenderPass-Cache reuse: refs=%u (entries=%zu)", it->second.m_refCount, m_map.size());
+            MARK_INFO_C(Utils::Category::Vulkan, "RenderPass-Cache reuse: refs=%u (entries=%zu)", it->second.m_refCount, m_map.size());
             return VulkanRenderPassRef(this, _key, it->second.m_renderPass);
         }
 

@@ -21,6 +21,29 @@ namespace Mark::RendererVK
             createDebugCallback();
         }
         m_physicalDevices.initialize(m_instance);
+
+
+        // --- Decide asset root once ---
+#ifdef MARK_ASSETS_DIR
+        m_assetRoot = std::filesystem::path(MARK_ASSETS_DIR); // set via CMake
+#else
+        // Fallback: tries "<cwd>/App/Assets"
+        auto cwd = std::filesystem::current_path();
+        if (std::filesystem::exists(cwd / "App" / "Assets"))
+            m_assetRoot = cwd / "App" / "Assets";
+        else
+            MARK_ERROR("MARK_ASSETS_DIR not defined and could not find default asset path");
+#endif
+        MARK_INFO_C(Utils::Category::System, "Asset root: %s", m_assetRoot.string().c_str());
+    }
+
+    std::filesystem::path VulkanCore::shaderPath(const std::string& _file) const
+    {
+        std::filesystem::path path = (m_assetRoot / "Shaders" / _file).lexically_normal();
+        if (!std::filesystem::exists(path)) {
+            MARK_WARN_C(Utils::Category::Shader, "Shader not found at: %s", path.string().c_str());
+        }
+        return path;
     }
 
     VulkanCore::~VulkanCore()

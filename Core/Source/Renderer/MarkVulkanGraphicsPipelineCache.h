@@ -19,6 +19,7 @@ namespace Mark::RendererVK
         VkShaderModule m_fragShader{ VK_NULL_HANDLE };
         VkPrimitiveTopology m_topology{ VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
         VkSampleCountFlagBits m_samples{ VK_SAMPLE_COUNT_1_BIT };
+        uint32_t m_dynamicStateMask{ 0 };
 
         bool operator==(const VulkanGraphicsPipelineKey& _o) const noexcept
         {
@@ -26,7 +27,8 @@ namespace Mark::RendererVK
                 && m_vertShader == _o.m_vertShader
                 && m_fragShader == _o.m_fragShader
                 && m_topology == _o.m_topology
-                && m_samples == _o.m_samples;
+                && m_samples == _o.m_samples
+                && m_dynamicStateMask == _o.m_dynamicStateMask;
         }
 
         static VulkanGraphicsPipelineKey Make(
@@ -34,7 +36,8 @@ namespace Mark::RendererVK
             VkShaderModule _vert,
             VkShaderModule _frag,
             VkPrimitiveTopology _topo = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            VkSampleCountFlagBits _smp = VK_SAMPLE_COUNT_1_BIT)
+            VkSampleCountFlagBits _smp = VK_SAMPLE_COUNT_1_BIT,
+            uint32_t _dynMask = 0)
         {
             VulkanGraphicsPipelineKey k;
             k.m_renderPass = _rp;
@@ -42,6 +45,7 @@ namespace Mark::RendererVK
             k.m_fragShader = _frag;
             k.m_topology = _topo;
             k.m_samples = _smp;
+            k.m_dynamicStateMask = _dynMask;
             return k;
         }
     };
@@ -62,6 +66,7 @@ namespace Mark::RendererVK
             mix(reinterpret_cast<size_t>(_key.m_fragShader));
             mix(static_cast<size_t>(_key.m_topology));
             mix(static_cast<size_t>(_key.m_samples));
+            mix(static_cast<size_t>(_key.m_dynamicStateMask));
             return hash;
         }
     };

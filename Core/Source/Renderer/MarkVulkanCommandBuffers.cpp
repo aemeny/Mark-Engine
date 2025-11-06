@@ -96,6 +96,13 @@ namespace Mark::RendererVK
 
             m_graphicsPipelineRef.bindPipeline(m_commandBuffers[i]);
 
+            // Dynamic viewport/scissor
+            const auto ext = m_swapChainRef.extent();
+            VkViewport viewport{ 0.f, 0.f, static_cast<float>(ext.width), static_cast<float>(ext.height), 0.f, 1.f };
+            VkRect2D scissor{ {0,0}, ext };
+            vkCmdSetViewport(m_commandBuffers[i], 0, 1, &viewport);
+            vkCmdSetScissor(m_commandBuffers[i], 0, 1, &scissor);
+
             // Verbose for now to test draw a simple triangle
             uint32_t vertexCount = 3;
             uint32_t instanceCount = 1;

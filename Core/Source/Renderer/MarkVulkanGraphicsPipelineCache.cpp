@@ -40,6 +40,8 @@ namespace Mark::RendererVK
         if (it != m_map.end())
         {
             it->second.m_refCount++;
+            MARK_INFO_C(Utils::Category::Vulkan, "Graphics-Pipeline-Cache reuse: refs=%u (entries=%zu)",
+                it->second.m_refCount, m_map.size());
             return VulkanGraphicsPipelineRef(this, _key, it->second.m_pipeline, it->second.m_layout);
         }
 
@@ -56,7 +58,7 @@ namespace Mark::RendererVK
         e.m_refCount = 1;
         auto [insIt, _] = m_map.emplace(_key, e);
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Graphics Pipeline Cached (entries: %zu)", m_map.size());
+        MARK_INFO_C(Utils::Category::Vulkan, "Graphics Pipeline Cached: entries=%zu", m_map.size());
         return VulkanGraphicsPipelineRef(this, _key, insIt->second.m_pipeline, insIt->second.m_layout);
     }
 
