@@ -4,7 +4,6 @@
 namespace Mark
 {
     Core::Core(const EngineAppInfo& _appInfo) : m_appInfo(_appInfo) {}
-    Core::~Core() = default;
 
     void Core::run()
     {

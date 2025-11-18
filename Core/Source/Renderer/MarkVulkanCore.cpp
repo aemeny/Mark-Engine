@@ -1,6 +1,9 @@
 #include <Mark/Engine.h>
 #include "MarkVulkanCore.h"
+#include "MarkVulkanVertexBuffer.h"
+
 #include "Platform/WindowManager.h"
+
 #include "Utils/VulkanUtils.h"
 #include "Utils/MarkUtils.h"
 
@@ -65,6 +68,11 @@ namespace Mark::RendererVK
                 m_graphicsPipelineCache->destroyAll();
                 m_graphicsPipelineCache.reset();
             }
+            if (m_vertexUploader) 
+            {
+                m_vertexUploader->destroy();
+                m_vertexUploader.reset();
+            }
 
             m_presentQueue.destroy();
             m_graphicsQueue.destroy();
@@ -97,6 +105,14 @@ namespace Mark::RendererVK
             // First window: pick families and create the device
             m_selectedDeviceResult = m_physicalDevices.selectDeviceForSurface(VK_QUEUE_GRAPHICS_BIT, _surface);
             createLogicalDevice();
+
+            // After device creation, we can initialize queues, caches and the vertex buffer
+            initializeQueue();
+            createCaches();
+
+            // Device wide vertex uploader (shared by all windows)
+            m_vertexUploader = std::make_unique<VulkanVertexBuffer>(m_device, graphicsQueueFamilyIndex(), m_graphicsQueue);
+
             return;
         }
 
@@ -121,6 +137,25 @@ namespace Mark::RendererVK
         {
             MARK_ERROR("Existing present queue family %u cannot present to the new surface", presentIdx);
         }
+    }
+
+    uint32_t VulkanCore::getMemoryTypeIndex(uint32_t _memoryTypeBits, VkMemoryPropertyFlags _propertyFlags) const
+    {
+        const VkPhysicalDeviceMemoryProperties& memProps = m_physicalDevices.selected().m_memoryProperties;
+
+        for (uint32_t i = 0; i < memProps.memoryTypeCount; i++)
+        {
+            const VkMemoryType& memType = memProps.memoryTypes[i];
+            uint32_t currentBitMask = (1 << i);
+            bool isCurrMemTypeSupported = (_memoryTypeBits & currentBitMask);
+            bool hasRequiredProperties = (memType.propertyFlags & _propertyFlags) == _propertyFlags;
+
+            if (isCurrMemTypeSupported && hasRequiredProperties) {
+                return i;
+            }
+        }
+        MARK_ERROR("Failed to find memory type for %x requested memory properties %x", _memoryTypeBits, _propertyFlags);
+        return -1;
     }
 
     void VulkanCore::createInstance(const EngineAppInfo& _appInfo)
@@ -312,14 +347,6 @@ namespace Mark::RendererVK
         volkLoadDevice(m_device);
 
         MARK_INFO_C(Utils::Category::Vulkan, "Logical Device Created");
-
-
-        // -- After device creation, we can initialize queues and caches --
-        initializeQueue();
-
-        m_renderPassCache = std::make_unique<VulkanRenderPassCache>(m_device);
-        m_shaderCache = std::make_unique<VulkanShaderCache>(m_device);
-        m_graphicsPipelineCache = std::make_unique<VulkanGraphicsPipelineCache>(m_device);
     }
 
     void VulkanCore::initializeQueue()
@@ -336,6 +363,13 @@ namespace Mark::RendererVK
         {
             MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Present Queue uses Graphics Queue");
         }
+    }
+
+    void VulkanCore::createCaches()
+    {
+        m_renderPassCache = std::make_unique<VulkanRenderPassCache>(m_device);
+        m_shaderCache = std::make_unique<VulkanShaderCache>(m_device);
+        m_graphicsPipelineCache = std::make_unique<VulkanGraphicsPipelineCache>(m_device);
     }
 
 } // namespace Mark::RendererVK

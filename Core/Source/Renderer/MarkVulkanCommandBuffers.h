@@ -19,6 +19,7 @@ namespace Mark::RendererVK
         void createCommandBuffers();
         void recordCommandBuffers(VkClearColorValue _clearColour);
 
+        uint32_t imageCount() const { return static_cast<uint32_t>(m_commandBuffers.size()); }
         VkCommandBuffer commandBuffer(uint32_t _index)
         {
             if (_index >= m_commandBuffers.size())
@@ -34,7 +35,9 @@ namespace Mark::RendererVK
 
         VkCommandPool m_commandPool{ VK_NULL_HANDLE };
         std::vector<VkCommandBuffer> m_commandBuffers;
+        VkCommandBuffer m_copyCommandBuffer{ VK_NULL_HANDLE };
 
+        friend struct VulkanVertexBuffer; // Access within copyBuffer
         void beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags);
     };
 } // namespace Mark::RendererVK

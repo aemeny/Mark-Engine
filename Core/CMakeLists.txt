@@ -6,9 +6,11 @@ add_library(Core STATIC)
 
 set(SOURCES
 Include/Mark/Engine.h
+
 Source/Engine.cpp
 Source/Core.h
 Source/Core.cpp
+
 Source/Platform/GLFWContext.h
 Source/Platform/GLFWContext.cpp
 Source/Platform/Window.h
@@ -18,6 +20,7 @@ Source/Platform/WindowManager.cpp
 Source/Utils/VulkanUtils.h
 Source/Utils/ErrorHandling.h
 Source/Utils/MarkUtils.h
+
 Source/Renderer/MarkVulkanCore.h
 Source/Renderer/MarkVulkanCore.cpp
 Source/Renderer/MarkVulkanPhysicalDevices.h
@@ -40,6 +43,11 @@ Source/Renderer/MarkVulkanGraphicsPipeline.h
 Source/Renderer/MarkVulkanGraphicsPipeline.cpp
 Source/Renderer/MarkVulkanGraphicsPipelineCache.h
 Source/Renderer/MarkVulkanGraphicsPipelineCache.cpp
+Source/Renderer/MarkVulkanVertexBuffer.h
+Source/Renderer/MarkVulkanVertexBuffer.cpp
+
+Source/Engine/ModelHandler.h
+Source/Engine/ModelHandler.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

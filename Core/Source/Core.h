@@ -10,7 +10,7 @@ namespace Mark
     struct Core
     {
         Core(const EngineAppInfo& _appInfo);
-        ~Core();
+        ~Core() = default;
         Core(const Core&) = delete;
         Core& operator=(const Core&) = delete;
 

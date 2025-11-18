@@ -33,8 +33,9 @@ namespace Mark::RendererVK
             uint32_t _imageIndex,
             VkSemaphore _waitSemaphore); // renderFinished
 
-    private:
+         VkQueue get() const { return m_queue; }
 
+    private:
         VkQueue m_queue{ VK_NULL_HANDLE };
         VkDevice m_device{ VK_NULL_HANDLE };
     };

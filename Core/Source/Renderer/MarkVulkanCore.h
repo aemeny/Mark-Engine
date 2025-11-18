@@ -12,6 +12,8 @@ namespace Mark::Platform { struct WindowManager; }
 
 namespace Mark::RendererVK
 {
+    struct VulkanVertexBuffer;
+
     struct VulkanCore
     {
         VulkanCore(const EngineAppInfo& _appInfo);
@@ -26,6 +28,7 @@ namespace Mark::RendererVK
         VulkanPhysicalDevices& physicalDevices() { return m_physicalDevices; }
         VkDevice& device() { return m_device; }
         VulkanRenderPassCache& renderPassCache() { return *m_renderPassCache; }
+        uint32_t getMemoryTypeIndex(uint32_t _memoryTypeBits, VkMemoryPropertyFlags _propertyFlags) const;
 
         // Queue getters
         uint32_t graphicsQueueFamilyIndex() const { return m_selectedDeviceResult.m_gtxQueueFamilyIndex; }
@@ -42,6 +45,8 @@ namespace Mark::RendererVK
         VulkanShaderCache& shaderCache() { return *m_shaderCache; }
         VulkanGraphicsPipelineCache& graphicsPipelineCache() { return *m_graphicsPipelineCache; }
 
+        // Vertex buffer uploader getter
+        VulkanVertexBuffer& vertexUploader() { return *m_vertexUploader; }
 
         // TEMP SHADER FILE PATH
         // --- Asset root / path helpers ---
@@ -59,6 +64,7 @@ namespace Mark::RendererVK
         void createDebugCallback();
         void createLogicalDevice();
         void initializeQueue();
+        void createCaches();
 
         VkInstance m_instance{ VK_NULL_HANDLE };
         VkDebugUtilsMessengerEXT m_debugMessenger{ VK_NULL_HANDLE };
@@ -72,6 +78,9 @@ namespace Mark::RendererVK
 
         // Shared across all windows on this device
         std::unique_ptr<VulkanRenderPassCache> m_renderPassCache;
+
+        // Vertex buffer uploader
+        std::unique_ptr<VulkanVertexBuffer> m_vertexUploader;
 
         // Cache
         std::unique_ptr<VulkanShaderCache> m_shaderCache;

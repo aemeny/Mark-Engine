@@ -29,6 +29,12 @@ namespace Mark::RendererVK
                 m_commandBuffers.clear();
             }
 
+            vkFreeCommandBuffers(VkCore->device(),
+                m_commandPool,
+                1,
+                &m_copyCommandBuffer
+            );
+
             vkDestroyCommandPool(VkCore->device(), m_commandPool, nullptr);
             m_commandPool = VK_NULL_HANDLE;
         }
@@ -53,7 +59,6 @@ namespace Mark::RendererVK
     void VulkanCommandBuffers::createCommandBuffers()
     {
         m_commandBuffers.resize(m_swapChainRef.numImages());
-
         VkCommandBufferAllocateInfo cmdBufferAllocInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             .pNext = nullptr,
@@ -63,8 +68,18 @@ namespace Mark::RendererVK
         };
         VkResult res = vkAllocateCommandBuffers(m_vulkanCoreRef.lock()->device(), &cmdBufferAllocInfo, m_commandBuffers.data());
         CHECK_VK_RESULT(res, "Allocate command buffers");
-
         MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Command Buffers Allocated: %zu", m_commandBuffers.size());
+
+        cmdBufferAllocInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .commandPool = m_commandPool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1
+        };
+        res = vkAllocateCommandBuffers(m_vulkanCoreRef.lock()->device(), &cmdBufferAllocInfo, &m_copyCommandBuffer);
+        CHECK_VK_RESULT(res, "Allocate copy command buffers");
+        MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Copy Command Buffer Allocated");
     }
 
     void VulkanCommandBuffers::recordCommandBuffers(VkClearColorValue _clearColour)
