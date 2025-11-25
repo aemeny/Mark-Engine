@@ -1,13 +1,12 @@
 #pragma once
+#include "Renderer/MarkVulkanVertexBuffer.h"
+
 #include <Volk/volk.h>
 #include <glm/glm.hpp>
 #include <vector>
 #include <memory>
 
-namespace Mark::RendererVK { 
-    struct VulkanCore; 
-    struct BufferAndMemory;
-}
+namespace Mark::RendererVK { struct VulkanCore; }
 
 namespace Mark::Engine
 {
@@ -35,7 +34,7 @@ namespace Mark::Engine
 
         // Call device uploader to create GPU buffer from CPU data
         void uploadToGPU(std::shared_ptr<RendererVK::VulkanCore> _vulkanCore);
-        const void destroyGPUBuffer(VkDevice _device) const;
+        void destroyGPUBuffer(VkDevice _device);
 
     private:
         RendererVK::BufferAndMemory m_bufferAndMemory;

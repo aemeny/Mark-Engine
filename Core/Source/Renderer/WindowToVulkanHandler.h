@@ -21,16 +21,21 @@ namespace Mark::RendererVK
         void createSurface();
         VkSurfaceKHR surface() const { return m_surface; }
 
+        std::weak_ptr<Engine::SimpleMesh> addMesh();
+
     private:
         void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
 
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         Platform::Window& m_windowRef;
 
+        // Temporary list of meshes to render for this window
+        std::vector<std::shared_ptr<Engine::SimpleMesh>> m_meshesToDraw;
+
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
         VulkanRenderPass m_renderPass{ m_vulkanCoreRef, m_swapChain };
-        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_renderPass };
+        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_renderPass, &m_meshesToDraw };
         VulkanCommandBuffers m_commandBuffers{ m_vulkanCoreRef, m_swapChain, m_renderPass, m_graphicsPipeline };
 
         struct FrameSyncData

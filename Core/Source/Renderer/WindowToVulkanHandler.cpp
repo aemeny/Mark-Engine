@@ -71,6 +71,9 @@ namespace Mark::RendererVK
             frameData.m_inFlightFence = createFence(device);
         }
 
+        // TEMP 1 ADD MESH FOR THIS WINDOW
+        addMesh();
+
         // Create graphics pipeline
         m_graphicsPipeline.createGraphicsPipeline();
 
@@ -192,5 +195,14 @@ namespace Mark::RendererVK
 
         CHECK_VK_RESULT(res, "Create window surface");
         MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Created");
+    }
+
+    std::weak_ptr<Engine::SimpleMesh> WindowToVulkanHandler::addMesh()
+    {
+        auto rtn = std::make_shared<Engine::SimpleMesh>();
+        rtn->uploadToGPU(m_vulkanCoreRef.lock());
+
+        m_meshesToDraw.push_back(rtn);
+        return rtn;
     }
 } // namespace Mark::RendererVK

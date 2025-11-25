@@ -1,5 +1,4 @@
 #include "ModelHandler.h"
-#include "Renderer/MarkVulkanVertexBuffer.h"
 #include "Renderer/MarkVulkanCore.h"
 #include "Utils/MarkUtils.h"
 
@@ -36,7 +35,7 @@ namespace Mark::Engine
             m_vertices.size(), static_cast<size_t>(bufferSize));
     }
 
-    const void SimpleMesh::destroyGPUBuffer(VkDevice _device) const
+    void SimpleMesh::destroyGPUBuffer(VkDevice _device)
     {
         if (hasGPUBuffer())
         {

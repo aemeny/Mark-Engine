@@ -6,14 +6,31 @@
 
 namespace Mark::RendererVK
 {
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_renderPassRef(_renderPassRef), m_swapChainRef(_swapChainRef)
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, const std::vector<std::shared_ptr<Engine::SimpleMesh>>* _meshesToDraw) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_renderPassRef(_renderPassRef), m_swapChainRef(_swapChainRef), m_meshesToDraw(_meshesToDraw)
     {}
 
     void VulkanGraphicsPipeline::destroyGraphicsPipeline()
     {
         // Drop cache ref (decrements refcount inside the cache)
         m_cachedRef = {};
+
+        if (m_vulkanCoreRef.expired())
+        {
+            MARK_LOG_ERROR_C(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy graphics pipeline");
+        }
+        auto device = m_vulkanCoreRef.lock()->device();
+
+        if (m_descriptorSetLayout) {
+            vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
+            m_descriptorSetLayout = VK_NULL_HANDLE;
+        }
+        if (m_descriptorPool) {
+            vkDestroyDescriptorPool(device, m_descriptorPool, nullptr);
+            m_descriptorPool = VK_NULL_HANDLE;
+        }
+        m_descriptorSets.clear();
+
         m_pipelineLayout = VK_NULL_HANDLE;
 
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Destroyed");
@@ -24,6 +41,7 @@ namespace Mark::RendererVK
         auto VkCore = m_vulkanCoreRef.lock();
         VkDevice device = VkCore->device();
 
+        // ---=== Temporary area for future Engine side handling ==---
         // Get shader modules from the device shader cache
         const auto vsPath = VkCore->shaderPath("TriangleTest.vert");
         const auto fsPath = VkCore->shaderPath("TriangleTest.frag");
@@ -33,6 +51,16 @@ namespace Mark::RendererVK
         {
             MARK_LOG_ERROR_C(Utils::Category::Vulkan, "Failed to load shaders");
             return;
+        }
+
+        // Create descriptor sets for each mesh we have to draw
+        if (m_meshesToDraw && !m_meshesToDraw->empty()) {
+            m_meshCount = static_cast<uint32_t>(m_meshesToDraw->size());
+            createDescriptorSets(device);
+        }
+        else {
+            m_meshCount = 0;
+            MARK_WARN_C(Utils::Category::Vulkan, "No meshes to draw for graphics pipeline");
         }
 
         // Cache key for this render-target + program + baked state
@@ -54,7 +82,11 @@ namespace Mark::RendererVK
             [&](const VulkanGraphicsPipelineKey& _key)->GraphicsPipelineCreateResult
             {
                 VkPipelineLayout layout = VK_NULL_HANDLE;
-                VkPipelineLayoutCreateInfo pipelineLayoutInfo{ VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+                VkPipelineLayoutCreateInfo pipelineLayoutInfo = { 
+                    .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+                    .setLayoutCount = m_descriptorSetLayout ? 1u : 0u,
+                    .pSetLayouts = m_descriptorSetLayout ? &m_descriptorSetLayout : nullptr
+                };
 
                 VkResult res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout);
                 CHECK_VK_RESULT(res, "Failed to create pipeline layout");
@@ -169,9 +201,149 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Created");
     }
 
-    void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer)
+    void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex, uint32_t _meshIndex)
     {
         vkCmdBindPipeline(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_cachedRef.get());
+
+        if (!m_descriptorSets.empty() && m_meshCount) {
+            const uint32_t index = _imageIndex * m_meshCount + _meshIndex;
+            vkCmdBindDescriptorSets(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 
+                0, // firstSet
+                1, // descriptorSetCount
+                &m_descriptorSets[index],
+                0, // dynamicOffsetCount
+                nullptr // pDynamicOffsets
+            );
+        }
+    }
+
+    void VulkanGraphicsPipeline::rebuildDescriptors()
+    {
+        auto VkCore = m_vulkanCoreRef.lock();
+        VkDevice device = VkCore->device();
+
+        // Destroy old descriptor objects
+        if (m_descriptorSetLayout) { 
+            vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr); 
+            m_descriptorSetLayout = VK_NULL_HANDLE; 
+        }
+        if (m_descriptorPool) { 
+            vkDestroyDescriptorPool(device, m_descriptorPool, nullptr); 
+            m_descriptorPool = VK_NULL_HANDLE; 
+        }
+        m_descriptorSets.clear();
+
+        m_meshCount = m_meshesToDraw ? static_cast<uint32_t>(m_meshesToDraw->size()) : 0;
+        if (m_meshCount) {
+            createDescriptorSets(device);
+        }
+    }
+
+    void VulkanGraphicsPipeline::createDescriptorSets(VkDevice _device)
+    {
+        const uint32_t numImages = static_cast<uint32_t>(m_swapChainRef.numImages());
+        const uint32_t totalSets = numImages * m_meshCount;
+
+        createDescriptorPool(totalSets, _device);
+        createDescriptorSetLayout(_device);
+        allocateDescriptorSets(totalSets, _device);
+        updateDescriptorSets(numImages, totalSets, _device);
+    }
+
+    void VulkanGraphicsPipeline::createDescriptorPool(uint32_t _numSets, VkDevice _device)
+    {
+        const VkDescriptorPoolSize sizes[] = {
+            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets } // 1 SSBO per set
+        };
+
+        VkDescriptorPoolCreateInfo poolCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .flags = 0,
+            .maxSets = _numSets,
+            .poolSizeCount = static_cast<uint32_t>(std::size(sizes)),
+            .pPoolSizes = sizes
+        };
+
+        VkResult res = vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &m_descriptorPool);
+        CHECK_VK_RESULT(res, "Create Descriptor Pool");
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Descriptor Pool Created");
+    }
+
+    void VulkanGraphicsPipeline::createDescriptorSetLayout(VkDevice _device)
+    {
+        std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+
+        VkDescriptorSetLayoutBinding vertexShaderLayouBinding = {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .pImmutableSamplers = nullptr
+        };
+
+        layoutBindings.push_back(vertexShaderLayouBinding);
+
+        VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0, // Reserved - so must be 0
+            .bindingCount = static_cast<uint32_t>(layoutBindings.size()),
+            .pBindings = layoutBindings.data()
+        };
+
+        VkResult res = vkCreateDescriptorSetLayout(_device, &layoutCreateInfo, nullptr, &m_descriptorSetLayout);
+        CHECK_VK_RESULT(res, "Create Descriptor Set Layout");
+    }
+
+    void VulkanGraphicsPipeline::allocateDescriptorSets(uint32_t _numSets, VkDevice _device)
+    {
+        std::vector<VkDescriptorSetLayout> layouts(_numSets, m_descriptorSetLayout);
+
+        VkDescriptorSetAllocateInfo allocInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorPool = m_descriptorPool,
+            .descriptorSetCount = _numSets,
+            .pSetLayouts = layouts.data()
+        };
+
+        m_descriptorSets.resize(_numSets);
+
+        VkResult res = vkAllocateDescriptorSets(_device, &allocInfo, m_descriptorSets.data());
+        CHECK_VK_RESULT(res, "Allocate Descriptor Sets");
+    }
+
+    void VulkanGraphicsPipeline::updateDescriptorSets(uint32_t _numImages, uint32_t _numSets, VkDevice _device)
+    {
+        std::vector<VkDescriptorBufferInfo> bufferInfos(_numSets);
+        std::vector<VkWriteDescriptorSet> writes(_numSets);
+
+        for (uint32_t img = 0; img < _numImages; img++)
+        {
+            for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
+            {       
+                const uint32_t index = img * m_meshCount + meshIndex;
+
+                bufferInfos[index] = {
+                    .buffer = m_meshesToDraw->at(meshIndex)->gpuBuffer(),
+                    .offset = 0,
+                    .range = m_meshesToDraw->at(meshIndex)->gpuBufferSize()
+                };
+
+                writes[index] = {
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = m_descriptorSets[index],
+                    .dstBinding = 0,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .pImageInfo = nullptr,
+                    .pBufferInfo = &bufferInfos[index],
+                    .pTexelBufferView = nullptr
+                };
+            }
+        }
+        vkUpdateDescriptorSets(_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
     }
 
 } // namespace Mark::RendererVK
