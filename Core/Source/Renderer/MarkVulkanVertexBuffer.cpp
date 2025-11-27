@@ -94,7 +94,7 @@ namespace Mark::RendererVK
         );
 
         // Copy data from staging buffer to final buffer
-        copyBuffer(deviceLocalBuffer.m_buffer, stagingBuffer.m_buffer, _size);
+        copyBuffer(stagingBuffer.m_buffer, deviceLocalBuffer.m_buffer, _size);
 
         // Release staging buffer resources
         stagingBuffer.destroy(_vulkanCoreRef->device());

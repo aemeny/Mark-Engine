@@ -1,8 +1,6 @@
 #pragma once
 #include "MarkVulkanCommandBuffers.h"
 
-#include <volk.h>
-#include <memory>
 #include <array>
 
 struct GLFWwindow;
@@ -35,7 +33,8 @@ namespace Mark::RendererVK
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
         VulkanRenderPass m_renderPass{ m_vulkanCoreRef, m_swapChain };
-        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_renderPass, &m_meshesToDraw };
+        VulkanUniformBuffer m_uniformBuffer{ m_vulkanCoreRef };
+        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_renderPass, m_uniformBuffer, &m_meshesToDraw };
         VulkanCommandBuffers m_commandBuffers{ m_vulkanCoreRef, m_swapChain, m_renderPass, m_graphicsPipeline };
 
         struct FrameSyncData

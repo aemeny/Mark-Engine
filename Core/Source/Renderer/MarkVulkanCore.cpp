@@ -327,9 +327,16 @@ namespace Mark::RendererVK
         deviceFeatures.geometryShader = VK_TRUE;
         deviceFeatures.tessellationShader = VK_TRUE;
 
+        // Vulkan 1.3: enable the core synchronization2 feature so *_2 calls are valid
+        VkPhysicalDeviceVulkan13Features v13 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+            .pNext = nullptr,
+            .synchronization2 = VK_TRUE
+        };
+
         VkDeviceCreateInfo deviceCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-            .pNext = nullptr,
+            .pNext = &v13,
             .flags = 0,
             .queueCreateInfoCount = qCount,
             .pQueueCreateInfos = qInfos,

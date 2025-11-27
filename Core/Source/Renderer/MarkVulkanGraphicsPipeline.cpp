@@ -33,8 +33,8 @@ namespace Mark::RendererVK
         return h;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, const std::vector<std::shared_ptr<Engine::SimpleMesh>>* _meshesToDraw) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_renderPassRef(_renderPassRef), m_swapChainRef(_swapChainRef), m_meshesToDraw(_meshesToDraw)
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, VulkanUniformBuffer& _uniformBufferRef, const std::vector<std::shared_ptr<Engine::SimpleMesh>>* _meshesToDraw) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_renderPassRef(_renderPassRef), m_swapChainRef(_swapChainRef), m_uniformBufferRef(_uniformBufferRef), m_meshesToDraw(_meshesToDraw)
     {}
 
     void VulkanGraphicsPipeline::destroyGraphicsPipeline()
@@ -164,7 +164,7 @@ namespace Mark::RendererVK
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
                     .polygonMode = VK_POLYGON_MODE_FILL,
                     .cullMode = VK_CULL_MODE_BACK_BIT,
-                    .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+                    .frontFace = VK_FRONT_FACE_CLOCKWISE,
                     .lineWidth = 1.0f
                 };
                 
@@ -288,16 +288,18 @@ namespace Mark::RendererVK
 
     void VulkanGraphicsPipeline::createDescriptorPool(uint32_t _numSets, VkDevice _device)
     {
-        const VkDescriptorPoolSize sizes[] = {
-            { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets } // 1 SSBO per set
-        };
+        std::vector<VkDescriptorPoolSize> sizes;
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets }); // 1 SSBO per set
+        if (m_uniformBufferRef.bufferCount() > 0) {
+            sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numSets }); // 1 UBO per set
+        }
 
         VkDescriptorPoolCreateInfo poolCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .flags = 0,
             .maxSets = _numSets,
-            .poolSizeCount = static_cast<uint32_t>(std::size(sizes)),
-            .pPoolSizes = sizes
+            .poolSizeCount = static_cast<uint32_t>(sizes.size()),
+            .pPoolSizes = sizes.data()
         };
 
         VkResult res = vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &m_descriptorPool);
@@ -312,7 +314,7 @@ namespace Mark::RendererVK
 
         m_bindings.clear();
 
-        VkDescriptorSetLayoutBinding vertexShaderLayoutBinding = {
+        VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_VB = {
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
@@ -320,7 +322,19 @@ namespace Mark::RendererVK
             .pImmutableSamplers = nullptr
         };
 
-        m_bindings.push_back(vertexShaderLayoutBinding);
+        m_bindings.push_back(vertexShaderLayoutBinding_VB);
+
+        VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_UBO = {
+            .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .pImmutableSamplers = nullptr
+        };
+
+        if (m_uniformBufferRef.bufferCount() > 0) {
+            m_bindings.push_back(vertexShaderLayoutBinding_UBO);
+        }
 
         VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -357,26 +371,38 @@ namespace Mark::RendererVK
 
     void VulkanGraphicsPipeline::updateDescriptorSets(uint32_t _numImages, uint32_t _numSets, VkDevice _device)
     {
-        std::vector<VkDescriptorBufferInfo> bufferInfos(_numSets);
-        std::vector<VkWriteDescriptorSet> writes(_numSets);
+        // One SSBO info per set; one UBO info per image
+        std::vector<VkDescriptorBufferInfo> ssboInfos(_numSets);
+        std::vector<VkDescriptorBufferInfo> uboInfos;
+        std::vector<VkWriteDescriptorSet> writes;
+
+        const bool hasUBO = (m_uniformBufferRef.bufferCount() > 0);
+        if (hasUBO) 
+        {
+            uboInfos.resize(_numImages);
+            for (uint32_t img = 0; img < _numImages; img++) {
+                uboInfos[img] = m_uniformBufferRef.descriptorInfo(img);
+            }
+        }
+        writes.reserve(_numSets * (hasUBO ? 2u : 1u));
 
         for (uint32_t img = 0; img < _numImages; img++)
         {
             for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
-            {       
+            {
                 const uint32_t index = img * m_meshCount + meshIndex;
                 const auto& mesh = *m_meshesToDraw->at(meshIndex);
 
                 if (!mesh.hasGPUBuffer()) {
                     MARK_ERROR("Mesh has no GPU buffer to bind to descriptor set");
                 }
-                bufferInfos[index] = {
+                ssboInfos[index] = {
                     .buffer = mesh.gpuBuffer(),
                     .offset = 0,
-                    .range = mesh.gpuBufferSize()
+                    .range = VK_WHOLE_SIZE
                 };
 
-                writes[index] = {
+                writes.push_back(VkWriteDescriptorSet{
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = m_descriptorSets[index],
                     .dstBinding = 0,
@@ -384,9 +410,24 @@ namespace Mark::RendererVK
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
                     .pImageInfo = nullptr,
-                    .pBufferInfo = &bufferInfos[index],
+                    .pBufferInfo = &ssboInfos[index],
                     .pTexelBufferView = nullptr
-                };
+                });
+
+                if (hasUBO) 
+                {
+                    writes.push_back(VkWriteDescriptorSet{
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = m_descriptorSets[index],
+                        .dstBinding = 1,
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                        .pImageInfo = nullptr,
+                        .pBufferInfo = &uboInfos[img],
+                        .pTexelBufferView = nullptr
+                    });
+                }
             }
         }
         vkUpdateDescriptorSets(_device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);

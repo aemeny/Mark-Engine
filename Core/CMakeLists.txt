@@ -45,6 +45,8 @@ Source/Renderer/MarkVulkanGraphicsPipelineCache.h
 Source/Renderer/MarkVulkanGraphicsPipelineCache.cpp
 Source/Renderer/MarkVulkanVertexBuffer.h
 Source/Renderer/MarkVulkanVertexBuffer.cpp
+Source/Renderer/MarkVulkanUniformBuffer.h
+Source/Renderer/MarkVulkanUniformBuffer.cpp
 
 Source/Engine/ModelHandler.h
 Source/Engine/ModelHandler.cpp

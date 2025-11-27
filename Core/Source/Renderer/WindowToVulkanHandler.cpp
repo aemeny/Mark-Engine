@@ -5,6 +5,7 @@
 #include "Utils/VulkanUtils.h"
 
 #include <GLFW/glfw3.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Mark::RendererVK
 {
@@ -71,6 +72,8 @@ namespace Mark::RendererVK
             frameData.m_inFlightFence = createFence(device);
         }
 
+        m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
+
         // TEMP 1 ADD MESH FOR THIS WINDOW
         addMesh();
 
@@ -97,6 +100,15 @@ namespace Mark::RendererVK
 
         // Destroy command buffers and pool
         m_commandBuffers.destroyCommandBuffers();
+
+        // Destroy uniform buffers
+        m_uniformBuffer.destroyUniformBuffers(VkCore->device());
+
+        // TEMP WHILE MESH HANDLING IS BASIC - clean mesh buffers
+        for (std::shared_ptr<Engine::SimpleMesh> mesh : m_meshesToDraw)
+        {
+            mesh->destroyGPUBuffer(VkCore->device());
+        }
 
         // Destroy graphics pipeline
         m_graphicsPipeline.destroyGraphicsPipeline();
@@ -165,6 +177,19 @@ namespace Mark::RendererVK
 
         // Reset this frame's fence for the upcoming submit
         vkResetFences(VkCore->device(), 1, &frameSyncData.m_inFlightFence);
+
+
+        /* TEMP UNIFORM DATA UPDATING FOR TESTING */
+        static float foo = 0.0f;
+        glm::mat4 rotate = glm::mat4(1.0f);
+        rotate = glm::rotate(rotate, glm::radians(foo), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
+        foo += 0.01f;
+        UniformData tempData = {
+            .WVP = rotate
+        };
+
+        // Update uniform buffer for this image
+        m_uniformBuffer.updateUniformBuffer(imageIndex, tempData);
 
         // Record the command buffer for this image
         VkCommandBuffer cmdBuffer = m_commandBuffers.commandBuffer(imageIndex);
