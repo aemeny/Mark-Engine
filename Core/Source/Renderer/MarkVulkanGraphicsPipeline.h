@@ -46,5 +46,9 @@ namespace Mark::RendererVK
         void createDescriptorSetLayout(VkDevice _device);
         void allocateDescriptorSets(uint32_t _numSets, VkDevice _device);
         void updateDescriptorSets(uint32_t _numImages, uint32_t _numSets, VkDevice _device);
+    
+        // The exact bindings used to create m_descriptorSetLayout (for hashing)
+        std::vector<VkDescriptorSetLayoutBinding> m_bindings;
+        uint64_t m_descSetLayoutHash{ 0 };
     };
 } // namespace Mark::RendererVK

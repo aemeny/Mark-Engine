@@ -6,6 +6,33 @@
 
 namespace Mark::RendererVK
 {
+    // Hash helper for descriptor bindings (order-independent by binding index)
+    static uint64_t HashBindings(const std::vector<VkDescriptorSetLayoutBinding>& _bindings)
+    {
+        // FNV-1a 64-bit
+        uint64_t h = 1469598103934665603ull;
+        auto mix = [&h](uint64_t _v)
+        {
+            h ^= _v;
+            h *= 1099511628211ull;
+        };
+
+        // Deterministic order
+        std::vector<VkDescriptorSetLayoutBinding> temp = _bindings;
+        std::sort(temp.begin(), temp.end(), [](auto& _a, auto& _b) 
+            { return _a.binding < _b.binding; }
+        );
+
+        for (const auto& b : temp)
+        {
+            mix(b.binding);
+            mix(static_cast<uint64_t>(b.descriptorType));
+            mix(b.descriptorCount);
+            mix(static_cast<uint64_t>(b.stageFlags));
+        }
+        return h;
+    }
+
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, const std::vector<std::shared_ptr<Engine::SimpleMesh>>* _meshesToDraw) :
         m_vulkanCoreRef(_vulkanCoreRef), m_renderPassRef(_renderPassRef), m_swapChainRef(_swapChainRef), m_meshesToDraw(_meshesToDraw)
     {}
@@ -63,6 +90,10 @@ namespace Mark::RendererVK
             MARK_WARN_C(Utils::Category::Vulkan, "No meshes to draw for graphics pipeline");
         }
 
+        // Ensure descriptor set layout exists for hashing
+        if (m_descriptorSetLayout == VK_NULL_HANDLE)
+            createDescriptorSetLayout(device);
+
         // Cache key for this render-target + program + baked state
         const VkRenderPass renderPass = m_renderPassRef.renderPass();
 
@@ -73,7 +104,8 @@ namespace Mark::RendererVK
             vs, fs,
             VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 
             samples,
-            dynMask
+            dynMask,
+            m_descSetLayoutHash
         );
 
         // Acquire from the device graphics-pipeline cache with a creation lambda
@@ -205,15 +237,19 @@ namespace Mark::RendererVK
     {
         vkCmdBindPipeline(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_cachedRef.get());
 
-        if (!m_descriptorSets.empty() && m_meshCount) {
+        if (!m_descriptorSets.empty() && m_meshCount) 
+        {
             const uint32_t index = _imageIndex * m_meshCount + _meshIndex;
-            vkCmdBindDescriptorSets(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 
-                0, // firstSet
-                1, // descriptorSetCount
-                &m_descriptorSets[index],
-                0, // dynamicOffsetCount
-                nullptr // pDynamicOffsets
-            );
+            if (index < m_descriptorSets.size()) 
+            {
+                vkCmdBindDescriptorSets(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout,
+                    0, // firstSet
+                    1, // descriptorSetCount
+                    &m_descriptorSets[index],
+                    0, // dynamicOffsetCount
+                    nullptr // pDynamicOffsets
+                );
+            }
         }
     }
 
@@ -271,9 +307,12 @@ namespace Mark::RendererVK
 
     void VulkanGraphicsPipeline::createDescriptorSetLayout(VkDevice _device)
     {
-        std::vector<VkDescriptorSetLayoutBinding> layoutBindings;
+        if (m_descriptorSetLayout != VK_NULL_HANDLE)
+            return;
 
-        VkDescriptorSetLayoutBinding vertexShaderLayouBinding = {
+        m_bindings.clear();
+
+        VkDescriptorSetLayoutBinding vertexShaderLayoutBinding = {
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
@@ -281,18 +320,21 @@ namespace Mark::RendererVK
             .pImmutableSamplers = nullptr
         };
 
-        layoutBindings.push_back(vertexShaderLayouBinding);
+        m_bindings.push_back(vertexShaderLayoutBinding);
 
         VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0, // Reserved - so must be 0
-            .bindingCount = static_cast<uint32_t>(layoutBindings.size()),
-            .pBindings = layoutBindings.data()
+            .bindingCount = static_cast<uint32_t>(m_bindings.size()),
+            .pBindings = m_bindings.data()
         };
 
         VkResult res = vkCreateDescriptorSetLayout(_device, &layoutCreateInfo, nullptr, &m_descriptorSetLayout);
         CHECK_VK_RESULT(res, "Create Descriptor Set Layout");
+
+        // Hash the bindings for future reference
+        m_descSetLayoutHash = HashBindings(m_bindings);
     }
 
     void VulkanGraphicsPipeline::allocateDescriptorSets(uint32_t _numSets, VkDevice _device)
@@ -323,11 +365,15 @@ namespace Mark::RendererVK
             for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
             {       
                 const uint32_t index = img * m_meshCount + meshIndex;
+                const auto& mesh = *m_meshesToDraw->at(meshIndex);
 
+                if (!mesh.hasGPUBuffer()) {
+                    MARK_ERROR("Mesh has no GPU buffer to bind to descriptor set");
+                }
                 bufferInfos[index] = {
-                    .buffer = m_meshesToDraw->at(meshIndex)->gpuBuffer(),
+                    .buffer = mesh.gpuBuffer(),
                     .offset = 0,
-                    .range = m_meshesToDraw->at(meshIndex)->gpuBufferSize()
+                    .range = mesh.gpuBufferSize()
                 };
 
                 writes[index] = {

@@ -20,6 +20,7 @@ namespace Mark::RendererVK
         VkPrimitiveTopology m_topology{ VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
         VkSampleCountFlagBits m_samples{ VK_SAMPLE_COUNT_1_BIT };
         uint32_t m_dynamicStateMask{ 0 };
+        uint64_t m_descriptorSetLayoutHash{ 0 };
 
         bool operator==(const VulkanGraphicsPipelineKey& _o) const noexcept
         {
@@ -28,7 +29,8 @@ namespace Mark::RendererVK
                 && m_fragShader == _o.m_fragShader
                 && m_topology == _o.m_topology
                 && m_samples == _o.m_samples
-                && m_dynamicStateMask == _o.m_dynamicStateMask;
+                && m_dynamicStateMask == _o.m_dynamicStateMask
+                && m_descriptorSetLayoutHash == _o.m_descriptorSetLayoutHash;
         }
 
         static VulkanGraphicsPipelineKey Make(
@@ -37,7 +39,8 @@ namespace Mark::RendererVK
             VkShaderModule _frag,
             VkPrimitiveTopology _topo = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
             VkSampleCountFlagBits _smp = VK_SAMPLE_COUNT_1_BIT,
-            uint32_t _dynMask = 0)
+            uint32_t _dynMask = 0,
+            uint64_t _descSetHash = 0)
         {
             VulkanGraphicsPipelineKey k;
             k.m_renderPass = _rp;
@@ -46,6 +49,7 @@ namespace Mark::RendererVK
             k.m_topology = _topo;
             k.m_samples = _smp;
             k.m_dynamicStateMask = _dynMask;
+            k.m_descriptorSetLayoutHash = _descSetHash;
             return k;
         }
     };
@@ -56,9 +60,9 @@ namespace Mark::RendererVK
         {
             // Simple FNV-1a style mixer
             size_t hash = 1469598103934665603ull;
-            auto mix = [&hash](size_t v)
+            auto mix = [&hash](size_t _v)
             {
-                hash ^= v;
+                hash ^= _v;
                 hash *= 1099511628211ull;
             };
             mix(reinterpret_cast<size_t>(_key.m_renderPass));
@@ -67,6 +71,7 @@ namespace Mark::RendererVK
             mix(static_cast<size_t>(_key.m_topology));
             mix(static_cast<size_t>(_key.m_samples));
             mix(static_cast<size_t>(_key.m_dynamicStateMask));
+            mix(static_cast<size_t>(_key.m_descriptorSetLayoutHash));
             return hash;
         }
     };
