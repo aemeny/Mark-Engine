@@ -74,8 +74,10 @@ namespace Mark::RendererVK
 
         m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
 
-        // TEMP 1 ADD MESH FOR THIS WINDOW
+        // TEMP ADD MESH FOR THIS WINDOW
         addMesh();
+        // TEMP INIT CAMERA CONTROLLER
+        initCameraController();
 
         // Create graphics pipeline
         m_graphicsPipeline.createGraphicsPipeline();
@@ -144,6 +146,26 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::Vulkan, "Window Frame Sync Objects Destroyed");
     }
 
+    void WindowToVulkanHandler::initCameraController()
+    {
+        // TEMP camera controller for testing
+        float FOV = 45.0f;
+        float zNear = 0.1f;
+        float zFar = 1000.0f;
+        Engine::PersProjInfo projInfo = {
+            .m_FOV = FOV,
+            .m_windowWidth = static_cast<float>(m_windowRef.windowSize().at(0)),
+            .m_windowHeight = static_cast<float>(m_windowRef.windowSize().at(1)),
+            .m_zNear = zNear,
+            .m_zFar = zFar
+        };
+        glm::vec3 pos(0.0f, 0.0f, -5.0f);
+        glm::vec3 target(0.0f, 0.0f, 0.0f);
+        glm::vec3 up(0.0f, 1.0f, 0.0f);
+
+        m_cameraController = std::make_shared<Engine::EarlyCameraController>(pos, target, up, projInfo);
+    }
+
     void WindowToVulkanHandler::renderToWindow()
     {
         // Check for valid extent before rendering
@@ -180,12 +202,9 @@ namespace Mark::RendererVK
 
 
         /* TEMP UNIFORM DATA UPDATING FOR TESTING */
-        static float foo = 0.0f;
-        glm::mat4 rotate = glm::mat4(1.0f);
-        rotate = glm::rotate(rotate, glm::radians(foo), glm::normalize(glm::vec3(0.0f, 0.0f, 1.0f)));
-        foo += 0.01f;
+        m_cameraController->tick(m_windowRef.handle());
         UniformData tempData = {
-            .WVP = rotate
+            .WVP = m_cameraController->getVPMatrix()
         };
 
         // Update uniform buffer for this image

@@ -50,6 +50,8 @@ Source/Renderer/MarkVulkanUniformBuffer.cpp
 
 Source/Engine/ModelHandler.h
 Source/Engine/ModelHandler.cpp
+Source/Engine/EarlyCameraController.h
+Source/Engine/EarlyCameraController.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

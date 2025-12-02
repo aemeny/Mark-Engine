@@ -1,6 +1,8 @@
 #pragma once
 #include "MarkVulkanCommandBuffers.h"
 
+#include "Engine/EarlyCameraController.h" // TEMP
+
 #include <array>
 
 struct GLFWwindow;
@@ -27,8 +29,11 @@ namespace Mark::RendererVK
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         Platform::Window& m_windowRef;
 
-        // Temporary list of meshes to render for this window
+        // TEMP list of meshes to render for this window
         std::vector<std::shared_ptr<Engine::SimpleMesh>> m_meshesToDraw;
+        // TEMP camera controller for testing
+        std::shared_ptr<Engine::EarlyCameraController> m_cameraController;
+        void initCameraController();
 
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
