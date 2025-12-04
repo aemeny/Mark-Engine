@@ -48,6 +48,14 @@ namespace Mark::RendererVK
         }
         return path;
     }
+    std::filesystem::path VulkanCore::texturePath(const std::string& _file) const
+    {
+        std::filesystem::path path = (m_assetRoot / "Textures" / _file).lexically_normal();
+        if (!std::filesystem::exists(path)) {
+            MARK_WARN_C(Utils::Category::Vulkan, "Texture not found at: %s", path.string().c_str());
+        }
+        return path;
+    }
 
     VulkanCore::~VulkanCore()
     {

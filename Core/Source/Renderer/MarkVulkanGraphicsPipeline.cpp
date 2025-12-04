@@ -33,7 +33,7 @@ namespace Mark::RendererVK
         return h;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, VulkanUniformBuffer& _uniformBufferRef, const std::vector<std::shared_ptr<Engine::SimpleMesh>>* _meshesToDraw) :
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, VulkanUniformBuffer& _uniformBufferRef, const std::vector<std::shared_ptr<MeshHandler>>* _meshesToDraw) :
         m_vulkanCoreRef(_vulkanCoreRef), m_renderPassRef(_renderPassRef), m_swapChainRef(_swapChainRef), m_uniformBufferRef(_uniformBufferRef), m_meshesToDraw(_meshesToDraw)
     {}
 

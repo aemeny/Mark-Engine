@@ -107,7 +107,7 @@ namespace Mark::RendererVK
         m_uniformBuffer.destroyUniformBuffers(VkCore->device());
 
         // TEMP WHILE MESH HANDLING IS BASIC - clean mesh buffers
-        for (std::shared_ptr<Engine::SimpleMesh> mesh : m_meshesToDraw)
+        for (std::shared_ptr<MeshHandler> mesh : m_meshesToDraw)
         {
             mesh->destroyGPUBuffer(VkCore->device());
         }
@@ -241,10 +241,10 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Created");
     }
 
-    std::weak_ptr<Engine::SimpleMesh> WindowToVulkanHandler::addMesh()
+    std::weak_ptr<MeshHandler> WindowToVulkanHandler::addMesh()
     {
-        auto rtn = std::make_shared<Engine::SimpleMesh>();
-        rtn->uploadToGPU(m_vulkanCoreRef.lock());
+        auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef);
+        rtn->uploadToGPU();
 
         m_meshesToDraw.push_back(rtn);
         return rtn;

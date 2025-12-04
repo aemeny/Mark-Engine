@@ -47,9 +47,11 @@ Source/Renderer/MarkVulkanVertexBuffer.h
 Source/Renderer/MarkVulkanVertexBuffer.cpp
 Source/Renderer/MarkVulkanUniformBuffer.h
 Source/Renderer/MarkVulkanUniformBuffer.cpp
+Source/Renderer/VulkanModelHandler.h
+Source/Renderer/VulkanModelHandler.cpp
+Source/Renderer/VulkanTextureHandler.h
+Source/Renderer/VulkanTextureHandler.cpp
 
-Source/Engine/ModelHandler.h
-Source/Engine/ModelHandler.cpp
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp
 )

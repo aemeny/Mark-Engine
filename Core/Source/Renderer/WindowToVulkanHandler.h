@@ -21,7 +21,7 @@ namespace Mark::RendererVK
         void createSurface();
         VkSurfaceKHR surface() const { return m_surface; }
 
-        std::weak_ptr<Engine::SimpleMesh> addMesh();
+        std::weak_ptr<MeshHandler> addMesh();
 
     private:
         void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
@@ -30,7 +30,7 @@ namespace Mark::RendererVK
         Platform::Window& m_windowRef;
 
         // TEMP list of meshes to render for this window
-        std::vector<std::shared_ptr<Engine::SimpleMesh>> m_meshesToDraw;
+        std::vector<std::shared_ptr<MeshHandler>> m_meshesToDraw;
         // TEMP camera controller for testing
         std::shared_ptr<Engine::EarlyCameraController> m_cameraController;
         void initCameraController();

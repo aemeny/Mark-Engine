@@ -3,7 +3,7 @@
 #include "MarkVulkanRenderPass.h"
 #include "MarkVulkanSwapChain.h"
 #include "MarkVulkanUniformBuffer.h"
-#include <Engine/ModelHandler.h>
+#include "VulkanModelHandler.h"
 
 namespace Mark::Platform{ struct Window; }
 namespace Mark::RendererVK
@@ -13,7 +13,7 @@ namespace Mark::RendererVK
     {
         VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, 
             VulkanRenderPass& _renderPassRef, VulkanUniformBuffer& _uniformBufferRef,
-            const std::vector<std::shared_ptr<Engine::SimpleMesh>>* _meshesToDraw);
+            const std::vector<std::shared_ptr<MeshHandler>>* _meshesToDraw);
         ~VulkanGraphicsPipeline() = default;
         void destroyGraphicsPipeline();
         VulkanGraphicsPipeline(const VulkanGraphicsPipeline&) = delete;
@@ -32,7 +32,7 @@ namespace Mark::RendererVK
         VulkanSwapChain& m_swapChainRef;
         VulkanRenderPass& m_renderPassRef;
         VulkanUniformBuffer& m_uniformBufferRef;
-        const std::vector<std::shared_ptr<Engine::SimpleMesh>>* m_meshesToDraw;
+        const std::vector<std::shared_ptr<MeshHandler>>* m_meshesToDraw;
 
         VulkanGraphicsPipelineRef m_cachedRef{};
         VkPipelineLayout m_pipelineLayout{ VK_NULL_HANDLE };

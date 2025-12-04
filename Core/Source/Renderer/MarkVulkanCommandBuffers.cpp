@@ -116,8 +116,8 @@ namespace Mark::RendererVK
             vkCmdSetViewport(m_commandBuffers[i], 0, 1, &viewport);
             vkCmdSetScissor(m_commandBuffers[i], 0, 1, &scissor);
 
-            // Verbose for now to test draw a simple triangle
-            const uint32_t vertexCount = 3;
+            // Verbose for now to test draw a simple mesh
+            const uint32_t vertexCount = 6;
             const uint32_t instanceCount = 1;
             const uint32_t firstVertex = 0;
             const uint32_t firstInstance = 0;

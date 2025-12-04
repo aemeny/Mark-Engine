@@ -1,15 +1,14 @@
 #pragma once
-#include "Renderer/MarkVulkanVertexBuffer.h"
+#include "MarkVulkanVertexBuffer.h"
+#include "VulkanTextureHandler.h"
 
-#include <Volk/volk.h>
 #include <glm/glm.hpp>
 #include <vector>
-#include <memory>
 
-namespace Mark::RendererVK { struct VulkanCore; }
-
-namespace Mark::Engine
+namespace Mark::RendererVK
 {
+    struct VulkanCore;
+
     // Temp early simple mesh structure for testing purposes
     struct VertexData
     {
@@ -19,9 +18,9 @@ namespace Mark::Engine
         glm::vec3 m_position;
         glm::vec2 m_tex;
     };
-    struct SimpleMesh
+    struct MeshHandler
     {
-        SimpleMesh();
+        MeshHandler(std::weak_ptr<VulkanCore> _vulkanCore);
 
         // CPU side data (can be streamed from disk in future)
         size_t vertexBufferSize() const { return sizeof(VertexData) * m_vertices.size(); }
@@ -33,10 +32,14 @@ namespace Mark::Engine
         VkDeviceSize gpuBufferSize() const { return m_bufferAndMemory.m_allocationSize; }
 
         // Call device uploader to create GPU buffer from CPU data
-        void uploadToGPU(std::shared_ptr<RendererVK::VulkanCore> _vulkanCore);
+        void uploadToGPU();
         void destroyGPUBuffer(VkDevice _device);
 
     private:
+        std::weak_ptr<VulkanCore> m_vulkanCore;
+
         RendererVK::BufferAndMemory m_bufferAndMemory;
+
+        TextureHandler* m_texture{ nullptr };
     };
-} // namespace Mark::Engine
+} // namespace Mark::RendererVK
