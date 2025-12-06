@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 project(Mark
 	VERSION 0.1.0
 	HOMEPAGE_URL "https://github.com/aemeny/Mark-Engine"
-	LANGUAGES CXX
+	LANGUAGES C CXX
 )
 
 # Required C++ standard

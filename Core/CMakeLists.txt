@@ -80,4 +80,5 @@ target_link_libraries(Core
    	glfw
   	glm::glm
 	${MARK_GLSLANG_TARGETS}
+	${MARK_KTX_TARGET}
 )

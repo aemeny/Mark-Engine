@@ -2,6 +2,7 @@
 # Dependencies/CMakeLists.txt (Vulkan + GLFW + GLM)
 #
 include(FetchContent)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Vulkan
 find_package(Vulkan REQUIRED) # Vulkan::Vulkan
@@ -52,7 +53,6 @@ if (NOT TARGET glm::glm)
 endif()
 
 ### glslang
-include(FetchContent)
 set(ENABLE_GLSLANG_BINARIES    OFF CACHE BOOL "" FORCE)
 set(ENABLE_HLSL                OFF CACHE BOOL "" FORCE)
 set(ENABLE_SPVREMAPPER         OFF CACHE BOOL "" FORCE)
@@ -74,7 +74,51 @@ set(MARK_GLSLANG_TARGETS
     CACHE INTERNAL "glslang targets to link"
 )
 
-set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+# ---------- libktx (KTX2 + BasisU) ----------
+set(KTX_FEATURE_TOOLS          OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_DOC            OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_TESTS          OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_LOADTEST_APPS  OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_GL_UPLOAD      OFF CACHE BOOL "" FORCE)
+set(KTX_FEATURE_VULKAN         ON  CACHE BOOL "" FORCE)
+
+FetchContent_Declare(ktx
+  GIT_REPOSITORY https://github.com/KhronosGroup/KTX-Software.git
+  GIT_TAG        v4.4.2
+  DOWNLOAD_EXTRACT_TIMESTAMP OFF
+)
+FetchContent_MakeAvailable(ktx)
+
+# Helper
+function(_set_folder_if_real tgt folder)
+  if (TARGET ${tgt})
+    get_target_property(_aliased ${tgt} ALIASED_TARGET)
+    if (NOT _aliased)  # skip ALIAS targets like KTX::ktx
+      set_target_properties(${tgt} PROPERTIES FOLDER "${folder}")
+    endif()
+  endif()
+endfunction()
+
+set(_ktx_targets
+  ktx           # main static lib
+  ktx_read      # small util
+  ktx_version   # version obj
+  objUtil
+  obj_basisu_cbind
+  astcenc-avx2-static
+)
+
+foreach(_t IN LISTS _ktx_targets)
+  _set_folder_if_real(${_t} "Dependencies/KTX")
+endforeach()
+
+
+if (TARGET KTX::ktx)
+  set(MARK_KTX_TARGET KTX::ktx CACHE INTERNAL "")
+else()
+  set(MARK_KTX_TARGET ktx CACHE INTERNAL "")
+endif()
+
 if (TARGET volk)
   set_target_properties(volk PROPERTIES FOLDER "Dependencies")
 endif()
