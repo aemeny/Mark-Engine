@@ -7,6 +7,8 @@ add_library(Core STATIC)
 set(SOURCES
 Include/Mark/Engine.h
 
+Extern/stb/stb_image.h
+
 Source/Engine.cpp
 Source/Core.h
 Source/Core.cpp
@@ -64,6 +66,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" FILES ${SOURCES})
 target_include_directories(Core 
 	PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include"
 	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source"
+	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Extern"
 )
 
 target_compile_definitions(Core 

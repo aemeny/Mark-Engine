@@ -25,7 +25,7 @@
 namespace Mark::Utils
 {
     // --------- CONSOLE LOGGING  ---------
-    enum class Level : uint32_t { Trace = 0, Debug, Info, Warn, Error, Fatal };
+    enum class Level : uint32_t { All = 0, Debug, Info, Warn, Error, Fatal };
     enum class Category : uint32_t { General = 0, Vulkan, GLFW, Window, Engine, System, Shader };
     constexpr uint64_t categoryBit(Category _c) { return 1ull << static_cast<uint32_t>(_c); }
 
@@ -226,7 +226,7 @@ namespace Mark::Utils
         {
             switch (_l)
             {
-            case Level::Trace: return "TRACE";
+            case Level::All: return "ALL";
             case Level::Debug: return "DEBUG";
             case Level::Info:  return "INFO";
             case Level::Warn:  return "WARN";
@@ -238,7 +238,7 @@ namespace Mark::Utils
         {
             switch (_l)
             {
-            case Level::Trace: return "\x1b[90m"; // gray
+            case Level::All: return "\x1b[90m"; // gray
             case Level::Debug: return "\x1b[36m"; // cyan
             case Level::Info:  return "\x1b[32m"; // green
             case Level::Warn:  return "\x1b[33m"; // yellow

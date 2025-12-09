@@ -16,6 +16,7 @@ namespace Mark::RendererVK
         VkDeviceMemory m_memory{ VK_NULL_HANDLE };
         VkDeviceSize m_allocationSize{ 0 };
 
+        void update(VkDevice _device, const void* _data, size_t _size);
         void destroy(VkDevice _device);
     };
 

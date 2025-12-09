@@ -3,7 +3,7 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/norm.hpp>
 
-namespace Mark::Engine
+namespace Mark::Systems
 {
     EarlyCameraController::EarlyCameraController(const glm::vec3& _pos, const glm::vec3& _target, 
         const glm::vec3& _up, PersProjInfo& _persProjInfo)
@@ -154,4 +154,4 @@ namespace Mark::Engine
 
         m_cameraPosition += m_velocity * _dt;
     }
-} // namespace Mark::Engine
+} // namespace Mark::Systems

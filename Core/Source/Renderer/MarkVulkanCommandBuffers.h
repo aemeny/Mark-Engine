@@ -26,6 +26,7 @@ namespace Mark::RendererVK
                 MARK_ERROR("Command buffer index %u out of range (max %zu)", _index, m_commandBuffers.size());
             return m_commandBuffers[_index];
         }
+        VkCommandBuffer copyCommandBuffer() const { return m_copyCommandBuffer; }
 
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
@@ -38,6 +39,7 @@ namespace Mark::RendererVK
         VkCommandBuffer m_copyCommandBuffer{ VK_NULL_HANDLE };
 
         friend struct VulkanVertexBuffer; // Access within copyBuffer
+        friend struct TextureHandler;    // Access within TransitionImageLayout
         void beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags);
     };
 } // namespace Mark::RendererVK

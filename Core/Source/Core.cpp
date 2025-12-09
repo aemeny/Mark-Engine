@@ -1,5 +1,6 @@
 #include "Core.h"
 #include "Utils/MarkUtils.h"
+#include "Platform/Window.h" // TEMP FOR ACCESSING MAIN WINDOW IN run()
 
 namespace Mark
 {
@@ -7,8 +8,14 @@ namespace Mark
 
     void Core::run()
     {
+        // TEMP ADD MESH FOR MAIN WINDOW
+        m_windows->main().vkHandler().addMesh();
+        m_windows->main().vkHandler().initCameraController();
+
+        // TEMP MULTI-WINDOW TESTING
         //m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
         //m_windows->create(600, 600, "Third", VkClearColorValue{ {0.0f, 0.0f, 1.0f, 1.0f} }, false);
+        
         while (!m_terminateApplication && m_windows->anyOpen())
         {
             m_windows->pollAll();

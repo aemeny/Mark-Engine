@@ -213,6 +213,15 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Bind Buffer Memory");
     }
 
+    void BufferAndMemory::update(VkDevice _device, const void* _data, size_t _size)
+    {
+        void* mem = nullptr;
+        VkResult res = vkMapMemory(_device, m_memory, 0, _size, 0, &mem);
+        CHECK_VK_RESULT(res, "Map Buffer Memory for Update");
+        memcpy(mem, _data, _size);
+        vkUnmapMemory(_device, m_memory);
+    }
+
     void BufferAndMemory::destroy(VkDevice _device)
     {
         if (m_buffer) 

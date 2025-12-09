@@ -5,7 +5,7 @@
 static bool constexpr CAMERA_LEFT_HANDED = true;
 struct GLFWwindow;
 
-namespace Mark::Engine
+namespace Mark::Systems
 {
     struct PersProjInfo
     {
@@ -60,4 +60,4 @@ namespace Mark::Engine
         void update(float _dt);
         void addMouseDelta(float _dxPixels, float _dyPixels);
     };
-} // namespace Mark::Engine
+} // namespace Mark::Systems

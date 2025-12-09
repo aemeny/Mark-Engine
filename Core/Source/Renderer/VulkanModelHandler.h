@@ -8,6 +8,7 @@
 namespace Mark::RendererVK
 {
     struct VulkanCore;
+    struct VulkanCommandBuffers;
 
     // Temp early simple mesh structure for testing purposes
     struct VertexData
@@ -20,7 +21,8 @@ namespace Mark::RendererVK
     };
     struct MeshHandler
     {
-        MeshHandler(std::weak_ptr<VulkanCore> _vulkanCore);
+        MeshHandler(std::weak_ptr<VulkanCore> _vulkanCore, VulkanCommandBuffers& _commandBuffersRef);
+        ~MeshHandler();
 
         // CPU side data (can be streamed from disk in future)
         size_t vertexBufferSize() const { return sizeof(VertexData) * m_vertices.size(); }
@@ -35,6 +37,8 @@ namespace Mark::RendererVK
         void uploadToGPU();
         void destroyGPUBuffer(VkDevice _device);
 
+        // Texture handling
+        TextureHandler* texture() const { return m_texture; }
     private:
         std::weak_ptr<VulkanCore> m_vulkanCore;
 

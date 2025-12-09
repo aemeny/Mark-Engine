@@ -40,7 +40,7 @@ namespace Mark::RendererVK
     }
 
     WindowToVulkanHandler::WindowToVulkanHandler(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_windowRef(_windowRef)
+        m_vulkanCoreRef(_vulkanCoreRef), m_windowRef(_windowRef), m_clearColour(_clearColour)
     {
         createSurface();
 
@@ -73,11 +73,6 @@ namespace Mark::RendererVK
         }
 
         m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
-
-        // TEMP ADD MESH FOR THIS WINDOW
-        addMesh();
-        // TEMP INIT CAMERA CONTROLLER
-        initCameraController();
 
         // Create graphics pipeline
         m_graphicsPipeline.createGraphicsPipeline();
@@ -152,7 +147,7 @@ namespace Mark::RendererVK
         float FOV = 45.0f;
         float zNear = 0.1f;
         float zFar = 1000.0f;
-        Engine::PersProjInfo projInfo = {
+        Systems::PersProjInfo projInfo = {
             .m_FOV = FOV,
             .m_windowWidth = static_cast<float>(m_windowRef.windowSize().at(0)),
             .m_windowHeight = static_cast<float>(m_windowRef.windowSize().at(1)),
@@ -163,7 +158,7 @@ namespace Mark::RendererVK
         glm::vec3 target(0.0f, 0.0f, 0.0f);
         glm::vec3 up(0.0f, 1.0f, 0.0f);
 
-        m_cameraController = std::make_shared<Engine::EarlyCameraController>(pos, target, up, projInfo);
+        m_cameraController = std::make_shared<Systems::EarlyCameraController>(pos, target, up, projInfo);
     }
 
     void WindowToVulkanHandler::renderToWindow()
@@ -243,10 +238,15 @@ namespace Mark::RendererVK
 
     std::weak_ptr<MeshHandler> WindowToVulkanHandler::addMesh()
     {
-        auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef);
+        auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef, m_commandBuffers);
         rtn->uploadToGPU();
-
         m_meshesToDraw.push_back(rtn);
+
+        // Rebuild descriptors to include new mesh
+        m_graphicsPipeline.rebuildDescriptors();
+        // Re-record command buffers to draw the new mesh
+        m_commandBuffers.recordCommandBuffers(m_clearColour);
+
         return rtn;
     }
 } // namespace Mark::RendererVK

@@ -80,14 +80,14 @@ namespace Mark::RendererVK
             return;
         }
 
-        // Create descriptor sets for each mesh we have to draw
+        // Create descriptor sets for each mesh we have to draw if preloading meshes
         if (m_meshesToDraw && !m_meshesToDraw->empty()) {
+            MARK_INFO_C(Utils::Category::Vulkan, "Preloading meshes for graphics pipeline");
             m_meshCount = static_cast<uint32_t>(m_meshesToDraw->size());
             createDescriptorSets(device);
         }
         else {
             m_meshCount = 0;
-            MARK_WARN_C(Utils::Category::Vulkan, "No meshes to draw for graphics pipeline");
         }
 
         // Ensure descriptor set layout exists for hashing
@@ -289,10 +289,11 @@ namespace Mark::RendererVK
     void VulkanGraphicsPipeline::createDescriptorPool(uint32_t _numSets, VkDevice _device)
     {
         std::vector<VkDescriptorPoolSize> sizes;
-        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets }); // 1 SSBO per set
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets }); // 1 SSBO per set, binding 0
         if (m_uniformBufferRef.bufferCount() > 0) {
-            sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numSets }); // 1 UBO per set
+            sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numSets }); // 1 UBO per set, binding 1
         }
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _numSets }); // Binding 2
 
         VkDescriptorPoolCreateInfo poolCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -335,6 +336,16 @@ namespace Mark::RendererVK
         if (m_uniformBufferRef.bufferCount() > 0) {
             m_bindings.push_back(vertexShaderLayoutBinding_UBO);
         }
+
+        VkDescriptorSetLayoutBinding fragmentShaderLayoutBinding = {
+            .binding = 2,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .pImmutableSamplers = nullptr
+        };
+
+        m_bindings.push_back(fragmentShaderLayoutBinding);
 
         VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -392,6 +403,7 @@ namespace Mark::RendererVK
             {
                 const uint32_t index = img * m_meshCount + meshIndex;
                 const auto& mesh = *m_meshesToDraw->at(meshIndex);
+                const auto texture = mesh.texture();
 
                 if (!mesh.hasGPUBuffer()) {
                     MARK_ERROR("Mesh has no GPU buffer to bind to descriptor set");
@@ -425,6 +437,27 @@ namespace Mark::RendererVK
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                         .pImageInfo = nullptr,
                         .pBufferInfo = &uboInfos[img],
+                        .pTexelBufferView = nullptr
+                    });
+                }
+
+                if (texture) 
+                {
+                    VkDescriptorImageInfo imageInfo = {
+                        .sampler = texture->sampler(),
+                        .imageView = texture->imageView(),
+                        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                    };
+
+                    writes.push_back(VkWriteDescriptorSet{
+                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                        .dstSet = m_descriptorSets[index],
+                        .dstBinding = 2,
+                        .dstArrayElement = 0,
+                        .descriptorCount = 1,
+                        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                        .pImageInfo = &imageInfo,
+                        .pBufferInfo = nullptr,
                         .pTexelBufferView = nullptr
                     });
                 }

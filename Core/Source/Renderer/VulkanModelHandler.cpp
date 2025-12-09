@@ -4,7 +4,7 @@
 
 namespace Mark::RendererVK
 {
-    MeshHandler::MeshHandler(std::weak_ptr<VulkanCore> _vulkanCore) :
+    MeshHandler::MeshHandler(std::weak_ptr<VulkanCore> _vulkanCore, VulkanCommandBuffers& _commandBuffersRef) :
         m_vulkanCore(_vulkanCore),
         m_vertices{ // Example vertex data initialization
         { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f } }, // bottom-left
@@ -15,8 +15,22 @@ namespace Mark::RendererVK
         { {  1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f } }  // bottom-right
         }
     {
-        const auto textPath = _vulkanCore.lock()->texturePath("TestTexture1.png");
-        m_texture = new TextureHandler(textPath.string().c_str());
+        const auto textPath = _vulkanCore.lock()->texturePath("Curuthers.png"); // Test cat texture
+        m_texture = new TextureHandler(_vulkanCore, _commandBuffersRef, textPath.string().c_str());
+    }
+
+    MeshHandler::~MeshHandler()
+    {
+        auto VkCore = m_vulkanCore.lock();
+        if (!VkCore) {
+            MARK_ERROR("VulkanCore is null for mesh destruction");
+        }
+
+        destroyGPUBuffer(VkCore->device());
+
+        if (m_texture) {
+            m_texture->DestroyTextureHandler(VkCore->device());
+        }
     }
 
     void MeshHandler::uploadToGPU()

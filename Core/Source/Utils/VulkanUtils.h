@@ -34,7 +34,7 @@ inline ::Mark::Utils::Level VkSeverityToLevel(VkDebugUtilsMessageSeverityFlagBit
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:    return ::Mark::Utils::Level::Info;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: return ::Mark::Utils::Level::Warn;
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:   return ::Mark::Utils::Level::Error;
-    default:                                              return ::Mark::Utils::Level::Trace;
+    default:                                              return ::Mark::Utils::Level::All;
     }
 }
 inline std::string GetDebugType(VkDebugUtilsMessageTypeFlagsEXT _type)

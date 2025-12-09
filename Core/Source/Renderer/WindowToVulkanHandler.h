@@ -21,19 +21,21 @@ namespace Mark::RendererVK
         void createSurface();
         VkSurfaceKHR surface() const { return m_surface; }
 
+        // TEMP FOR TESTING
         std::weak_ptr<MeshHandler> addMesh();
+        void initCameraController();
 
     private:
         void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
 
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         Platform::Window& m_windowRef;
+        VkClearColorValue m_clearColour{};
 
         // TEMP list of meshes to render for this window
         std::vector<std::shared_ptr<MeshHandler>> m_meshesToDraw;
         // TEMP camera controller for testing
-        std::shared_ptr<Engine::EarlyCameraController> m_cameraController;
-        void initCameraController();
+        std::shared_ptr<Systems::EarlyCameraController> m_cameraController;
 
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
