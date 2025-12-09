@@ -2,6 +2,7 @@
 #include "MarkVulkanCore.h"
 #include "Utils/VulkanUtils.h"
 #include "Utils/MarkUtils.h"
+#include <array>
 
 namespace Mark::RendererVK
 {
@@ -84,7 +85,10 @@ namespace Mark::RendererVK
 
     void VulkanCommandBuffers::recordCommandBuffers(VkClearColorValue _clearColour)
     {
-        VkClearValue clearValue{ .color = _clearColour };
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = _clearColour;
+        clearValues[1].depthStencil = { 1.0f, 0 };
+
         VkRenderPassBeginInfo renderPassBeginInfo = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             .pNext = nullptr,
@@ -96,8 +100,8 @@ namespace Mark::RendererVK
                 },
                 .extent = m_swapChainRef.extent()
             },
-            .clearValueCount = 1,
-            .pClearValues = &clearValue
+            .clearValueCount = static_cast<uint32_t>(clearValues.size()),
+            .pClearValues = clearValues.data()
         };
 
         // Record each command buffer
@@ -117,7 +121,7 @@ namespace Mark::RendererVK
             vkCmdSetScissor(m_commandBuffers[i], 0, 1, &scissor);
 
             // Verbose for now to test draw a simple mesh
-            const uint32_t vertexCount = 6;
+            const uint32_t vertexCount = 9;
             const uint32_t instanceCount = 1;
             const uint32_t firstVertex = 0;
             const uint32_t firstInstance = 0;

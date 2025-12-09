@@ -186,6 +186,19 @@ namespace Mark::RendererVK
                     .minSampleShading = 1.0f,
                 };
 
+                VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo = {
+                    .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+                    .depthTestEnable = VK_TRUE,
+                    .depthWriteEnable = VK_TRUE,
+                    .depthCompareOp = VK_COMPARE_OP_LESS,
+                    .depthBoundsTestEnable = VK_FALSE,
+                    .stencilTestEnable = VK_FALSE,
+                    .front = {},
+                    .back = {},
+                    .minDepthBounds = 0.0f,
+                    .maxDepthBounds = 1.0f
+                };
+
                 VkPipelineColorBlendAttachmentState colorBlendAttachment = {
                     .blendEnable = VK_FALSE,
                     .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
@@ -206,6 +219,7 @@ namespace Mark::RendererVK
                     .pViewportState = &viewportCreateInfo,
                     .pRasterizationState = &rasterizeCreateInfo,
                     .pMultisampleState = &multisampleInfo,
+                    .pDepthStencilState = &depthStencilCreateInfo,
                     .pColorBlendState = &colorBlendCreateInfo,
                     .pDynamicState = &dynamicStateCreateInfo,
                     .layout = layout,

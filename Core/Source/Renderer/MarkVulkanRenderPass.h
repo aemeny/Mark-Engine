@@ -35,8 +35,8 @@ namespace Mark::RendererVK
 
         VulkanRenderPassRef m_renderPassRef; // From cache
         std::vector<VkFramebuffer> m_frameBuffers;
-    };
 
+    };
     // Factory used by the cache to create the pass for a given key
-    VkRenderPass CreateSimpleRenderPassForKey(VkDevice _device, const VulkanRenderPassKey& _key);
+    VkRenderPass createSimpleRenderPassForKey(VkDevice _device, const VulkanRenderPassKey& _key);
 } // namespace Mark::RendererVK

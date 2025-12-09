@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanTextureHandler.h"
 #include <volk.h>
 #include <memory>
 #include <vector>
@@ -15,6 +16,7 @@ namespace Mark::RendererVK
         VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 
         void createSwapChain();
+        void createDepthResources();
 
         // Getters
         VkSwapchainKHR& swapChain() { return m_swapChain; }
@@ -25,6 +27,7 @@ namespace Mark::RendererVK
         VkImageView& swapChainImageViewAt(int _index) { return m_swapChainImageViews[_index]; }
         VkExtent2D extent() const { return m_extent; }
         VkSurfaceFormatKHR surfaceFormat() const { return m_surfaceFormat; }
+        TextureHandler& depthImageAt(int _index) { return m_depthImages[_index]; }
 
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
@@ -33,6 +36,8 @@ namespace Mark::RendererVK
         VkSwapchainKHR m_swapChain{ VK_NULL_HANDLE };
         std::vector<VkImage> m_swapChainImages;
         std::vector<VkImageView> m_swapChainImageViews;
+        std::vector<TextureHandler> m_depthImages;
+
 
         VkExtent2D m_extent{ 0, 0 };
         VkSurfaceFormatKHR m_surfaceFormat{ VK_FORMAT_UNDEFINED };

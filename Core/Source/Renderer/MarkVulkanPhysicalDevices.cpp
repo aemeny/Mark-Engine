@@ -117,6 +117,8 @@ namespace Mark::RendererVK
             MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory heaps: %d", m_devices[i].m_memoryProperties.memoryHeapCount);
 
             vkGetPhysicalDeviceFeatures(currentDevice, &m_devices[i].m_features);
+
+            m_devices[i].m_depthFormat = findDepthFormat(currentDevice);
         }
     }
 
@@ -255,5 +257,38 @@ namespace Mark::RendererVK
             MARK_ERROR("A physical device has not been selected");
         }
         return m_devices[m_selectedDeviceIndex];
+    }
+
+    VkFormat VulkanPhysicalDevices::findDepthFormat(const VkPhysicalDevice& _physicalDevice)
+    {
+        std::vector<VkFormat> candidated = {
+            VK_FORMAT_D32_SFLOAT_S8_UINT,
+            VK_FORMAT_D32_SFLOAT,
+            VK_FORMAT_D24_UNORM_S8_UINT,
+            VK_FORMAT_D16_UNORM_S8_UINT,
+            VK_FORMAT_D16_UNORM
+        };
+
+        return findSupportedFormat(_physicalDevice, candidated, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+    }
+
+    VkFormat VulkanPhysicalDevices::findSupportedFormat(const VkPhysicalDevice& _physicalDevice, const std::vector<VkFormat>& _candidates, VkImageTiling _tiling, VkFormatFeatureFlags _features)
+    {
+        for (size_t i = 0; i < _candidates.size(); i++)
+        {
+            VkFormat format = _candidates[i];
+            VkFormatProperties props;
+            vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &props);
+
+            if (_tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & _features) == _features) 
+            {
+                return format;
+            }
+            else if (_tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & _features) == _features)
+            {
+                return format;
+            }
+        }
+        MARK_ERROR("Failed to find supported format for physical device");
     }
 } // namespace Mark::RendererVK

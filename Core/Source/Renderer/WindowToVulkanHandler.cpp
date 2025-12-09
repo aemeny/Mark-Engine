@@ -49,11 +49,12 @@ namespace Mark::RendererVK
         VkCore->selectDevicesForSurface(m_surface);
 
         m_swapChain.createSwapChain();
+        m_swapChain.createDepthResources();
 
         // Acquire or share a render pass from the device cache
         VulkanRenderPassKey key = VulkanRenderPassKey::Make(
             m_swapChain.surfaceFormat().format,   // Colour format for this window
-            VK_FORMAT_UNDEFINED,                  // No depth
+            m_vulkanCoreRef.lock()->physicalDevices().selected().m_depthFormat,
             VK_SAMPLE_COUNT_1_BIT
         );
         m_renderPass.initWithCache(VkCore->renderPassCache(), key);
@@ -74,10 +75,8 @@ namespace Mark::RendererVK
 
         m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
 
-        // Create graphics pipeline
         m_graphicsPipeline.createGraphicsPipeline();
 
-        // Create command buffers
         m_commandBuffers.createCommandPool();
         m_commandBuffers.createCommandBuffers();
         m_commandBuffers.recordCommandBuffers(_clearColour);

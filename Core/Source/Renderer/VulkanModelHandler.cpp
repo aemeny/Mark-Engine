@@ -12,11 +12,15 @@ namespace Mark::RendererVK
         { {  1.0f,  1.0f, 0.0f }, { 1.0f, 1.0f } }, // top-right
         { { -1.0f, -1.0f, 0.0f }, { 0.0f, 0.0f } }, // bottom-left
         { {  1.0f,  1.0f, 0.0f }, { 1.0f, 1.0f } }, // top-right
-        { {  1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f } }  // bottom-right
+        { {  1.0f, -1.0f, 0.0f }, { 1.0f, 0.0f } }, // bottom-right
+        // Extra triangle for testing depth
+        { { -1.0f, -1.0f, 5.0f }, { 0.0f, 0.0f } }, // bottom-left
+        { { -1.0f,  1.0f, 5.0f }, { 0.0f, 1.0f } }, // top-left
+        { {  1.0f,  1.0f, 5.0f }, { 1.0f, 1.0f } }, // top-right
         }
     {
         const auto textPath = _vulkanCore.lock()->texturePath("Curuthers.png"); // Test cat texture
-        m_texture = new TextureHandler(_vulkanCore, _commandBuffersRef, textPath.string().c_str());
+        m_texture = new TextureHandler(_vulkanCore, &_commandBuffersRef, textPath.string().c_str());
     }
 
     MeshHandler::~MeshHandler()
@@ -29,7 +33,7 @@ namespace Mark::RendererVK
         destroyGPUBuffer(VkCore->device());
 
         if (m_texture) {
-            m_texture->DestroyTextureHandler(VkCore->device());
+            m_texture->destroyTextureHandler(VkCore->device());
         }
     }
 

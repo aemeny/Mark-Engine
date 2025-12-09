@@ -24,6 +24,7 @@ namespace Mark::RendererVK
             std::vector<VkQueueFamilyProperties> m_queueFamilyProperties;
             VkPhysicalDeviceMemoryProperties m_memoryProperties{};
             VkPhysicalDeviceFeatures m_features{};
+            VkFormat m_depthFormat;
         };
         
         struct selectDeviceResult
@@ -46,5 +47,8 @@ namespace Mark::RendererVK
         std::vector<DeviceProperties> m_devices;
 
         int m_selectedDeviceIndex{ -1 };
+
+        VkFormat findDepthFormat(const VkPhysicalDevice& _physicalDevice);
+        VkFormat findSupportedFormat(const VkPhysicalDevice& _physicalDevice, const std::vector<VkFormat>& _candidates, VkImageTiling _tiling, VkFormatFeatureFlags _features);
     };
 } // namespace Mark::RendererVK

@@ -14,7 +14,7 @@ namespace Mark::RendererVK
     struct VulkanRenderPassKey
     {
         VkFormat m_colorFormat{ VK_FORMAT_UNDEFINED };
-        VkFormat m_depthFormat{ VK_FORMAT_UNDEFINED }; // VK_FORMAT_UNDEFINED = no depth
+        VkFormat m_depthFormat{ VK_FORMAT_UNDEFINED };
         VkSampleCountFlagBits m_samples{ VK_SAMPLE_COUNT_1_BIT };
 
         VkAttachmentLoadOp m_colorLoad{ VK_ATTACHMENT_LOAD_OP_CLEAR };

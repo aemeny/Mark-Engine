@@ -95,19 +95,27 @@ namespace Mark::RendererVK
         {
             MARK_ERROR("VulkanCore reference expired, cannot destroy swap chain");
         }
+        VkDevice device = m_vulkanCoreRef.lock()->device();
 
         for (VkImageView& imageView : m_swapChainImageViews)
         {
             if (imageView != VK_NULL_HANDLE)
             {
-                vkDestroyImageView(m_vulkanCoreRef.lock()->device(), imageView, nullptr);
+                vkDestroyImageView(device, imageView, nullptr);
                 imageView = VK_NULL_HANDLE;
             }
         }
 
+        // Destroy depth images/views first (framebuffers already destroyed by the render-pass owner)
+        for (TextureHandler& depthImage : m_depthImages) 
+        {
+            depthImage.destroyTextureHandler(device);
+        }
+        m_depthImages.clear();
+
         if (m_swapChain != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(m_vulkanCoreRef.lock()->device(), m_swapChain, nullptr);
+            vkDestroySwapchainKHR(device, m_swapChain, nullptr);
             m_swapChain = VK_NULL_HANDLE;
         }
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Swap Chain Destroyed");
@@ -203,5 +211,23 @@ namespace Mark::RendererVK
             }
         }
         MARK_ERROR("Failed to find matching surface for swap chain creation");
+    }
+
+    void VulkanSwapChain::createDepthResources()
+    {
+        int swapChainImageCount = numImages();
+
+        VkFormat depthFormat = m_vulkanCoreRef.lock()->physicalDevices().selected().m_depthFormat;
+
+        for (size_t i = 0; i < swapChainImageCount; i++)
+        {
+            TextureHandler& depthImage = m_depthImages.emplace_back(TextureHandler{ m_vulkanCoreRef });
+
+            VkImageUsageFlagBits usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            depthImage.createImage(m_extent.width, m_extent.height, depthFormat, usage, properties);
+
+            depthImage.m_textureImageView = depthImage.createImageView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+        }
     }
 } // namespace Mark::RendererVK

@@ -12,20 +12,24 @@
 
 namespace Mark::RendererVK
 {
-    TextureHandler::TextureHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanCommandBuffers& _commandBuffersRef, const char* _texturePath) :
+    TextureHandler::TextureHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanCommandBuffers* _commandBuffersRef, const char* _texturePath) :
         m_vulkanCoreRef(_vulkanCoreRef), m_commandBuffersRef(_commandBuffersRef)
     {
         if (_vulkanCoreRef.expired()) {
             MARK_ERROR("Vulkan Core Reference Is Null In TextureHandler!");
         }
-        if (m_commandBuffersRef.m_copyCommandBuffer == VK_NULL_HANDLE) {
+        if (!m_commandBuffersRef) {
             MARK_ERROR("Vulkan Command Buffer Reference Is Null In TextureHandler!");
         }
 
         generateTexture(_texturePath);
     }
 
-    void TextureHandler::DestroyTextureHandler(VkDevice _device)
+    TextureHandler::TextureHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef) :
+        m_vulkanCoreRef(_vulkanCoreRef)
+    {}
+
+    void TextureHandler::destroyTextureHandler(VkDevice _device)
     {
         if (m_textureSampler != VK_NULL_HANDLE) {
             vkDestroySampler(_device, m_textureSampler, nullptr);
@@ -57,32 +61,32 @@ namespace Mark::RendererVK
         }
 
         VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM;
-        CreateTextureImageFromData(pixels, imageWidth, imageHeight, imageFormat);
+        createTextureImageFromData(pixels, imageWidth, imageHeight, imageFormat);
 
         stbi_image_free(pixels);
 
         VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
-        m_textureImageView = CreateImageView(imageFormat, aspectFlags);
+        m_textureImageView = createImageView(imageFormat, aspectFlags);
 
         VkFilter minFilter = VK_FILTER_LINEAR;
         VkFilter maxFilter = VK_FILTER_LINEAR;
         VkSamplerAddressMode adressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
-        m_textureSampler = CreateTextureSampler(minFilter, maxFilter, adressMode);
+        m_textureSampler = createTextureSampler(minFilter, maxFilter, adressMode);
 
         MARK_INFO_C(Utils::Category::Vulkan, "Texture Loaded To Vulkan From: %s", _texturePath);
     }
 
-    void TextureHandler::CreateTextureImageFromData(const void* _pixels, int _width, int _height, VkFormat _format)
+    void TextureHandler::createTextureImageFromData(const void* _pixels, int _width, int _height, VkFormat _format)
     {
         VkImageUsageFlagBits usage = (VkImageUsageFlagBits)(VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
         VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        CreateImage(_width, _height, _format, usage, properties);
+        createImage(_width, _height, _format, usage, properties);
 
-        UpdateTextureImage(_pixels, _width, _height, _format);
+        updateTextureImage(_pixels, _width, _height, _format);
     }
 
-    void TextureHandler::CreateImage(int _width, int _height, VkFormat _format, VkImageUsageFlags _usage, VkMemoryPropertyFlagBits _properties)
+    void TextureHandler::createImage(int _width, int _height, VkFormat _format, VkImageUsageFlags _usage, VkMemoryPropertyFlagBits _properties)
     {
         VkDevice device = m_vulkanCoreRef.lock()->device();
 
@@ -115,7 +119,7 @@ namespace Mark::RendererVK
         vkGetImageMemoryRequirements(device, m_textureImage, &memRequirements);
         MARK_DEBUG_C(Utils::Category::Vulkan, "Texture Image Memory Requirements - Size: %llu Alignment: %llu MemoryTypeBits: 0x%08X", memRequirements.size, memRequirements.alignment, memRequirements.memoryTypeBits);
 
-        uint32_t memoryTypeIndex = GetMemoryTypeIndex(memRequirements.memoryTypeBits, _properties);
+        uint32_t memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, _properties);
         MARK_DEBUG_C(Utils::Category::Vulkan, "Texture Image Memory Type Index: %u", memoryTypeIndex);
 
         VkMemoryAllocateInfo allocInfo{
@@ -132,7 +136,7 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Failed to bind texture image memory!");
     }
 
-    uint32_t TextureHandler::GetMemoryTypeIndex(uint32_t _typeFilter, VkMemoryPropertyFlagBits _properties)
+    uint32_t TextureHandler::getMemoryTypeIndex(uint32_t _typeFilter, VkMemoryPropertyFlagBits _properties)
     {
         const VkPhysicalDeviceMemoryProperties& memProperties = m_vulkanCoreRef.lock()->physicalDevices().selected().m_memoryProperties;
 
@@ -152,11 +156,11 @@ namespace Mark::RendererVK
         return -1;
     }
 
-    void TextureHandler::UpdateTextureImage(const void* _pixels, int _width, int _height, VkFormat _format)
+    void TextureHandler::updateTextureImage(const void* _pixels, int _width, int _height, VkFormat _format)
     {
         VkDevice device = m_vulkanCoreRef.lock()->device();
 
-        int bytesPerPixel = GetBytesPerTexFormat(_format);
+        int bytesPerPixel = getBytesPerTexFormat(_format);
 
         VkDeviceSize layerSize = _width * _height * bytesPerPixel;
         int layerCount = 1; // Simple 2D texture, no array layers
@@ -168,16 +172,16 @@ namespace Mark::RendererVK
         BufferAndMemory stagingTexture = BufferAndMemory(m_vulkanCoreRef.lock(), imageSize, usage, properties);
         stagingTexture.update(device, _pixels, static_cast<size_t>(imageSize));
 
-        TransitionImageLayout(m_textureImage, _format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        transitionImageLayout(m_textureImage, _format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-        CopyBufferToImage(stagingTexture.m_buffer, m_textureImage, static_cast<uint32_t>(_width), static_cast<uint32_t>(_height));
+        copyBufferToImage(stagingTexture.m_buffer, m_textureImage, static_cast<uint32_t>(_width), static_cast<uint32_t>(_height));
 
-        TransitionImageLayout(m_textureImage, _format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        transitionImageLayout(m_textureImage, _format, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         stagingTexture.destroy(device);
     }
 
-    int TextureHandler::GetBytesPerTexFormat(VkFormat _format)
+    int TextureHandler::getBytesPerTexFormat(VkFormat _format)
     {
         switch (_format)
         {
@@ -201,9 +205,9 @@ namespace Mark::RendererVK
         }
     }
 
-    void TextureHandler::TransitionImageLayout(VkImage& _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout)
+    void TextureHandler::transitionImageLayout(VkImage& _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout)
     {
-        m_commandBuffersRef.beginCommandBuffer(m_commandBuffersRef.m_copyCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        m_commandBuffersRef->beginCommandBuffer(m_commandBuffersRef->m_copyCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
         VkImageMemoryBarrier barrier{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -298,7 +302,7 @@ namespace Mark::RendererVK
             MARK_ERROR("Unsupported layout transition from %s to %s", string_VkImageLayout(_oldLayout), string_VkImageLayout(_newLayout));
         }
 
-        vkCmdPipelineBarrier(m_commandBuffersRef.m_copyCommandBuffer,
+        vkCmdPipelineBarrier(m_commandBuffersRef->m_copyCommandBuffer,
             sourceStage, destinationStage,
             0,
             0, nullptr,
@@ -306,7 +310,7 @@ namespace Mark::RendererVK
             1, &barrier
         );
 
-        SubmitCopyCommand();
+        submitCopyCommand();
     }
 
     bool TextureHandler::hasStencilComponent(VkFormat _format)
@@ -316,9 +320,9 @@ namespace Mark::RendererVK
                 _format == VK_FORMAT_D24_UNORM_S8_UINT);
     }
 
-    void TextureHandler::CopyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height)
+    void TextureHandler::copyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height)
     {
-        m_commandBuffersRef.beginCommandBuffer(m_commandBuffersRef.m_copyCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        m_commandBuffersRef->beginCommandBuffer(m_commandBuffersRef->m_copyCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
         VkBufferImageCopy bufferImageCopy{
             .bufferOffset = 0,
@@ -343,7 +347,7 @@ namespace Mark::RendererVK
         };
 
         vkCmdCopyBufferToImage(
-            m_commandBuffersRef.m_copyCommandBuffer,
+            m_commandBuffersRef->m_copyCommandBuffer,
             _buffer,
             _image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -351,20 +355,20 @@ namespace Mark::RendererVK
             &bufferImageCopy
         );
 
-        SubmitCopyCommand();
+        submitCopyCommand();
     }
 
-    void TextureHandler::SubmitCopyCommand()
+    void TextureHandler::submitCopyCommand()
     {
-        vkEndCommandBuffer(m_commandBuffersRef.m_copyCommandBuffer);
+        vkEndCommandBuffer(m_commandBuffersRef->m_copyCommandBuffer);
 
         VulkanQueue& graphicsQueue = m_vulkanCoreRef.lock()->graphicsQueue();
-        graphicsQueue.submit(m_commandBuffersRef.m_copyCommandBuffer, VK_NULL_HANDLE, 0, VK_NULL_HANDLE, VK_NULL_HANDLE);
+        graphicsQueue.submit(m_commandBuffersRef->m_copyCommandBuffer, VK_NULL_HANDLE, 0, VK_NULL_HANDLE, VK_NULL_HANDLE);
 
         graphicsQueue.waitIdle();
     }
 
-    VkImageView TextureHandler::CreateImageView(VkFormat _format, VkImageAspectFlags _aspectFlags)
+    VkImageView TextureHandler::createImageView(VkFormat _format, VkImageAspectFlags _aspectFlags)
     {
         VkImageViewCreateInfo viewInfo{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -395,7 +399,7 @@ namespace Mark::RendererVK
         return imageView;
     }
 
-    VkSampler TextureHandler::CreateTextureSampler(VkFilter _minFilter, VkFilter _maxFilter, VkSamplerAddressMode _adressMode)
+    VkSampler TextureHandler::createTextureSampler(VkFilter _minFilter, VkFilter _maxFilter, VkSamplerAddressMode _adressMode)
     {
         VkSamplerCreateInfo samplerInfo{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
