@@ -195,12 +195,16 @@ namespace Mark::RendererVK
         // Reset this frame's fence for the upcoming submit
         vkResetFences(VkCore->device(), 1, &frameSyncData.m_inFlightFence);
 
-
         /* TEMP UNIFORM DATA UPDATING FOR TESTING */
-        m_cameraController->tick(m_windowRef.handle());
-        UniformData tempData = {
-            .WVP = m_cameraController->getVPMatrix()
-        };
+        UniformData tempData;
+        if (m_cameraController)
+        {
+            m_cameraController->tick(m_windowRef.handle());
+            tempData.WVP = m_cameraController->getVPMatrix();
+        }
+        else {
+            tempData.WVP = glm::mat4(1.0f);
+        }
 
         // Update uniform buffer for this image
         m_uniformBuffer.updateUniformBuffer(imageIndex, tempData);

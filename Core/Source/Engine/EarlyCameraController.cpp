@@ -74,52 +74,64 @@ namespace Mark::Systems
         m_cameraOrientation = glm::normalize(qYaw * qPitch);
     }
 
-    void EarlyCameraController::tick(GLFWwindow* window)
+    void EarlyCameraController::tick(GLFWwindow* _window)
     {
+        if (!_window) return;
+
+        // Skip input for unfocused windows
+        if (!glfwGetWindowAttrib(_window, GLFW_FOCUSED)) 
+        {
+            if (m_rotating) 
+            {
+                glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                if (glfwRawMouseMotionSupported())
+                    glfwSetInputMode(_window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+                m_rotating = false;
+            }
+            return;
+        }
+
         // Simple dt
-        static double lastTime = glfwGetTime();
         double now = glfwGetTime();
-        float dt = static_cast<float>(now - lastTime);
-        lastTime = now;
+        float dt = (m_lastTime > 0.0) ? static_cast<float>(now - m_lastTime) : 0.0f;
+        m_lastTime = now;
 
         auto& mv = m_movement;
-        mv.m_moveForward = glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS;
-        mv.m_moveBackward = glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS;
-        mv.m_moveLeft = glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS;
-        mv.m_moveRight = glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
-        mv.m_moveUp = glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS;
-        mv.m_moveDown = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
-        mv.m_fastMove = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
+        mv.m_moveForward = glfwGetKey(_window, GLFW_KEY_W) == GLFW_PRESS;
+        mv.m_moveBackward = glfwGetKey(_window, GLFW_KEY_S) == GLFW_PRESS;
+        mv.m_moveLeft = glfwGetKey(_window, GLFW_KEY_A) == GLFW_PRESS;
+        mv.m_moveRight = glfwGetKey(_window, GLFW_KEY_D) == GLFW_PRESS;
+        mv.m_moveUp = glfwGetKey(_window, GLFW_KEY_SPACE) == GLFW_PRESS;
+        mv.m_moveDown = glfwGetKey(_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS;
+        mv.m_fastMove = glfwGetKey(_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS;
 
         // RMB mouse-look
-        static bool rotating = false;
-        static double lastX = 0.0, lastY = 0.0;
-        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) 
+        if (glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) 
         {
             double x, y; 
-            glfwGetCursorPos(window, &x, &y);
-            if (!rotating) {
-                rotating = true;
+            glfwGetCursorPos(_window, &x, &y);
+            if (!m_rotating) {
+                m_rotating = true;
                 // Hide cursor and allow unlimited relative motion
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
                 if (glfwRawMouseMotionSupported())
-                    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-                lastX = x; lastY = y; // Avoid an initial jump
+                    glfwSetInputMode(_window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+                m_lastX = x; m_lastY = y; // Avoid an initial jump
             }
             else {
-                addMouseDelta(static_cast<float>(x - lastX), static_cast<float>(y - lastY));
-                lastX = x; lastY = y;
+                addMouseDelta(static_cast<float>(x - m_lastX), static_cast<float>(y - m_lastY));
+                m_lastX = x; m_lastY = y;
             }
         }
         else 
         {
-            if (rotating) {
+            if (m_rotating) {
                 // Release capture when RMB is released
-                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+                glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
                 if (glfwRawMouseMotionSupported())
-                    glfwSetInputMode(window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+                    glfwSetInputMode(_window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
             }
-            rotating = false;
+            m_rotating = false;
         }
 
         update(dt);

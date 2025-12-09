@@ -37,7 +37,7 @@ namespace Mark::Systems
         glm::mat4 getViewMatrix() const;
         glm::mat4 getVPMatrix() const;
 
-        void tick(GLFWwindow* window);
+        void tick(GLFWwindow* _window);
 
         CameraMovement m_movement;
     private:
@@ -53,6 +53,12 @@ namespace Mark::Systems
         float m_damping{ 12.0f };
         float m_maxSpeed{ 10.0f };
         float m_fastMoveCoef{ 6.0f };
+
+        bool m_rotating{ false };
+        double m_lastX{ 0.0 };
+        double m_lastY{ 0.0 };
+
+        double m_lastTime{ 0.0 };
 
         glm::vec3 forward() const;
         glm::vec3 right() const;

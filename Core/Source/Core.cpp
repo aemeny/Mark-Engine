@@ -13,9 +13,13 @@ namespace Mark
         m_windows->main().vkHandler().initCameraController();
 
         // TEMP MULTI-WINDOW TESTING
-        //m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
-        //m_windows->create(600, 600, "Third", VkClearColorValue{ {0.0f, 0.0f, 1.0f, 1.0f} }, false);
-        
+        //Platform::Window& window2 = m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
+        //window2.vkHandler().addMesh();
+        //window2.vkHandler().initCameraController();
+        //Platform::Window& window3 = m_windows->create(600, 600, "Third", VkClearColorValue{ {0.0f, 0.0f, 1.0f, 1.0f} }, false);
+        //window3.vkHandler().addMesh();
+        //window3.vkHandler().initCameraController();
+
         while (!m_terminateApplication && m_windows->anyOpen())
         {
             m_windows->pollAll();
