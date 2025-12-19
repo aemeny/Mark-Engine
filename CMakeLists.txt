@@ -25,6 +25,16 @@ endif()
 # Normalize for Windows
 file(TO_CMAKE_PATH "${MARK_ASSETS_DIR}" MARK_ASSETS_DIR)
 
+# ---- Engine fallback assets ----
+# Path is RELATIVE to repo root (CMAKE_SOURCE_DIR)
+set(MARK_FALLBACK_MODEL "" CACHE STRING "Relative path (from repo root) to engine fallback OBJ")
+if (NOT MARK_FALLBACK_MODEL)
+  set(MARK_FALLBACK_MODEL "${CMAKE_SOURCE_DIR}/Core/Handling/Fallback/Mark_Fallback_Model.obj")
+endif()
+# Normalize for Windows
+file(TO_CMAKE_PATH "${MARK_FALLBACK_MODEL}" MARK_FALLBACK_MODEL)
+
+
 # Projects
 add_subdirectory(Core)
 add_subdirectory(App)

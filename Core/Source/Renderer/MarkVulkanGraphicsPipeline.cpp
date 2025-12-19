@@ -70,8 +70,8 @@ namespace Mark::RendererVK
 
         // ---=== Temporary area for future Engine side handling ==---
         // Get shader modules from the device shader cache
-        const auto vsPath = VkCore->shaderPath("TriangleTest.vert");
-        const auto fsPath = VkCore->shaderPath("TriangleTest.frag");
+        const auto vsPath = VkCore->assetPath("Shaders/TriangleTest.vert");
+        const auto fsPath = VkCore->assetPath("Shaders/TriangleTest.frag");
         VkShaderModule vs = VkCore->shaderCache().getOrCreateFromGLSL(vsPath.string().c_str());
         VkShaderModule fs = VkCore->shaderCache().getOrCreateFromGLSL(fsPath.string().c_str());
         if (!vs || !fs)
@@ -303,7 +303,7 @@ namespace Mark::RendererVK
     void VulkanGraphicsPipeline::createDescriptorPool(uint32_t _numSets, VkDevice _device)
     {
         std::vector<VkDescriptorPoolSize> sizes;
-        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets }); // 1 SSBO per set, binding 0
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets * 2 }); // vertex + index SSBO per set, binding 0
         if (m_uniformBufferRef.bufferCount() > 0) {
             sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numSets }); // 1 UBO per set, binding 1
         }
@@ -326,7 +326,6 @@ namespace Mark::RendererVK
     {
         if (m_descriptorSetLayout != VK_NULL_HANDLE)
             return;
-
         m_bindings.clear();
 
         VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_VB = {
@@ -336,29 +335,35 @@ namespace Mark::RendererVK
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = nullptr
         };
-
         m_bindings.push_back(vertexShaderLayoutBinding_VB);
 
-        VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_UBO = {
+        VkDescriptorSetLayoutBinding indexBufferBinding = {
             .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+            .pImmutableSamplers = nullptr
+        };
+        m_bindings.push_back(indexBufferBinding);
+
+        VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_UBO = {
+            .binding = 2,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = nullptr
         };
-
         if (m_uniformBufferRef.bufferCount() > 0) {
             m_bindings.push_back(vertexShaderLayoutBinding_UBO);
         }
 
         VkDescriptorSetLayoutBinding fragmentShaderLayoutBinding = {
-            .binding = 2,
+            .binding = 3,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = nullptr
         };
-
         m_bindings.push_back(fragmentShaderLayoutBinding);
 
         VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
@@ -398,6 +403,7 @@ namespace Mark::RendererVK
     {
         // One SSBO info per set; one UBO info per image
         std::vector<VkDescriptorBufferInfo> ssboInfos(_numSets);
+        std::vector<VkDescriptorBufferInfo> indexInfos(_numSets);
         std::vector<VkDescriptorBufferInfo> uboInfos;
         std::vector<VkWriteDescriptorSet> writes;
 
@@ -419,15 +425,14 @@ namespace Mark::RendererVK
                 const auto& mesh = *m_meshesToDraw->at(meshIndex);
                 const auto texture = mesh.texture();
 
-                if (!mesh.hasGPUBuffer()) {
-                    MARK_ERROR("Mesh has no GPU buffer to bind to descriptor set");
+                if (!mesh.hasVertexBuffer()) {
+                    MARK_ERROR("Mesh has no vertex GPU buffer to bind to descriptor set");
                 }
                 ssboInfos[index] = {
-                    .buffer = mesh.gpuBuffer(),
+                    .buffer = mesh.vertexBuffer(),
                     .offset = 0,
                     .range = VK_WHOLE_SIZE
                 };
-
                 writes.push_back(VkWriteDescriptorSet{
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = m_descriptorSets[index],
@@ -440,12 +445,32 @@ namespace Mark::RendererVK
                     .pTexelBufferView = nullptr
                 });
 
+                if (!mesh.hasIndexBuffer()) {
+                    MARK_ERROR("Mesh has no index GPU buffer to bind to descriptor set");
+                }
+                indexInfos[index] = {
+                    .buffer = mesh.indexBuffer(),
+                    .offset = 0,
+                    .range = VK_WHOLE_SIZE
+                };
+                writes.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = m_descriptorSets[index],
+                    .dstBinding = 1,
+                    .dstArrayElement = 0,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .pImageInfo = nullptr,
+                    .pBufferInfo = &indexInfos[index],
+                    .pTexelBufferView = nullptr
+                });
+
                 if (hasUBO) 
                 {
                     writes.push_back(VkWriteDescriptorSet{
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = m_descriptorSets[index],
-                        .dstBinding = 1,
+                        .dstBinding = 2,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -466,7 +491,7 @@ namespace Mark::RendererVK
                     writes.push_back(VkWriteDescriptorSet{
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = m_descriptorSets[index],
-                        .dstBinding = 2,
+                        .dstBinding = 3,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

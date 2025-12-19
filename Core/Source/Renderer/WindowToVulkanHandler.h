@@ -22,7 +22,7 @@ namespace Mark::RendererVK
         VkSurfaceKHR surface() const { return m_surface; }
 
         // TEMP FOR TESTING
-        std::weak_ptr<MeshHandler> addMesh();
+        std::weak_ptr<MeshHandler> addMesh(const char* _meshPath);
         void initCameraController();
 
     private:

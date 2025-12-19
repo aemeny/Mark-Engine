@@ -48,14 +48,11 @@ namespace Mark::RendererVK
         // Vertex buffer uploader getter
         VulkanVertexBuffer& vertexUploader() { return *m_vertexUploader; }
 
-        // TEMP SHADER FILE PATH
+        // TEMP FILE PATH
         // --- Asset root / path helpers ---
         const std::filesystem::path& assetRoot() const { return m_assetRoot; }
-        // Returns "<assetRoot>/shaders/<file>"
-        std::filesystem::path shaderPath(const std::string& _file) const;
-        // TEMP TEXTURE FILE PATH
-        // Returns "<assetRoot>/textures/<file>"
-        std::filesystem::path texturePath(const std::string& _file) const;
+        // Returns "<assetRoot>/<file>"
+        std::filesystem::path assetPath(const std::string& _file) const;
 
     private:
         // TEMP SHADER FILE PATH

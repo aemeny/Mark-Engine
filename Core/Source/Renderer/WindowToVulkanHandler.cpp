@@ -239,10 +239,14 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Created");
     }
 
-    std::weak_ptr<MeshHandler> WindowToVulkanHandler::addMesh()
+    std::weak_ptr<MeshHandler> WindowToVulkanHandler::addMesh(const char* _meshPath)
     {
         auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef, m_commandBuffers);
+
+        const auto assetPath = m_vulkanCoreRef.lock()->assetPath(_meshPath); // Test cat model
+        rtn->loadFromOBJ(assetPath.string().c_str());
         rtn->uploadToGPU();
+
         m_meshesToDraw.push_back(rtn);
 
         // Rebuild descriptors to include new mesh

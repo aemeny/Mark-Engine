@@ -8,6 +8,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <filesystem>
 #if defined(_WIN32)
     #ifndef NOMINMAX
@@ -319,6 +320,16 @@ namespace Mark::Utils
      // --------- End ARRAY SIZE HELPER  ---------
 
 
+     // --------- HASH COMBINE HELPER  ---------
+     // from: https://stackoverflow.com/a/57595105
+     template <typename T, typename... Rest>
+     void hashCombine(std::size_t& seed, const T& v, const Rest&... rest)
+     {
+         seed ^= std::hash<T>{}(v)+0x9e3779b9 + (seed << 6) + (seed >> 2);
+         (hashCombine(seed, rest), ...);
+     };
+     // --------- End HASH COMBINE HELPER  ---------
+
 
      // --------- SHORT PATH FOR LOGGING HELPER  ---------
      inline std::string ShortPathForLog(std::string_view _absPath)
@@ -364,6 +375,7 @@ namespace Mark::Utils
 #if MARK_LOG_COLOR
     #define MARK_COL_RESET  "\x1b[0m"
     #define MARK_COL_LABEL  "\x1b[38;5;88m"
+    #define MARK_COL_LABEL2 "\x1b[38;5;170m"
 #else
     #define MARK_COL_RESET  ""
     #define MARK_COL_LABEL  ""

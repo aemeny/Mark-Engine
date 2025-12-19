@@ -40,19 +40,11 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::System, "Asset root: %s", m_assetRoot.string().c_str());
     }
 
-    std::filesystem::path VulkanCore::shaderPath(const std::string& _file) const
+    std::filesystem::path VulkanCore::assetPath(const std::string& _file) const
     {
-        std::filesystem::path path = (m_assetRoot / "Shaders" / _file).lexically_normal();
+        std::filesystem::path path = (m_assetRoot / _file).lexically_normal();
         if (!std::filesystem::exists(path)) {
-            MARK_WARN_C(Utils::Category::Shader, "Shader not found at: %s", path.string().c_str());
-        }
-        return path;
-    }
-    std::filesystem::path VulkanCore::texturePath(const std::string& _file) const
-    {
-        std::filesystem::path path = (m_assetRoot / "Textures" / _file).lexically_normal();
-        if (!std::filesystem::exists(path)) {
-            MARK_WARN_C(Utils::Category::Vulkan, "Texture not found at: %s", path.string().c_str());
+            MARK_LOG_ERROR_C(Utils::Category::System, "Asset not found at: %s", Utils::ShortPathForLog(path.string()).c_str());
         }
         return path;
     }

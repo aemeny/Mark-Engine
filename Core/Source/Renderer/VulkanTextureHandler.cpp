@@ -8,7 +8,7 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_MSC_SECURE_CRT
-#include "stb/stb_image.h"
+#include "Include/stb/stb_image.h"
 
 namespace Mark::RendererVK
 {
@@ -57,7 +57,7 @@ namespace Mark::RendererVK
         stbi_uc* pixels = stbi_load(_texturePath, &imageWidth, &imageHeight, &imageChannels, STBI_rgb_alpha);
 
         if (!pixels) {
-            MARK_ERROR("Failed to load texture image: %s  (Check File Path/Type Is Correct)", _texturePath);
+            MARK_ERROR("Failed to load texture image: %s  (Check File Path/Type Is Correct)", Utils::ShortPathForLog(_texturePath).c_str());
         }
 
         VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -74,7 +74,7 @@ namespace Mark::RendererVK
 
         m_textureSampler = createTextureSampler(minFilter, maxFilter, adressMode);
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Texture Loaded To Vulkan From: %s", _texturePath);
+        MARK_INFO_C(Utils::Category::Vulkan, "Texture Loaded To Vulkan From: %s", Utils::ShortPathForLog(_texturePath).c_str());
     }
 
     void TextureHandler::createTextureImageFromData(const void* _pixels, int _width, int _height, VkFormat _format)

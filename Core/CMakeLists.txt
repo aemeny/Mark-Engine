@@ -7,7 +7,8 @@ add_library(Core STATIC)
 set(SOURCES
 Include/Mark/Engine.h
 
-Extern/stb/stb_image.h
+Extern/Include/stb/stb_image.h
+Extern/Include/objloader/tiny_obj_loader.h
 
 Source/Engine.cpp
 Source/Core.h
@@ -74,6 +75,7 @@ target_compile_definitions(Core
 	GLFW_INCLUDE_NONE
 	MARK_ASSETS_DIR="${MARK_ASSETS_DIR}"
 	MARK_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
+	MARK_FALLBACK_MODEL="${MARK_FALLBACK_MODEL}"
 )
 
 target_link_libraries(Core

@@ -25,7 +25,10 @@ namespace Mark::RendererVK
         // When meshes change during runtime
         void rebuildDescriptors();
 
+        // Mesh getters
         uint32_t meshCount() const noexcept { return m_meshCount; }
+        uint32_t vertexCountForMesh(uint32_t _meshIndex) const { return m_meshesToDraw->at(_meshIndex)->vertexCount(); }
+        uint32_t indexCountForMesh(uint32_t _meshIndex) const { return m_meshesToDraw->at(_meshIndex)->indexCount(); }
 
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;

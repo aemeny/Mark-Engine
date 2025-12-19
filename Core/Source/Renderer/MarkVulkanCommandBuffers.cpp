@@ -120,14 +120,19 @@ namespace Mark::RendererVK
             vkCmdSetViewport(m_commandBuffers[i], 0, 1, &viewport);
             vkCmdSetScissor(m_commandBuffers[i], 0, 1, &scissor);
 
-            // Verbose for now to test draw a simple mesh
-            const uint32_t vertexCount = 9;
             const uint32_t instanceCount = 1;
             const uint32_t firstVertex = 0;
             const uint32_t firstInstance = 0;
 
             for (uint32_t m = 0; m < m_graphicsPipelineRef.meshCount(); m++)
             {
+                const uint32_t indexCountForMesh = m_graphicsPipelineRef.indexCountForMesh(m);
+                const uint32_t vertexCount = indexCountForMesh > 0
+                    ? indexCountForMesh   // SSBO index path
+                    : m_graphicsPipelineRef.vertexCountForMesh(m); // fallback if no indices
+
+                if (vertexCount == 0) continue; // Skip empty meshes
+
                 m_graphicsPipelineRef.bindPipeline(m_commandBuffers[i], i, m);
                 vkCmdDraw(m_commandBuffers[i], vertexCount, instanceCount, firstVertex, firstInstance);
             }
