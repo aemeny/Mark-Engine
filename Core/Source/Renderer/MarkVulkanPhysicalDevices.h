@@ -25,6 +25,9 @@ namespace Mark::RendererVK
             VkPhysicalDeviceMemoryProperties m_memoryProperties{};
             VkPhysicalDeviceFeatures m_features{};
             VkFormat m_depthFormat;
+            std::vector<VkExtensionProperties> m_supportedExtensions;
+
+            bool isExtensionSupported(const char* _ext) const;
         };
         
         struct selectDeviceResult
@@ -50,5 +53,7 @@ namespace Mark::RendererVK
 
         VkFormat findDepthFormat(const VkPhysicalDevice& _physicalDevice);
         VkFormat findSupportedFormat(const VkPhysicalDevice& _physicalDevice, const std::vector<VkFormat>& _candidates, VkImageTiling _tiling, VkFormatFeatureFlags _features);
+
+        void getExtensionsforDevice(int _deviceIndex);
     };
 } // namespace Mark::RendererVK

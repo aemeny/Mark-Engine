@@ -14,6 +14,7 @@ namespace Mark::RendererVK
 
         VkSampler sampler() const { return m_textureSampler; }
         VkImageView imageView() const { return m_textureImageView; }
+        VkImage image() const { return m_textureImage; }
 
     private:
         // Use for depth textures
@@ -37,7 +38,7 @@ namespace Mark::RendererVK
         int getBytesPerTexFormat(VkFormat _format);
 
         void transitionImageLayout(VkImage& _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout);
-        bool hasStencilComponent(VkFormat _format);
+        static bool hasStencilComponent(VkFormat _format);
         void copyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height);
         void submitCopyCommand();
 

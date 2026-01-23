@@ -17,6 +17,7 @@ namespace Mark::RendererVK
 
         void createSwapChain();
         void createDepthResources();
+        void initImageLayoutsForDynamicRendering();
 
         // Getters
         VkSwapchainKHR& swapChain() { return m_swapChain; }

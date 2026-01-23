@@ -1,6 +1,7 @@
 #include "MarkVulkanGraphicsPipeline.h"
 #include "MarkVulkanCore.h"
 #include "MarkVulkanShader.h"
+#include "MarkVulkanPhysicalDevices.h"
 #include "Utils/VulkanUtils.h"
 #include "Utils/MarkUtils.h"
 
@@ -33,8 +34,8 @@ namespace Mark::RendererVK
         return h;
     }
 
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanRenderPass& _renderPassRef, VulkanUniformBuffer& _uniformBufferRef, const std::vector<std::shared_ptr<MeshHandler>>* _meshesToDraw) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_renderPassRef(_renderPassRef), m_swapChainRef(_swapChainRef), m_uniformBufferRef(_uniformBufferRef), m_meshesToDraw(_meshesToDraw)
+    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanUniformBuffer& _uniformBufferRef, const std::vector<std::shared_ptr<MeshHandler>>* _meshesToDraw) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_uniformBufferRef(_uniformBufferRef), m_meshesToDraw(_meshesToDraw)
     {}
 
     void VulkanGraphicsPipeline::destroyGraphicsPipeline()
@@ -95,12 +96,15 @@ namespace Mark::RendererVK
             createDescriptorSetLayout(device);
 
         // Cache key for this render-target + program + baked state
-        const VkRenderPass renderPass = m_renderPassRef.renderPass();
+        const VkFormat colourFormat = m_swapChainRef.surfaceFormat().format;
+        const VkFormat depthFormat = VkCore->physicalDevices().selected().m_depthFormat;
 
         const auto samples = VK_SAMPLE_COUNT_1_BIT;
         const uint32_t dynMask = (1u << 0) | (1u << 1); // viewport|scissor
+
         auto key = VulkanGraphicsPipelineKey::Make(
-            renderPass, 
+            colourFormat,
+            depthFormat,
             vs, fs,
             VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 
             samples,
@@ -210,12 +214,24 @@ namespace Mark::RendererVK
                     .pAttachments = &colorBlendAttachment
                 };
 
+                VkPipelineRenderingCreateInfo renderingInfo{
+                    .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+                    .pNext = nullptr,
+                    .viewMask = 0,
+                    .colorAttachmentCount = 1,
+                    .pColorAttachmentFormats = &_key.m_colourFormat,
+                    .depthAttachmentFormat = _key.m_depthFormat,
+                    .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
+                };
+
                 VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
                     .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+                    .pNext = &renderingInfo,
                     .stageCount = ARRAY_COUNT(shaderStageCreateInfo),
                     .pStages = &shaderStageCreateInfo[0],
                     .pVertexInputState = &vertexInputCreateInfo,
                     .pInputAssemblyState = &inputAssemblyCreateInfo,
+                    .pTessellationState = nullptr,
                     .pViewportState = &viewportCreateInfo,
                     .pRasterizationState = &rasterizeCreateInfo,
                     .pMultisampleState = &multisampleInfo,
@@ -223,7 +239,7 @@ namespace Mark::RendererVK
                     .pColorBlendState = &colorBlendCreateInfo,
                     .pDynamicState = &dynamicStateCreateInfo,
                     .layout = layout,
-                    .renderPass = _key.m_renderPass,
+                    .renderPass = VK_NULL_HANDLE,
                     .subpass = 0,
                     .basePipelineHandle = VK_NULL_HANDLE,
                     .basePipelineIndex = -1
@@ -303,11 +319,11 @@ namespace Mark::RendererVK
     void VulkanGraphicsPipeline::createDescriptorPool(uint32_t _numSets, VkDevice _device)
     {
         std::vector<VkDescriptorPoolSize> sizes;
-        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets * 2 }); // vertex + index SSBO per set, binding 0
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets * 2 }); // vertex + index SSBO per set (0)
         if (m_uniformBufferRef.bufferCount() > 0) {
-            sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numSets }); // 1 UBO per set, binding 1
+            sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numSets }); // binding UBO per set (2)
         }
-        sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _numSets }); // Binding 2
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _numSets }); // Binding texture (3)
 
         VkDescriptorPoolCreateInfo poolCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -329,7 +345,7 @@ namespace Mark::RendererVK
         m_bindings.clear();
 
         VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_VB = {
-            .binding = 0,
+            .binding = Binding::verticesSSBO,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -338,7 +354,7 @@ namespace Mark::RendererVK
         m_bindings.push_back(vertexShaderLayoutBinding_VB);
 
         VkDescriptorSetLayoutBinding indexBufferBinding = {
-            .binding = 1,
+            .binding = Binding::indicesSSBO,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -347,7 +363,7 @@ namespace Mark::RendererVK
         m_bindings.push_back(indexBufferBinding);
 
         VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_UBO = {
-            .binding = 2,
+            .binding = Binding::UBO,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -358,7 +374,7 @@ namespace Mark::RendererVK
         }
 
         VkDescriptorSetLayoutBinding fragmentShaderLayoutBinding = {
-            .binding = 3,
+            .binding = Binding::texture,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -436,7 +452,7 @@ namespace Mark::RendererVK
                 writes.push_back(VkWriteDescriptorSet{
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = m_descriptorSets[index],
-                    .dstBinding = 0,
+                    .dstBinding = Binding::verticesSSBO,
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -456,7 +472,7 @@ namespace Mark::RendererVK
                 writes.push_back(VkWriteDescriptorSet{
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = m_descriptorSets[index],
-                    .dstBinding = 1,
+                    .dstBinding = Binding::indicesSSBO,
                     .dstArrayElement = 0,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -470,7 +486,7 @@ namespace Mark::RendererVK
                     writes.push_back(VkWriteDescriptorSet{
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = m_descriptorSets[index],
-                        .dstBinding = 2,
+                        .dstBinding = Binding::UBO,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -491,7 +507,7 @@ namespace Mark::RendererVK
                     writes.push_back(VkWriteDescriptorSet{
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                         .dstSet = m_descriptorSets[index],
-                        .dstBinding = 3,
+                        .dstBinding = Binding::texture,
                         .dstArrayElement = 0,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

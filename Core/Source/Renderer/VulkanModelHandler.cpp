@@ -102,12 +102,15 @@ namespace Mark::RendererVK
             StripTrailingNewlines(warn);
             StripTrailingNewlines(err);
 
-            MARK_SCOPE_C_L(Utils::Category::System, Utils::Level::Error, "Failed to load model from:");
-            MARK_IN_SCOPE("%s", Utils::ShortPathForLog(_meshPath).c_str());
-            MARK_IN_SCOPE(MARK_COL_LABEL "Severity: " MARK_COL_RESET "%s", "Error");
-            MARK_IN_SCOPE(MARK_COL_LABEL "Warning: " MARK_COL_RESET "%s", (warn.empty()) ? "<none>": warn.c_str());
-            MARK_IN_SCOPE(MARK_COL_LABEL "Error: " MARK_COL_RESET "%s", (err.empty()) ? "<none>" : err.c_str());
-            MARK_IN_SCOPE("Defaulting to " MARK_COL_LABEL2 "[MARK_FALLBACK_MODEL]" MARK_COL_RESET);
+            const auto level = Utils::Level::Error;
+            const auto category = Utils::Category::System;
+
+            MARK_SCOPE_C_L(category, level, "Failed to load model from:");
+            MARK_IN_SCOPE(category, level, "%s", Utils::ShortPathForLog(_meshPath).c_str());
+            MARK_IN_SCOPE(category, level, MARK_COL_LABEL "Severity: " MARK_COL_RESET "%s", "Error");
+            MARK_IN_SCOPE(category, level, MARK_COL_LABEL "Warning: " MARK_COL_RESET "%s", (warn.empty()) ? "<none>": warn.c_str());
+            MARK_IN_SCOPE(category, level, MARK_COL_LABEL "Error: " MARK_COL_RESET "%s", (err.empty()) ? "<none>" : err.c_str());
+            MARK_IN_SCOPE(category, level, "Defaulting to " MARK_COL_LABEL2 "[MARK_FALLBACK_MODEL]" MARK_COL_RESET);
 
             const char* fallbackMeshPath = MARK_FALLBACK_MODEL;
             m_usingFallBack = true;
@@ -154,10 +157,14 @@ namespace Mark::RendererVK
 
                 if (index.texcoord_index >= 0)
                 {
-                    vertex.m_uv = {
-                        attrib.texcoords[2 * index.texcoord_index + 0],
-                        attrib.texcoords[2 * index.texcoord_index + 1]
-                    };
+                    float u = attrib.texcoords[2 * index.texcoord_index + 0];
+                    float v = attrib.texcoords[2 * index.texcoord_index + 1];
+
+                    if (_flipV) {
+                        v = 1.0f - v;
+                    }
+
+                    vertex.m_uv = { u, v };
                 }
 
                 // If new Vertex add it to the uniqueVertices map

@@ -252,7 +252,7 @@ namespace Mark::RendererVK
         if (_oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && _newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) 
         {
             barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
             sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
@@ -262,7 +262,7 @@ namespace Mark::RendererVK
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
             destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         }
         else if (_oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && _newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
@@ -317,7 +317,8 @@ namespace Mark::RendererVK
     {
         return (_format == VK_FORMAT_S8_UINT ||
                 _format == VK_FORMAT_D16_UNORM_S8_UINT ||
-                _format == VK_FORMAT_D24_UNORM_S8_UINT);
+                _format == VK_FORMAT_D24_UNORM_S8_UINT ||
+                _format == VK_FORMAT_D32_SFLOAT_S8_UINT);
     }
 
     void TextureHandler::copyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height)

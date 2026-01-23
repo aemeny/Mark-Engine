@@ -53,11 +53,6 @@ namespace Mark::RendererVK
     {
         if (m_device != VK_NULL_HANDLE)
         {
-            if (m_renderPassCache)
-            {
-                m_renderPassCache->destroyAll();
-                m_renderPassCache.reset();
-            }
             if (m_shaderCache)
             {
                 m_shaderCache->destroy();
@@ -181,6 +176,7 @@ namespace Mark::RendererVK
             extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
 
+        getInstanceVersion();
         VkApplicationInfo appInfo = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
             .pNext = nullptr,
@@ -188,7 +184,7 @@ namespace Mark::RendererVK
             .applicationVersion = VK_MAKE_API_VERSION(_appInfo.appVersion[0], _appInfo.appVersion[1], _appInfo.appVersion[2], _appInfo.appVersion[3]),
             .pEngineName = "Mark",
             .engineVersion = VK_MAKE_API_VERSION(0, 1, 0, 0),
-            .apiVersion = VK_API_VERSION_1_3
+            .apiVersion = VK_MAKE_API_VERSION(0, m_instanceVersion.major, m_instanceVersion.minor, 0)
         };
 
         VkInstanceCreateInfo createInfo = {
@@ -208,6 +204,21 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Created");
     }
 
+    void VulkanCore::getInstanceVersion()
+    {
+        uint32_t instanceVersion = 0;
+
+        VkResult res = vkEnumerateInstanceVersion(&instanceVersion);
+        CHECK_VK_RESULT(res, "Enumerate Instance Version");
+
+        m_instanceVersion.major = VK_API_VERSION_MAJOR(instanceVersion);
+        m_instanceVersion.minor = VK_API_VERSION_MINOR(instanceVersion);
+        m_instanceVersion.patch = VK_API_VERSION_PATCH(instanceVersion);
+
+        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Version: %u.%u.%u",
+            m_instanceVersion.major, m_instanceVersion.minor, m_instanceVersion.patch);
+    }
+
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT _severity,
         VkDebugUtilsMessageTypeFlagsEXT _type,
@@ -215,24 +226,25 @@ namespace Mark::RendererVK
         void* _pUserData)
     {
         const auto severityLevel = VkSeverityToLevel(_severity);
+        const auto category = Utils::Category::Vulkan;
 
-        MARK_SCOPE_C_L(Utils::Category::Vulkan, severityLevel, "Vulkan Debug Callback:");
-        MARK_IN_SCOPE("%s", _pCallbackData->pMessage);
-        MARK_IN_SCOPE(MARK_COL_LABEL "Severity: " MARK_COL_RESET "%s", GetDebugSeverityStr(_severity));
+        MARK_SCOPE_C_L(category, severityLevel, "Vulkan Debug Callback:");
+        MARK_IN_SCOPE(category, severityLevel, "%s", _pCallbackData->pMessage);
+        MARK_IN_SCOPE(category, severityLevel, MARK_COL_LABEL "Severity: " MARK_COL_RESET "%s", GetDebugSeverityStr(_severity));
         const std::string typeStr = GetDebugType(_type);
-        MARK_IN_SCOPE(MARK_COL_LABEL "Type: " MARK_COL_RESET "%s", typeStr.c_str());
+        MARK_IN_SCOPE(category, severityLevel, MARK_COL_LABEL "Type: " MARK_COL_RESET "%s", typeStr.c_str());
 
         if (_pCallbackData->objectCount == 0) {
-            MARK_IN_SCOPE(MARK_COL_LABEL "Objects: " MARK_COL_RESET "<none>");
+            MARK_IN_SCOPE(category, severityLevel, MARK_COL_LABEL "Objects: " MARK_COL_RESET "<none>");
         }
         else {
-            MARK_IN_SCOPE(MARK_COL_LABEL "Objects: " MARK_COL_RESET);
+            MARK_IN_SCOPE(category, severityLevel, MARK_COL_LABEL "Objects: " MARK_COL_RESET);
             for (uint32_t i = 0; i < _pCallbackData->objectCount; i++)
             {
                 const auto& object = _pCallbackData->pObjects[i];
                 const char* typeStr = VkObjectTypeToStr(object.objectType);
                 const char* nameStr = (object.pObjectName && *object.pObjectName) ? object.pObjectName : "<unnamed>";
-                MARK_IN_SCOPE("    [%s] %s (0x%" PRIx64 ")", typeStr, nameStr, object.objectHandle);
+                MARK_IN_SCOPE(category, severityLevel, "    [%s] %s (0x%" PRIx64 ")", typeStr, nameStr, object.objectHandle);
             }
         }
 
@@ -289,36 +301,41 @@ namespace Mark::RendererVK
             };
         }
 
-        // Any device extensions required by Vulkan, enabled here
+        const VulkanPhysicalDevices::DeviceProperties& selectedPhysical = m_physicalDevices.selected();
+        // Any device extensions required by Vulkan are enabled here
         std::vector<const char*> deviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
+
         // VK_KHR_shader_draw_parameters is needed for support in Vulkan under 1.1
-        uint32_t api = m_physicalDevices.selected().m_properties.apiVersion;
-        if (VK_API_VERSION_MAJOR(api) == 1 && VK_API_VERSION_MINOR(api) == 0) {
-            deviceExtensions.push_back(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+        bool isInstanceUnder1_1 = (m_instanceVersion.major < 1) || ((m_instanceVersion.major == 1) && (m_instanceVersion.minor < 1));
+        if (isInstanceUnder1_1) {
+            bool deviceSupportsShaderDrawParams = selectedPhysical.isExtensionSupported(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+            if (deviceSupportsShaderDrawParams) {
+                deviceExtensions.push_back(VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME);
+            }
+            else {
+                MARK_LOG_ERROR_C(Utils::Category::Vulkan, "The system does not support Shader Draw Paramaters");
+            }
         }
 
-        // Ensure the selected device supports nessesary extensions
-        auto supportsExt = [&](const char* _name)
-            {
-                uint32_t n = 0;
-                vkEnumerateDeviceExtensionProperties(m_physicalDevices.selected().m_device, nullptr, &n, nullptr);
-                std::vector<VkExtensionProperties> exts(n);
-                vkEnumerateDeviceExtensionProperties(m_physicalDevices.selected().m_device, nullptr, &n, exts.data());
-                for (const auto& e : exts) if (std::strcmp(e.extensionName, _name) == 0) return true;
-                return false;
-            };
-        for (const char* ext : deviceExtensions)
-        {
-            if (!supportsExt(ext))
-            {
-                MARK_ERROR("Device does not support extension %s", ext);
+        // Enable DYNAMIC RENDERING if vulkan version is before 1.3
+        bool deviceSupportsDynamicRendering = selectedPhysical.isExtensionSupported(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+        bool isInstanceOver1_3 = (m_instanceVersion.major > 1) || ((m_instanceVersion.major == 1) && (m_instanceVersion.minor >= 3));
+        if (deviceSupportsDynamicRendering) {
+            if (isInstanceOver1_3) {
+                MARK_DEBUG_C(Utils::Category::Vulkan, "The Vulkan instance and device support dynamic rendering as a core feature");
+            }
+            else if (m_instanceVersion.minor == 2) {
+                deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
+            }
+            else {
+                MARK_ERROR("The system does not support Dynamic Rendering");
             }
         }
 
         // Ensure the selected device supports nessesary features
-        const VkPhysicalDeviceFeatures& feats = m_physicalDevices.selected().m_features;
+        const VkPhysicalDeviceFeatures& feats = selectedPhysical.m_features;
         REQ_FEATURE(feats, geometryShader);
         REQ_FEATURE(feats, tessellationShader);
 
@@ -327,16 +344,8 @@ namespace Mark::RendererVK
         deviceFeatures.geometryShader = VK_TRUE;
         deviceFeatures.tessellationShader = VK_TRUE;
 
-        // Vulkan 1.3: enable the core synchronization2 feature so *_2 calls are valid
-        VkPhysicalDeviceVulkan13Features v13 = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-            .pNext = nullptr,
-            .synchronization2 = VK_TRUE
-        };
-
         VkDeviceCreateInfo deviceCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-            .pNext = &v13,
             .flags = 0,
             .queueCreateInfoCount = qCount,
             .pQueueCreateInfos = qInfos,
@@ -347,7 +356,34 @@ namespace Mark::RendererVK
             .pEnabledFeatures = &deviceFeatures
         };
 
-        VkResult res = vkCreateDevice(m_physicalDevices.selected().m_device, &deviceCreateInfo, nullptr, &m_device);
+        VkResult res;
+        if (isInstanceOver1_3) {
+            VkPhysicalDeviceVulkan13Features v13 = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+                .pNext = nullptr,
+                .synchronization2 = VK_TRUE,
+                .dynamicRendering = VK_TRUE
+            };
+
+            deviceCreateInfo.pNext = &v13;
+            res = vkCreateDevice(selectedPhysical.m_device, &deviceCreateInfo, nullptr, &m_device);
+        }
+        else {
+            VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicRenderingFeatures = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
+                .pNext = nullptr,
+                .dynamicRendering = VK_TRUE
+            };
+            VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
+                .pNext = &dynamicRenderingFeatures,
+                .synchronization2 = VK_TRUE
+            };
+
+            deviceCreateInfo.pNext = &synchronization2Features;
+            res = vkCreateDevice(selectedPhysical.m_device, &deviceCreateInfo, nullptr, &m_device);
+        }
+
         CHECK_VK_RESULT(res, "Create Logical Device");
 
         // Load device for volk to be able to call device functions
@@ -374,7 +410,6 @@ namespace Mark::RendererVK
 
     void VulkanCore::createCaches()
     {
-        m_renderPassCache = std::make_unique<VulkanRenderPassCache>(m_device);
         m_shaderCache = std::make_unique<VulkanShaderCache>(m_device);
         m_graphicsPipelineCache = std::make_unique<VulkanGraphicsPipelineCache>(m_device);
     }

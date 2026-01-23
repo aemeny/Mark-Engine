@@ -124,9 +124,12 @@ namespace Mark::Utils
         }
 
         // Continuation/body line (no timestamp/category/level header). Uses current indent
-        static void writeCont(const char* _fmt, ...)
+        static void writeCont(Level _lvl, Category _cat, const char* _fmt, ...)
         {
 #if MARK_LOG_ENABLED
+            if (!isEnabled(_cat)) return;
+            if ((int)_lvl < (int)levelRef()) return;
+
             // Format user message
             char buf[2048];
             va_list args; va_start(args, _fmt);
@@ -376,6 +379,7 @@ namespace Mark::Utils
     #define MARK_COL_RESET  "\x1b[0m"
     #define MARK_COL_LABEL  "\x1b[38;5;88m"
     #define MARK_COL_LABEL2 "\x1b[38;5;170m"
+    #define MARK_COL_LABEL3 "\x1b[32m"
 #else
     #define MARK_COL_RESET  ""
     #define MARK_COL_LABEL  ""
@@ -397,21 +401,21 @@ namespace Mark::Utils
 
     // Category-aware writing
     #define MARK_LOG_WRITE_C(lvl, cat, fmt, ...) ::Mark::Utils::Logger::writeCategory((lvl), (cat), __FILE__, __LINE__, __func__, (fmt), ##__VA_ARGS__)
-    #define MARK_DEBUG_C(cat, fmt, ...)      MARK_LOG_WRITE_C(::Mark::Utils::Level::Debug, (cat), fmt, ##__VA_ARGS__)
-    #define MARK_INFO_C(cat, fmt, ...)      MARK_LOG_WRITE_C(::Mark::Utils::Level::Info, (cat), fmt, ##__VA_ARGS__)
-    #define MARK_WARN_C(cat, fmt, ...)      MARK_LOG_WRITE_C(::Mark::Utils::Level::Warn, (cat), fmt, ##__VA_ARGS__)
+    #define MARK_DEBUG_C(cat, fmt, ...)          MARK_LOG_WRITE_C(::Mark::Utils::Level::Debug, (cat), fmt, ##__VA_ARGS__)
+    #define MARK_INFO_C(cat, fmt, ...)           MARK_LOG_WRITE_C(::Mark::Utils::Level::Info, (cat), fmt, ##__VA_ARGS__)
+    #define MARK_WARN_C(cat, fmt, ...)           MARK_LOG_WRITE_C(::Mark::Utils::Level::Warn, (cat), fmt, ##__VA_ARGS__)
     #define MARK_LOG_ERROR_C(cat, fmt, ...)      MARK_LOG_WRITE_C(::Mark::Utils::Level::Error, (cat), fmt, ##__VA_ARGS__)
 
     // Indented section (prints a title once, indents all inner logs)
     #define MARK_SCOPE(title)         ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__((title), ::Mark::Utils::Category::General)
     #define MARK_SCOPE_C(cat, title)  ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__((title), (cat))
-    #define MARK_IN_SCOPE(fmt, ...) ::Mark::Utils::Logger::writeCont((fmt), ##__VA_ARGS__)    
+    #define MARK_IN_SCOPE(cat, lvl, fmt, ...)   ::Mark::Utils::Logger::writeCont((lvl), (cat), (fmt), ##__VA_ARGS__)
     // Scopes with a dynamic log level
 #ifdef MARK_SCOPE_C_L
     #undef  MARK_SCOPE_C_L
 #endif
-    #define MARK_SCOPE_C_L(cat, lvl, fmt, ...)  ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__(::Mark::Utils::ScopeFmtTag{}, (cat), (lvl), (fmt), ##__VA_ARGS__)
-    #define MARK_SCOPE_L(lvl, title)            ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__((title), ::Mark::Utils::Category::General, (lvl))
+    #define MARK_SCOPE_C_L(cat, lvl, fmt, ...)     ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__(::Mark::Utils::ScopeFmtTag{}, (cat), (lvl), (fmt), ##__VA_ARGS__)
+    #define MARK_SCOPE_L(lvl, title)               ::Mark::Utils::ScopedIndent _mark_scope_##__LINE__((title), ::Mark::Utils::Category::General, (lvl))
 #else
     #define MARK_TRACE(...)         ((void)0)
     #define MARK_DEBUG(...)         ((void)0)

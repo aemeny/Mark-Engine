@@ -20,6 +20,7 @@ namespace Mark::Systems
             m_cameraOrientation = glm::lookAtRH(_pos, _target, _up);
             m_persProjection = glm::perspectiveRH(_persProjInfo.m_FOV, aspect, _persProjInfo.m_zNear, _persProjInfo.m_zFar);
         }
+        m_persProjection[1][1] *= -1.0f; // Flip Y for Vulkan
 
         const glm::vec3 dir = glm::normalize(_target - _pos);
         if (CAMERA_LEFT_HANDED) {
@@ -62,7 +63,7 @@ namespace Mark::Systems
     void EarlyCameraController::addMouseDelta(float _dxPixels, float _dyPixels)
     {
         m_yaw += _dxPixels * m_mouseSensitivity;
-        m_pitch -= _dyPixels * m_mouseSensitivity;
+        m_pitch += _dyPixels * m_mouseSensitivity;
 
         // clamp pitch to avoid flipping
         constexpr float kLimit = glm::radians(89.0f);
@@ -148,8 +149,8 @@ namespace Mark::Systems
         if (m_movement.m_moveBackward) desired -= forward();
         if (m_movement.m_moveRight) desired += right();
         if (m_movement.m_moveLeft) desired -= right();
-        if (m_movement.m_moveUp) desired -= up();
-        if (m_movement.m_moveDown) desired += up();
+        if (m_movement.m_moveUp) desired += up();
+        if (m_movement.m_moveDown) desired -= up();
 
         if (glm::length2(desired) > 0.0f) desired = glm::normalize(desired);
 

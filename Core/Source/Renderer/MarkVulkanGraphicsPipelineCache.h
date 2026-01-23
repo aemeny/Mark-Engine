@@ -7,14 +7,16 @@
 
 namespace Mark::RendererVK
 {
-    // Minimal pipeline identity for now:
-    // - Render target: renderPass
+    // Pipeline identity:
+    // - Dynamic rendering
     // - Program: shader modules (VS/FS)  (entry names assumed "main")
     // - Fixed state: topology, samples
 
     struct VulkanGraphicsPipelineKey
     {
-        VkRenderPass m_renderPass{ VK_NULL_HANDLE };
+        VkFormat m_colourFormat{ VK_FORMAT_UNDEFINED };
+        VkFormat m_depthFormat{ VK_FORMAT_UNDEFINED };
+
         VkShaderModule m_vertShader{ VK_NULL_HANDLE };
         VkShaderModule m_fragShader{ VK_NULL_HANDLE };
         VkPrimitiveTopology m_topology{ VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST };
@@ -24,7 +26,8 @@ namespace Mark::RendererVK
 
         bool operator==(const VulkanGraphicsPipelineKey& _o) const noexcept
         {
-            return m_renderPass == _o.m_renderPass
+            return m_colourFormat == _o.m_colourFormat
+                && m_depthFormat == _o.m_depthFormat
                 && m_vertShader == _o.m_vertShader
                 && m_fragShader == _o.m_fragShader
                 && m_topology == _o.m_topology
@@ -34,7 +37,8 @@ namespace Mark::RendererVK
         }
 
         static VulkanGraphicsPipelineKey Make(
-            VkRenderPass _rp,
+            VkFormat _color,
+            VkFormat _depth,
             VkShaderModule _vert,
             VkShaderModule _frag,
             VkPrimitiveTopology _topo = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
@@ -43,7 +47,8 @@ namespace Mark::RendererVK
             uint64_t _descSetHash = 0)
         {
             VulkanGraphicsPipelineKey k;
-            k.m_renderPass = _rp;
+            k.m_colourFormat = _color;
+            k.m_depthFormat = _depth;
             k.m_vertShader = _vert;
             k.m_fragShader = _frag;
             k.m_topology = _topo;
@@ -65,7 +70,8 @@ namespace Mark::RendererVK
                 hash ^= _v;
                 hash *= 1099511628211ull;
             };
-            mix(reinterpret_cast<size_t>(_key.m_renderPass));
+            mix(static_cast<size_t>(_key.m_colourFormat));
+            mix(static_cast<size_t>(_key.m_depthFormat));
             mix(reinterpret_cast<size_t>(_key.m_vertShader));
             mix(reinterpret_cast<size_t>(_key.m_fragShader));
             mix(static_cast<size_t>(_key.m_topology));

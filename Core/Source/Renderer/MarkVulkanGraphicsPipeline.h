@@ -1,6 +1,5 @@
 #pragma once
 #include "MarkVulkanGraphicsPipelineCache.h" 
-#include "MarkVulkanRenderPass.h"
 #include "MarkVulkanSwapChain.h"
 #include "MarkVulkanUniformBuffer.h"
 #include "VulkanModelHandler.h"
@@ -8,11 +7,20 @@
 namespace Mark::Platform{ struct Window; }
 namespace Mark::RendererVK
 {
+    namespace Binding
+    {
+        constexpr uint32_t verticesSSBO = 0;
+        constexpr uint32_t indicesSSBO = 1;
+        constexpr uint32_t UBO = 2;
+        constexpr uint32_t texture = 3;
+    }
+
     struct VulkanCore;
     struct VulkanGraphicsPipeline
     {
-        VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, 
-            VulkanRenderPass& _renderPassRef, VulkanUniformBuffer& _uniformBufferRef,
+        VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, 
+            VulkanSwapChain& _swapChainRef, 
+            VulkanUniformBuffer& _uniformBufferRef,
             const std::vector<std::shared_ptr<MeshHandler>>* _meshesToDraw);
         ~VulkanGraphicsPipeline() = default;
         void destroyGraphicsPipeline();
@@ -33,7 +41,6 @@ namespace Mark::RendererVK
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         VulkanSwapChain& m_swapChainRef;
-        VulkanRenderPass& m_renderPassRef;
         VulkanUniformBuffer& m_uniformBufferRef;
         const std::vector<std::shared_ptr<MeshHandler>>* m_meshesToDraw;
 

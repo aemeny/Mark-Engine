@@ -50,14 +50,7 @@ namespace Mark::RendererVK
 
         m_swapChain.createSwapChain();
         m_swapChain.createDepthResources();
-
-        // Acquire or share a render pass from the device cache
-        VulkanRenderPassKey key = VulkanRenderPassKey::Make(
-            m_swapChain.surfaceFormat().format,   // Colour format for this window
-            m_vulkanCoreRef.lock()->physicalDevices().selected().m_depthFormat,
-            VK_SAMPLE_COUNT_1_BIT
-        );
-        m_renderPass.initWithCache(VkCore->renderPassCache(), key);
+        m_swapChain.initImageLayoutsForDynamicRendering();
 
         // Create frame data sync objects
         m_imagesInFlight.assign(m_swapChain.numImages(), VK_NULL_HANDLE);
@@ -108,9 +101,6 @@ namespace Mark::RendererVK
 
         // Destroy graphics pipeline
         m_graphicsPipeline.destroyGraphicsPipeline();
-
-        // Destroy framebuffers before swap chain for references used there
-        m_renderPass.destroyFrameBuffers();
 
         // Explicitly destroy swap chain before surface
         m_swapChain.destroySwapChain();
@@ -244,7 +234,7 @@ namespace Mark::RendererVK
         auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef, m_commandBuffers);
 
         const auto assetPath = m_vulkanCoreRef.lock()->assetPath(_meshPath); // Test cat model
-        rtn->loadFromOBJ(assetPath.string().c_str());
+        rtn->loadFromOBJ(assetPath.string().c_str(), true/*Flip texture vertically for Vulkan*/);
         rtn->uploadToGPU();
 
         m_meshesToDraw.push_back(rtn);

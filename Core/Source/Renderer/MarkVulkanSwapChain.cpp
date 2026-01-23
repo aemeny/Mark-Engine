@@ -227,7 +227,134 @@ namespace Mark::RendererVK
             VkMemoryPropertyFlagBits properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
             depthImage.createImage(m_extent.width, m_extent.height, depthFormat, usage, properties);
 
-            depthImage.m_textureImageView = depthImage.createImageView(depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
+            VkImageAspectFlags aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+            if (depthImage.hasStencilComponent(depthFormat)) {
+                aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+
+            depthImage.m_textureImageView = depthImage.createImageView(depthFormat, aspect);
         }
+    }
+
+    void VulkanSwapChain::initImageLayoutsForDynamicRendering()
+    {
+        auto VkCore = m_vulkanCoreRef.lock();
+        if (!VkCore)
+        {
+            MARK_ERROR("VulkanCore expired in VulkanSwapChain::initImageLayoutsForDynamicRendering");
+            return;
+        }
+        VkDevice device = VkCore->device();
+
+        // Command pool for one-time setup
+        VkCommandPoolCreateInfo poolInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+            .queueFamilyIndex = VkCore->graphicsQueueFamilyIndex()
+        };
+
+        VkCommandPool pool = VK_NULL_HANDLE;
+        VkResult res = vkCreateCommandPool(device, &poolInfo, nullptr, &pool);
+        CHECK_VK_RESULT(res, "Create command pool for initImageLayoutsForDynamicRendering");
+
+        VkCommandBufferAllocateInfo allocInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .commandPool = pool,
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1
+        };
+
+        VkCommandBuffer cmd = VK_NULL_HANDLE;
+        res = vkAllocateCommandBuffers(device, &allocInfo, &cmd);
+        CHECK_VK_RESULT(res, "Allocate command buffer for initImageLayoutsForDynamicRendering");
+
+        VkCommandBufferBeginInfo beginInfo = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .pNext = nullptr,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+            .pInheritanceInfo = nullptr
+        };
+        vkBeginCommandBuffer(cmd, &beginInfo);
+
+        std::vector<VkImageMemoryBarrier> barriers;
+        // Colour images: UNDEFINED -> PRESENT_SRC_KHR
+        for (VkImage image : m_swapChainImages)
+        {
+            VkImageMemoryBarrier b{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .pNext = nullptr,
+                .srcAccessMask = 0,
+                .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = image,
+                .subresourceRange = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            };
+            barriers.push_back(b);
+        }
+
+        // Depth images: UNDEFINED -> DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        VkFormat depthFormat = VkCore->physicalDevices().selected().m_depthFormat;
+        for (TextureHandler& depthImage : m_depthImages)
+        {
+            VkImageMemoryBarrier b{
+                .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+                .pNext = nullptr,
+                .srcAccessMask = 0,
+                .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                .image = depthImage.image(),
+                .subresourceRange = {
+                    .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                    .baseMipLevel = 0,
+                    .levelCount = 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1
+                }
+            };
+
+            if (TextureHandler::hasStencilComponent(depthFormat))
+            {
+                b.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+
+            barriers.push_back(b);
+        }
+
+        if (!barriers.empty())
+        {
+            vkCmdPipelineBarrier(
+                cmd,
+                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                0,
+                0, nullptr,
+                0, nullptr,
+                static_cast<uint32_t>(barriers.size()),
+                barriers.data());
+        }
+
+        vkEndCommandBuffer(cmd);
+
+        // Submit and wait
+        VulkanQueue& graphicsQueue = VkCore->graphicsQueue();
+        graphicsQueue.submit(cmd, VK_NULL_HANDLE, 0, VK_NULL_HANDLE, VK_NULL_HANDLE);
+        graphicsQueue.waitIdle();
+
+        vkFreeCommandBuffers(device, pool, 1, &cmd);
+        vkDestroyCommandPool(device, pool, nullptr);
     }
 } // namespace Mark::RendererVK

@@ -101,6 +101,8 @@ namespace Mark::RendererVK
                 VK_API_VERSION_MINOR(apiVersion),
                 VK_API_VERSION_PATCH(apiVersion));
 
+            getExtensionsforDevice(i);
+
             vkGetPhysicalDeviceMemoryProperties(currentDevice, &(m_devices[i].m_memoryProperties));
 
             MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory types: %d", m_devices[i].m_memoryProperties.memoryTypeCount);
@@ -290,5 +292,43 @@ namespace Mark::RendererVK
             }
         }
         MARK_ERROR("Failed to find supported format for physical device");
+    }
+
+    void VulkanPhysicalDevices::getExtensionsforDevice(int _deviceIndex)
+    {
+        DeviceProperties& device = m_devices[_deviceIndex];
+
+        uint32_t extensionCount = 0;
+        vkEnumerateDeviceExtensionProperties(device.m_device, nullptr, &extensionCount, nullptr);
+        device.m_supportedExtensions.resize(extensionCount);
+
+        vkEnumerateDeviceExtensionProperties(device.m_device, nullptr, &extensionCount, device.m_supportedExtensions.data());
+
+        MARK_SCOPE_C_L(Utils::Category::Vulkan, Utils::Level::Info, "Physical Device %d Extensions:", _deviceIndex);
+        MARK_IN_SCOPE(Utils::Category::Vulkan, Utils::Level::Info, MARK_COL_LABEL3 "Extension Count: " MARK_COL_RESET "%u", extensionCount);
+        for (const VkExtensionProperties& extProp : device.m_supportedExtensions) {
+            MARK_IN_SCOPE(Utils::Category::Vulkan, Utils::Level::Debug, MARK_COL_LABEL2 "Extension Name: " MARK_COL_RESET "%s, Spec Version: %u", extProp.extensionName, extProp.specVersion);
+        }
+    }
+
+    bool VulkanPhysicalDevices::DeviceProperties::isExtensionSupported(const char* _ext) const
+    {
+        bool rtn = false;
+
+        std::string requestedExt(_ext);
+
+        for (const VkExtensionProperties& supported : m_supportedExtensions)
+        {
+            std::string curExt(supported.extensionName);
+
+            if (curExt == requestedExt) {
+                rtn = true;
+                break;
+            }
+        }
+
+        MARK_DEBUG_C(Utils::Category::Vulkan, "Extension %s %s supported", _ext, rtn ? "is" : "is not");
+
+        return rtn;
     }
 } // namespace Mark::RendererVK

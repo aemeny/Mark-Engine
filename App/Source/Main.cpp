@@ -5,7 +5,7 @@ int main()
 {
     EngineAppInfo appInfo{
         .appName = "EngineTesting",
-        .appVersion = {0, 1, 0, 0},
+        .appVersion = { 0, 1, 0, 0 },
         .enableVulkanValidation = true
     };
 

@@ -1,6 +1,5 @@
 #pragma once
 #include "MarkVulkanPhysicalDevices.h"
-#include "MarkVulkanRenderPassCache.h"
 #include "MarkVulkanShader.h"
 #include "MarkVulkanQueue.h"
 #include "MarkVulkanGraphicsPipelineCache.h"
@@ -27,7 +26,6 @@ namespace Mark::RendererVK
         void selectDevicesForSurface(VkSurfaceKHR _surface);
         VulkanPhysicalDevices& physicalDevices() { return m_physicalDevices; }
         VkDevice& device() { return m_device; }
-        VulkanRenderPassCache& renderPassCache() { return *m_renderPassCache; }
         uint32_t getMemoryTypeIndex(uint32_t _memoryTypeBits, VkMemoryPropertyFlags _propertyFlags) const;
 
         // Queue getters
@@ -61,6 +59,13 @@ namespace Mark::RendererVK
         friend struct Platform::WindowManager;
 
         void createInstance(const EngineAppInfo& _appInfo);
+        void getInstanceVersion();
+        struct {
+            uint32_t major{ 0 };
+            uint32_t minor{ 0 };
+            uint32_t patch{ 0 };
+        } m_instanceVersion;
+
         void createDebugCallback();
         void createLogicalDevice();
         void initializeQueue();
@@ -75,9 +80,6 @@ namespace Mark::RendererVK
         VulkanPhysicalDevices m_physicalDevices;
         VulkanPhysicalDevices::selectDeviceResult m_selectedDeviceResult;
         VkDevice m_device{ VK_NULL_HANDLE };
-
-        // Shared across all windows on this device
-        std::unique_ptr<VulkanRenderPassCache> m_renderPassCache;
 
         // Vertex buffer uploader
         std::unique_ptr<VulkanVertexBuffer> m_vertexUploader;
