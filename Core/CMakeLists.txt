@@ -80,6 +80,7 @@ target_link_libraries(Core
         volk
    	glfw
   	glm::glm
+	imgui
 	${MARK_GLSLANG_TARGETS}
 	${MARK_KTX_TARGET}
 )

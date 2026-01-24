@@ -4,8 +4,10 @@
 include(FetchContent)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+
 # Vulkan
 find_package(Vulkan REQUIRED) # Vulkan::Vulkan
+
 
 # Volk (Vulkan function loader)
 find_package(volk QUIET)
@@ -18,6 +20,7 @@ if (NOT volk_FOUND)
   )
   FetchContent_MakeAvailable(volk)    # creates target: volk
 endif()
+
 
 # GLFW
 if (NOT TARGET glfw)
@@ -38,6 +41,7 @@ if (NOT TARGET glfw)
   endif()
 endif()
 
+
 # GLM
 if (NOT TARGET glm::glm)
   find_package(glm 1.0.1 CONFIG QUIET) # glm::glm
@@ -51,6 +55,7 @@ if (NOT TARGET glm::glm)
     FetchContent_MakeAvailable(glm)    # creates glm and glm::glm
   endif()
 endif()
+
 
 ### glslang
 set(ENABLE_GLSLANG_BINARIES    OFF CACHE BOOL "" FORCE)
@@ -66,13 +71,50 @@ FetchContent_Declare(glslang
 )
 FetchContent_MakeAvailable(glslang)
 
-# Expose a variable so subprojects can link cleanly
 set(MARK_GLSLANG_TARGETS
     glslang::glslang
     glslang::SPIRV
     glslang::glslang-default-resource-limits
     CACHE INTERNAL "glslang targets to link"
 )
+
+
+### Dear ImGui
+FetchContent_Declare(imgui
+  DOWNLOAD_EXTRACT_TIMESTAMP OFF
+  URL https://github.com/ocornut/imgui/archive/refs/tags/v1.92.5.zip
+)
+FetchContent_GetProperties(imgui)
+if (NOT imgui_POPULATED)
+  FetchContent_Populate(imgui)
+
+  add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+
+    # Backends: GLFW (platform) + Vulkan (renderer)
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+  )
+
+  target_include_directories(imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+    ${imgui_SOURCE_DIR}/misc/cpp
+  )
+
+  target_link_libraries(imgui PUBLIC
+    glfw               
+    Vulkan::Vulkan
+  )
+
+  target_compile_features(imgui PUBLIC cxx_std_23)
+endif()
+
 
 # ---------- libktx (KTX2 + BasisU) ----------
 set(KTX_FEATURE_TOOLS          OFF CACHE BOOL "" FORCE)
@@ -118,7 +160,9 @@ if (TARGET KTX::ktx)
 else()
   set(MARK_KTX_TARGET ktx CACHE INTERNAL "")
 endif()
-
+if (TARGET imgui)
+  set_target_properties(imgui PROPERTIES FOLDER "Dependencies")
+endif()
 if (TARGET volk)
   set_target_properties(volk PROPERTIES FOLDER "Dependencies")
 endif()

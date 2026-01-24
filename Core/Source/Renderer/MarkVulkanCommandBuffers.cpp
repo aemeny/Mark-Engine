@@ -85,35 +85,12 @@ namespace Mark::RendererVK
 
     void VulkanCommandBuffers::recordCommandBuffers(VkClearColorValue _clearColour)
     {
-        // Old rener pass info
-        /*std::array<VkClearValue, 2> clearValues{};
-        clearValues[0].color = _clearColour;
-        clearValues[1].depthStencil = { 1.0f, 0 };
-
-        VkRenderPassBeginInfo renderPassBeginInfo = {
-            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            .pNext = nullptr,
-            .renderPass = m_renderPassRef.renderPass(),
-            .renderArea = {
-                .offset = {
-                    .x = 0,
-                    .y = 0
-                },
-                .extent = m_swapChainRef.extent()
-            },
-            .clearValueCount = static_cast<uint32_t>(clearValues.size()),
-            .pClearValues = clearValues.data()
-        };*/
-
         const VkExtent2D& extent = m_swapChainRef.extent();
 
         // Record each command buffer
         for (uint32_t i = 0; i < m_commandBuffers.size(); i++)
         {
             beginCommandBuffer(m_commandBuffers[i], VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
-
-            //renderPassBeginInfo.framebuffer = m_renderPassRef.frameBufferAt(i);
-            //vkCmdBeginRenderPass(m_commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
             // Colour image: PRESENT_SRC_KHR -> COLOR_ATTACHMENT_OPTIMAL
             VkImageMemoryBarrier toColourAttachment = {

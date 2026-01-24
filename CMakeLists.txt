@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.31)
+if(POLICY CMP0169)
+  cmake_policy(SET CMP0169 OLD)
+endif()
 
 project(Mark
 	VERSION 0.1.0
@@ -38,3 +41,7 @@ file(TO_CMAKE_PATH "${MARK_FALLBACK_MODEL}" MARK_FALLBACK_MODEL)
 # Projects
 add_subdirectory(Core)
 add_subdirectory(App)
+
+if (MSVC)
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT App)
+endif()
