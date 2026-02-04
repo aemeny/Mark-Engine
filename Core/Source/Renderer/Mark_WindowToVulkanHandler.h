@@ -1,5 +1,5 @@
 #pragma once
-#include "MarkVulkanCommandBuffers.h"
+#include "Mark_VulkanCommandBuffers.h"
 
 #include "Engine/EarlyCameraController.h" // TEMP
 
@@ -26,6 +26,8 @@ namespace Mark::RendererVK
         void initCameraController();
 
     private:
+        friend struct ImGuiRenderer; // Allows access to main windows info for ImGui init
+
         void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
 
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
@@ -41,7 +43,7 @@ namespace Mark::RendererVK
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
         VulkanUniformBuffer m_uniformBuffer{ m_vulkanCoreRef };
         VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_uniformBuffer, &m_meshesToDraw };
-        VulkanCommandBuffers m_commandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline };
+        VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline };
 
         struct FrameSyncData
         {

@@ -22,9 +22,9 @@ namespace Mark::RendererVK
             uint32_t* _outImageIndex);
 
         // Submit one command buffer
-        void submit(VkCommandBuffer _cmdBuffer,
+        void submit(VkCommandBuffer* _cmdBuffers,
+            int _numCmdBuffers,
             VkSemaphore _waitSemaphore,  // imageAvailable
-            VkPipelineStageFlags _waitStage,
             VkSemaphore _signalSemaphore, // renderFinished
             VkFence _fence); // (can be VK_NULL_HANDLE)
 

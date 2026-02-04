@@ -27,7 +27,7 @@ namespace Mark::Utils
 {
     // --------- CONSOLE LOGGING  ---------
     enum class Level : uint32_t { All = 0, Debug, Info, Warn, Error, Fatal };
-    enum class Category : uint32_t { General = 0, Vulkan, GLFW, Window, Engine, System, Shader };
+    enum class Category : uint32_t { General = 0, Vulkan, GLFW, Window, Engine, System, Shader, imgui };
     constexpr uint64_t categoryBit(Category _c) { return 1ull << static_cast<uint32_t>(_c); }
 
     // Compile-time toggle (on in Debug, off in Release by default)
@@ -263,6 +263,7 @@ namespace Mark::Utils
             case Category::Engine:  return "Engine";
             case Category::System:  return "System";
             case Category::Shader:  return "Shader";
+            case Category::imgui:   return "imgui";
             default:                return "Other";
             }
         }

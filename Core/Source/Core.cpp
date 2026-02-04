@@ -1,5 +1,5 @@
 #include "Core.h"
-#include "Utils/MarkUtils.h"
+#include "Utils/Mark_Utils.h"
 #include "Platform/Window.h" // TEMP FOR ACCESSING MAIN WINDOW IN run()
 
 namespace Mark
@@ -25,6 +25,15 @@ namespace Mark
             m_windows->pollAll();
             m_windows->renderAll();
         }
+
+        cleanUp();
+    }
+
+    void Core::cleanUp()
+    {
+        m_vulkanCore->waitForDeviceIdle();
+
+        m_vulkanCore->m_imguiHandler.destroy();
         m_windows->destroyAllWindows();
     }
 
@@ -33,5 +42,4 @@ namespace Mark
         m_terminateApplication = true;
         MARK_INFO_C(Utils::Category::Engine, "---Mark Core Stop Called, terminating application---");
     }
-
 } // namespace Mark

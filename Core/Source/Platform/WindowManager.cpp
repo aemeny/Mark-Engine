@@ -1,8 +1,8 @@
 #include "WindowManager.h"
 #include "GLFWContext.h"
 #include "Window.h"
-#include "Renderer/MarkVulkanCore.h"
-#include "Utils/MarkUtils.h"
+#include "Renderer/Mark_VulkanCore.h"
+#include "Utils/Mark_Utils.h"
 
 #include <GLFW/glfw3.h>
 #include <volk.h>
@@ -32,6 +32,9 @@ namespace Mark::Platform
             VkClearColorValue clearColour = { 0.91f, 0.1f, 0.12f, 1.0f }; // Fallback clear colour for main window
             create(1280, 720, "Mark Editor", clearColour, true);
             glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
+
+            // Init imgui using main window
+            m_vulkanCoreRef.lock()->initializeImGui(&m_impl->m_windows.front()->vkHandler());
         }
         else if (m_impl->m_windows.empty())
         {

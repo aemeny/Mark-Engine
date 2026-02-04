@@ -1,17 +1,19 @@
 #pragma once
-#include "MarkVulkanPhysicalDevices.h"
-#include "MarkVulkanShader.h"
-#include "MarkVulkanQueue.h"
-#include "MarkVulkanGraphicsPipelineCache.h"
+#include "Mark_VulkanPhysicalDevices.h"
+#include "Mark_VulkanShader.h"
+#include "Mark_VulkanQueue.h"
+#include "Mark_VulkanGraphicsPipelineCache.h"
+#include "Platform/imguiHandler.h"
 
 #include <filesystem>
 
-namespace Mark { struct EngineAppInfo; }
+namespace Mark { struct EngineAppInfo; struct Core; }
 namespace Mark::Platform { struct WindowManager; }
 
 namespace Mark::RendererVK
 {
     struct VulkanVertexBuffer;
+    struct WindowToVulkanHandler;
 
     struct VulkanCore
     {
@@ -22,11 +24,19 @@ namespace Mark::RendererVK
 
         const VkInstance& instance() const { return m_instance; }
 
+        void waitForDeviceIdle() const { vkDeviceWaitIdle(m_device); };
+
         // Device selection and getters
         void selectDevicesForSurface(VkSurfaceKHR _surface);
+
         VulkanPhysicalDevices& physicalDevices() { return m_physicalDevices; }
         VkDevice& device() { return m_device; }
         uint32_t getMemoryTypeIndex(uint32_t _memoryTypeBits, VkMemoryPropertyFlags _propertyFlags) const;
+        uint32_t getInstanceVersion() const;
+
+        // Dynamic rendering checks
+        bool usesDynamicRendering() const { return m_useDynamicRendering; }
+        bool usesDynamicRenderingAsCore() const { return m_useDynamicRenderingAsCore; }
 
         // Queue getters
         uint32_t graphicsQueueFamilyIndex() const { return m_selectedDeviceResult.m_gtxQueueFamilyIndex; }
@@ -58,8 +68,15 @@ namespace Mark::RendererVK
 
         friend struct Platform::WindowManager;
 
-        void createInstance(const EngineAppInfo& _appInfo);
-        void getInstanceVersion();
+        const EngineAppInfo& m_appInfo;
+
+        void initializeImGui(WindowToVulkanHandler* _windowHandler);
+        friend Core;
+        friend WindowToVulkanHandler;
+        ::Mark::Platform::ImGuiHandler m_imguiHandler;
+
+        void createInstance();
+        void createInstanceVersion();
         struct {
             uint32_t major{ 0 };
             uint32_t minor{ 0 };
@@ -75,6 +92,9 @@ namespace Mark::RendererVK
         VkDebugUtilsMessengerEXT m_debugMessenger{ VK_NULL_HANDLE };
         VulkanQueue m_graphicsQueue;
         VulkanQueue m_presentQueue;
+
+        bool m_useDynamicRendering{ false };
+        bool m_useDynamicRenderingAsCore{ false };
 
         // Devices and their properties
         VulkanPhysicalDevices m_physicalDevices;

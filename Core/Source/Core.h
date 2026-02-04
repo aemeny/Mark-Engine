@@ -1,7 +1,7 @@
 #pragma once
 #include <Mark/Engine.h>
 #include "Platform/WindowManager.h"
-#include "Renderer/MarkVulkanCore.h"
+#include "Renderer/Mark_VulkanCore.h"
 
 #include <memory>
 
@@ -20,6 +20,8 @@ namespace Mark
     private:
         bool m_terminateApplication{ false };
         const EngineAppInfo& m_appInfo;
+
+        void cleanUp();
 
         /* --== Window Manager ==-- */
         // Must be created before any renderer, as they'll require glfwInit() call

@@ -1,6 +1,6 @@
-#include "MarkVulkanPhysicalDevices.h"
+#include "Mark_VulkanPhysicalDevices.h"
 #include "Utils/VulkanUtils.h"
-#include "Utils/MarkUtils.h"
+#include "Utils/Mark_Utils.h"
 
 #include <assert.h>
 
@@ -193,6 +193,19 @@ namespace Mark::RendererVK
 
             m_devices[i].m_surfacesLinked.push_back(surfaceProps);
         }
+    }
+
+    const VulkanPhysicalDevices::SurfaceProperties& VulkanPhysicalDevices::getSurfaceProperties(const DeviceProperties& _deviceProperties, const VkSurfaceKHR& _surface) const
+    {
+        for (const auto& surfaceLinked : _deviceProperties.m_surfacesLinked)
+        {
+            if (surfaceLinked.m_surface == _surface)
+            {
+                return surfaceLinked;
+            }
+        }
+        MARK_LOG_ERROR_C(Utils::Category::Vulkan, "Surface properties for surface %p not found on device %s", _surface, _deviceProperties.m_properties.deviceName);
+        return _deviceProperties.m_surfacesLinked[0]; // Unreachable
     }
 
     VulkanPhysicalDevices::selectDeviceResult VulkanPhysicalDevices::selectDeviceForSurface(VkQueueFlags _requiredQueueFlags, VkSurfaceKHR _surface)

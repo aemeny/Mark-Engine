@@ -1,4 +1,5 @@
 #pragma once
+#include "Settings/imguiSettings.h"
 
 namespace Mark
 {
@@ -7,6 +8,7 @@ namespace Mark
         const char* appName{ "My project" };
         const int appVersion[4]{ 0, 1, 0, 0 }; // Variant, Major, Minor, Patch
         const bool enableVulkanValidation{ false };
+        Settings::ImGuiSettings imguiSettings{};
     };
 
     struct Engine

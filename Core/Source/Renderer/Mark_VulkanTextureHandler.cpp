@@ -1,8 +1,8 @@
-#include "VulkanTextureHandler.h"
-#include "MarkVulkanCore.h"
-#include "MarkVulkanVertexBuffer.h"
-#include "MarkVulkanCommandBuffers.h"
-#include "Utils/MarkUtils.h"
+#include "Mark_VulkanTextureHandler.h"
+#include "Mark_VulkanCore.h"
+#include "Mark_VulkanVertexBuffer.h"
+#include "Mark_VulkanCommandBuffers.h"
+#include "Utils/Mark_Utils.h"
 #include "Utils/VulkanUtils.h"
 #include <vulkan/vk_enum_string_helper.h>
 
@@ -207,7 +207,7 @@ namespace Mark::RendererVK
 
     void TextureHandler::transitionImageLayout(VkImage& _image, VkFormat _format, VkImageLayout _oldLayout, VkImageLayout _newLayout)
     {
-        m_commandBuffersRef->beginCommandBuffer(m_commandBuffersRef->m_copyCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        m_commandBuffersRef->beginCommandBuffer(m_commandBuffersRef->copyCommandBuffer(), VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
         VkImageMemoryBarrier barrier{
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -302,7 +302,7 @@ namespace Mark::RendererVK
             MARK_ERROR("Unsupported layout transition from %s to %s", string_VkImageLayout(_oldLayout), string_VkImageLayout(_newLayout));
         }
 
-        vkCmdPipelineBarrier(m_commandBuffersRef->m_copyCommandBuffer,
+        vkCmdPipelineBarrier(m_commandBuffersRef->copyCommandBuffer(),
             sourceStage, destinationStage,
             0,
             0, nullptr,
@@ -323,7 +323,7 @@ namespace Mark::RendererVK
 
     void TextureHandler::copyBufferToImage(VkBuffer _buffer, VkImage _image, uint32_t _width, uint32_t _height)
     {
-        m_commandBuffersRef->beginCommandBuffer(m_commandBuffersRef->m_copyCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        m_commandBuffersRef->beginCommandBuffer(m_commandBuffersRef->copyCommandBuffer(), VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
         VkBufferImageCopy bufferImageCopy{
             .bufferOffset = 0,
@@ -348,7 +348,7 @@ namespace Mark::RendererVK
         };
 
         vkCmdCopyBufferToImage(
-            m_commandBuffersRef->m_copyCommandBuffer,
+            m_commandBuffersRef->copyCommandBuffer(),
             _buffer,
             _image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -361,10 +361,10 @@ namespace Mark::RendererVK
 
     void TextureHandler::submitCopyCommand()
     {
-        vkEndCommandBuffer(m_commandBuffersRef->m_copyCommandBuffer);
+        vkEndCommandBuffer(m_commandBuffersRef->copyCommandBuffer());
 
         VulkanQueue& graphicsQueue = m_vulkanCoreRef.lock()->graphicsQueue();
-        graphicsQueue.submit(m_commandBuffersRef->m_copyCommandBuffer, VK_NULL_HANDLE, 0, VK_NULL_HANDLE, VK_NULL_HANDLE);
+        graphicsQueue.submit(&m_commandBuffersRef->copyCommandBuffer(), 1, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
 
         graphicsQueue.waitIdle();
     }

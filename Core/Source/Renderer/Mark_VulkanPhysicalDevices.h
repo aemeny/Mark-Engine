@@ -24,7 +24,7 @@ namespace Mark::RendererVK
             std::vector<VkQueueFamilyProperties> m_queueFamilyProperties;
             VkPhysicalDeviceMemoryProperties m_memoryProperties{};
             VkPhysicalDeviceFeatures m_features{};
-            VkFormat m_depthFormat;
+            VkFormat m_depthFormat{};
             std::vector<VkExtensionProperties> m_supportedExtensions;
 
             bool isExtensionSupported(const char* _ext) const;
@@ -41,7 +41,9 @@ namespace Mark::RendererVK
         ~VulkanPhysicalDevices() = default;
 
         void initialize(const VkInstance& _instance);
+
         void querySurfaceProperties(const VkSurfaceKHR& _surface);
+        const SurfaceProperties& getSurfaceProperties(const DeviceProperties& _deviceProperties, const VkSurfaceKHR& _surface) const;
 
         selectDeviceResult selectDeviceForSurface(VkQueueFlags _requiredQueueFlags, VkSurfaceKHR _surface);
         const DeviceProperties& selected() const;

@@ -1,6 +1,6 @@
-#include "MarkVulkanQueue.h"
+#include "Mark_VulkanQueue.h"
 #include "Utils/VulkanUtils.h"
-#include "Utils/MarkUtils.h"
+#include "Utils/Mark_Utils.h"
 
 #include <stdio.h>
 
@@ -33,16 +33,18 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Acquire Next Image");
     }
 
-    void VulkanQueue::submit(VkCommandBuffer _cmdBuffer, VkSemaphore _waitSemaphore, VkPipelineStageFlags _waitStage, VkSemaphore _signalSemaphore, VkFence _fence)
+    void VulkanQueue::submit(VkCommandBuffer* _cmdBuffers, int _numCmdBuffers, VkSemaphore _waitSemaphore, VkSemaphore _signalSemaphore, VkFence _fence)
     {
+        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
         VkSubmitInfo submitInfo{
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .pNext = nullptr,
             .waitSemaphoreCount = _waitSemaphore ? 1u : 0u,
             .pWaitSemaphores = _waitSemaphore ? &_waitSemaphore : nullptr,
-            .pWaitDstStageMask = _waitSemaphore ? &_waitStage : nullptr,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &_cmdBuffer,
+            .pWaitDstStageMask = _waitSemaphore ? &waitStage : nullptr,
+            .commandBufferCount = static_cast<uint32_t>(_numCmdBuffers),
+            .pCommandBuffers = _cmdBuffers,
             .signalSemaphoreCount = _signalSemaphore ? 1u : 0u,
             .pSignalSemaphores = _signalSemaphore ? &_signalSemaphore : nullptr
         };

@@ -1,5 +1,5 @@
-#include "WindowToVulkanHandler.h"
-#include "MarkVulkanCore.h"
+#include "Mark_WindowToVulkanHandler.h"
+#include "Mark_VulkanCore.h"
 #include "Platform/Window.h"
 #include "Utils/ErrorHandling.h"
 #include "Utils/VulkanUtils.h"
@@ -70,9 +70,13 @@ namespace Mark::RendererVK
 
         m_graphicsPipeline.createGraphicsPipeline();
 
-        m_commandBuffers.createCommandPool();
-        m_commandBuffers.createCommandBuffers();
-        m_commandBuffers.recordCommandBuffers(_clearColour);
+        m_vulkanCommandBuffers.createCommandPool();
+
+        m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithGUI());
+        m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithoutGUI());
+
+        m_vulkanCommandBuffers.createCopyCommandBuffer();
+        m_vulkanCommandBuffers.recordCommandBuffers(_clearColour);
     }
 
     WindowToVulkanHandler::~WindowToVulkanHandler()
@@ -88,7 +92,7 @@ namespace Mark::RendererVK
         destroyFrameSyncObjects(VkCore);
 
         // Destroy command buffers and pool
-        m_commandBuffers.destroyCommandBuffers();
+        m_vulkanCommandBuffers.destroyCommandBuffers();
 
         // Destroy uniform buffers
         m_uniformBuffer.destroyUniformBuffers(VkCore->device());
@@ -198,15 +202,25 @@ namespace Mark::RendererVK
         // Update uniform buffer for this image
         m_uniformBuffer.updateUniformBuffer(imageIndex, tempData);
 
-        // Record the command buffer for this image
-        VkCommandBuffer cmdBuffer = m_commandBuffers.commandBuffer(imageIndex);
-
         // Submit to graphics queue: wait on imageAvailable, signal renderFinished
         VkSemaphore presentSem = m_presentSems[imageIndex];
         if (presentSem == VK_NULL_HANDLE) MARK_ERROR("presentSem is VK_NULL_HANDLE!");
 
-        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        graphicsQueue.submit(cmdBuffer, frameSyncData.m_imageAvailableSem, waitStage, presentSem, frameSyncData.m_inFlightFence);
+        // Submit the command buffer for this image
+        if (VkCore->m_imguiHandler.showGUI()) 
+        {
+            VkCore->m_imguiHandler.updateGUI();
+
+            VkCommandBuffer imguiCmdBuffer = VkCore->m_imguiHandler.prepareCommandBuffer(imageIndex);
+
+            VkCommandBuffer cmdBuffers[] = { m_vulkanCommandBuffers.commandBufferWithGUI(imageIndex), imguiCmdBuffer };
+
+            graphicsQueue.submit(&cmdBuffers[0], 2, frameSyncData.m_imageAvailableSem, presentSem, frameSyncData.m_inFlightFence);
+        }
+        else {
+            VkCommandBuffer cmdBuffer = m_vulkanCommandBuffers.commandBufferWithoutGUI(imageIndex);
+            graphicsQueue.submit(&cmdBuffer, 1, frameSyncData.m_imageAvailableSem, presentSem, frameSyncData.m_inFlightFence);
+        }
 
         // Present the window
         presentQueue.present(m_swapChain.swapChain(), imageIndex, presentSem);
@@ -231,7 +245,7 @@ namespace Mark::RendererVK
 
     std::weak_ptr<MeshHandler> WindowToVulkanHandler::addMesh(const char* _meshPath)
     {
-        auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef, m_commandBuffers);
+        auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef, m_vulkanCommandBuffers);
 
         const auto assetPath = m_vulkanCoreRef.lock()->assetPath(_meshPath); // Test cat model
         rtn->loadFromOBJ(assetPath.string().c_str(), true/*Flip texture vertically for Vulkan*/);
@@ -242,7 +256,7 @@ namespace Mark::RendererVK
         // Rebuild descriptors to include new mesh
         m_graphicsPipeline.rebuildDescriptors();
         // Re-record command buffers to draw the new mesh
-        m_commandBuffers.recordCommandBuffers(m_clearColour);
+        m_vulkanCommandBuffers.recordCommandBuffers(m_clearColour);
 
         return rtn;
     }

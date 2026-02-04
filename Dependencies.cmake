@@ -110,9 +110,16 @@ if (NOT imgui_POPULATED)
   target_link_libraries(imgui PUBLIC
     glfw               
     Vulkan::Vulkan
+    volk
   )
 
   target_compile_features(imgui PUBLIC cxx_std_23)
+
+  target_compile_definitions(imgui PUBLIC
+    IMGUI_IMPL_VULKAN_USE_VOLK
+    VK_NO_PROTOTYPES
+  )
+
 endif()
 
 

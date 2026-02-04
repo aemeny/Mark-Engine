@@ -1,6 +1,6 @@
-#include "MarkVulkanSwapChain.h"
-#include "MarkVulkanCore.h"
-#include "MarkVulkanPhysicalDevices.h"
+#include "Mark_VulkanSwapChain.h"
+#include "Mark_VulkanCore.h"
+#include "Mark_VulkanPhysicalDevices.h"
 #include "Utils/VulkanUtils.h"
 #include "Utils/ErrorHandling.h"
 
@@ -351,7 +351,7 @@ namespace Mark::RendererVK
 
         // Submit and wait
         VulkanQueue& graphicsQueue = VkCore->graphicsQueue();
-        graphicsQueue.submit(cmd, VK_NULL_HANDLE, 0, VK_NULL_HANDLE, VK_NULL_HANDLE);
+        graphicsQueue.submit(&cmd, 1, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
         graphicsQueue.waitIdle();
 
         vkFreeCommandBuffers(device, pool, 1, &cmd);
