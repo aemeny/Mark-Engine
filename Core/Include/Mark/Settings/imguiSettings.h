@@ -13,7 +13,7 @@ namespace Mark::Settings
         const float fontScale;
         const ImGuiStyleColors colourStyle;
 
-        constexpr ImGuiSettings(float scale = 1.5f, ImGuiStyleColors style = ImGuiStyleColors::Dark) :
+        constexpr ImGuiSettings(float scale = 0.95f, ImGuiStyleColors style = ImGuiStyleColors::Dark) :
             fontScale(scale), colourStyle(style)
         {}
         ImGuiSettings(const ImGuiSettings&) = default;

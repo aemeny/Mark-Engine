@@ -6,7 +6,7 @@
 #include <array>
 
 struct GLFWwindow;
-namespace Mark::Platform { struct Window; }
+namespace Mark::Platform { struct Window; struct ImGuiHandler; }
 namespace Mark::RendererVK
 {
     struct WindowToVulkanHandler 
@@ -27,6 +27,7 @@ namespace Mark::RendererVK
 
     private:
         friend struct ImGuiRenderer; // Allows access to main windows info for ImGui init
+        friend Platform::ImGuiHandler;
 
         void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
 

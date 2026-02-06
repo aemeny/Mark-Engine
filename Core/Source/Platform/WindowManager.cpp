@@ -32,9 +32,6 @@ namespace Mark::Platform
             VkClearColorValue clearColour = { 0.91f, 0.1f, 0.12f, 1.0f }; // Fallback clear colour for main window
             create(1280, 720, "Mark Editor", clearColour, true);
             glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
-
-            // Init imgui using main window
-            m_vulkanCoreRef.lock()->initializeImGui(&m_impl->m_windows.front()->vkHandler());
         }
         else if (m_impl->m_windows.empty())
         {

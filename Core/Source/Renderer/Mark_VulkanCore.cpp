@@ -3,6 +3,8 @@
 #include "Mark_VulkanVertexBuffer.h"
 #include "Mark_WindowToVulkanHandler.h"
 
+#include "Core.h"
+
 #include "Platform/WindowManager.h"
 
 #include "Utils/VulkanUtils.h"
@@ -17,8 +19,8 @@
 
 namespace Mark::RendererVK
 {
-    VulkanCore::VulkanCore(const EngineAppInfo& _appInfo) : 
-        m_appInfo(_appInfo)
+    VulkanCore::VulkanCore(const EngineAppInfo& _appInfo, Core& _core) : 
+        m_appInfo(_appInfo), m_core(_core)
     {
         createInstance();
         if (m_appInfo.enableVulkanValidation)
@@ -40,6 +42,11 @@ namespace Mark::RendererVK
             MARK_ERROR("MARK_ASSETS_DIR not defined and could not find default asset path");
 #endif
         MARK_INFO_C(Utils::Category::System, "Asset root: %s", m_assetRoot.string().c_str());
+    }
+
+    Platform::ImGuiHandler& VulkanCore::imguiHandler()
+    {
+        return m_core.imguiHandler();
     }
 
     std::filesystem::path VulkanCore::assetPath(const std::string& _file) const
@@ -157,11 +164,6 @@ namespace Mark::RendererVK
     uint32_t VulkanCore::getInstanceVersion() const
     {
         return VK_MAKE_API_VERSION(0, m_instanceVersion.major, m_instanceVersion.minor, m_instanceVersion.patch);
-    }
-
-    void VulkanCore::initializeImGui(WindowToVulkanHandler* _windowHandler)
-    {
-        m_imguiHandler.initialize(m_appInfo.imguiSettings, _windowHandler, this);
     }
 
     void VulkanCore::createInstance()

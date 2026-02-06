@@ -207,11 +207,9 @@ namespace Mark::RendererVK
         if (presentSem == VK_NULL_HANDLE) MARK_ERROR("presentSem is VK_NULL_HANDLE!");
 
         // Submit the command buffer for this image
-        if (VkCore->m_imguiHandler.showGUI()) 
+        if (VkCore->imguiHandler().showGUI())
         {
-            VkCore->m_imguiHandler.updateGUI();
-
-            VkCommandBuffer imguiCmdBuffer = VkCore->m_imguiHandler.prepareCommandBuffer(imageIndex);
+            VkCommandBuffer imguiCmdBuffer = VkCore->imguiHandler().prepareCommandBuffer(imageIndex);
 
             VkCommandBuffer cmdBuffers[] = { m_vulkanCommandBuffers.commandBufferWithGUI(imageIndex), imguiCmdBuffer };
 

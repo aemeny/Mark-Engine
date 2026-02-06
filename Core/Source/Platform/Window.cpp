@@ -53,6 +53,11 @@ namespace Mark::Platform
         glfwGetFramebufferSize(m_window, &_width, &_height);
     }
 
+    void Window::getWindowContentScale(float& _scaleX, float& _scaleY) const
+    {
+        glfwGetWindowContentScale(m_window, &_scaleX, &_scaleY);
+    }
+
     void Window::waitUntilFramebufferValid() const
     {
         int w = 0, h = 0;

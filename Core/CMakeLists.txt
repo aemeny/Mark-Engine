@@ -70,6 +70,7 @@ target_include_directories(Core
 	PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Include"
 	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source"
 	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Extern"
+	PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Handling"
 )
 
 target_compile_definitions(Core 
@@ -78,6 +79,7 @@ target_compile_definitions(Core
 	MARK_ASSETS_DIR="${MARK_ASSETS_DIR}"
 	MARK_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
 	MARK_FALLBACK_MODEL="${MARK_FALLBACK_MODEL}"
+	MARK_ENGINE_CORE_DIR="${MARK_ENGINE_CORE_DIR}"
 )
 
 target_link_libraries(Core

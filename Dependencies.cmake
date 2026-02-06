@@ -82,7 +82,7 @@ set(MARK_GLSLANG_TARGETS
 ### Dear ImGui
 FetchContent_Declare(imgui
   DOWNLOAD_EXTRACT_TIMESTAMP OFF
-  URL https://github.com/ocornut/imgui/archive/refs/tags/v1.92.5.zip
+  URL https://github.com/ocornut/imgui/archive/refs/heads/docking.zip
 )
 FetchContent_GetProperties(imgui)
 if (NOT imgui_POPULATED)

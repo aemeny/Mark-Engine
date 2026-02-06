@@ -30,8 +30,6 @@ namespace Mark::RendererVK
         // returns command buffer to submit to the queue
         VkCommandBuffer prepareCommandBuffer(uint32_t _imageIndex);
 
-        int m_frameBufferWidth{ 0 };
-        int m_frameBufferHeight{ 0 };
         std::vector<VkCommandBuffer> m_commandBuffers;
         VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
     };

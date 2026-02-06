@@ -17,7 +17,7 @@ namespace Mark::RendererVK
 
     struct VulkanCore
     {
-        VulkanCore(const EngineAppInfo& _appInfo);
+        VulkanCore(const EngineAppInfo& _appInfo, Core& _core);
         ~VulkanCore();
         VulkanCore(const VulkanCore&) = delete;
         VulkanCore& operator=(const VulkanCore&) = delete;
@@ -49,6 +49,9 @@ namespace Mark::RendererVK
                 : m_presentQueue;
         }
 
+        // ImGui Getter
+        Platform::ImGuiHandler& imguiHandler();
+
         // Cache getters
         VulkanShaderCache& shaderCache() { return *m_shaderCache; }
         VulkanGraphicsPipelineCache& graphicsPipelineCache() { return *m_graphicsPipelineCache; }
@@ -67,13 +70,9 @@ namespace Mark::RendererVK
         std::filesystem::path m_assetRoot;
 
         friend struct Platform::WindowManager;
+        Core& m_core;
 
         const EngineAppInfo& m_appInfo;
-
-        void initializeImGui(WindowToVulkanHandler* _windowHandler);
-        friend Core;
-        friend WindowToVulkanHandler;
-        ::Mark::Platform::ImGuiHandler m_imguiHandler;
 
         void createInstance();
         void createInstanceVersion();

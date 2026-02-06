@@ -28,6 +28,15 @@ endif()
 # Normalize for Windows
 file(TO_CMAKE_PATH "${MARK_ASSETS_DIR}" MARK_ASSETS_DIR)
 
+# ---- Engine Core root ----
+set(MARK_ENGINE_CORE_DIR "" CACHE STRING "Relative path (from repo root) to Engine Core")
+if (NOT MARK_ENGINE_CORE_DIR)
+  # Default to repo_root/Core
+  set(MARK_ENGINE_CORE_DIR "${CMAKE_SOURCE_DIR}/Core")
+endif()
+# Normalize for Windows
+file(TO_CMAKE_PATH "${MARK_ENGINE_CORE_DIR}" MARK_ENGINE_CORE_DIR)
+
 # ---- Engine fallback assets ----
 # Path is RELATIVE to repo root (CMAKE_SOURCE_DIR)
 set(MARK_FALLBACK_MODEL "" CACHE STRING "Relative path (from repo root) to engine fallback OBJ")

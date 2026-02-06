@@ -28,6 +28,7 @@ namespace Mark::Platform
 
         void frameBufferSize(int& _width, int& _height) const;
         std::array<int, 2> windowSize() const { return { m_width, m_height }; };
+        void getWindowContentScale(float& _scaleX, float& _scaleY) const;
 
         void waitUntilFramebufferValid() const;
 

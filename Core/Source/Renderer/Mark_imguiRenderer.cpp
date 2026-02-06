@@ -29,8 +29,6 @@ namespace Mark::RendererVK
 
     void ImGuiRenderer::initialize()
     {
-        m_imguiHandler.m_mainWindowHandler->m_windowRef.frameBufferSize(m_frameBufferWidth, m_frameBufferHeight);
-
         createDescriptorPool();
         initImGui();
     }
@@ -70,24 +68,6 @@ namespace Mark::RendererVK
 
         if (!vulkanCoreRef || !mainWindowHandler) {
             MARK_ERROR("Reference expired, cannot initialize ImGui");
-        }
-
-        ImGuiIO& io = ImGui::GetIO();
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
-        io.ConfigFlags |= ImGuiConfigFlags_NavEnableSetMousePos; // Enable Keyboard to move mouse cursor
-        io.DisplaySize.x = static_cast<float>(m_frameBufferWidth);
-        io.DisplaySize.y = static_cast<float>(m_frameBufferHeight);
-
-        ImGui::GetStyle().FontScaleMain = m_imguiHandler.m_ImGuiSettings->fontScale;
-
-        // ImGui Style
-        switch (m_imguiHandler.m_ImGuiSettings->colourStyle)
-        {
-        default:
-        case Settings::ImGuiStyleColors::Dark:    ImGui::StyleColorsDark();    break;
-        case Settings::ImGuiStyleColors::Classic: ImGui::StyleColorsClassic(); break;
-        case Settings::ImGuiStyleColors::Light:   ImGui::StyleColorsLight();   break;
-
         }
 
         bool installGLFWCallbacks = true;

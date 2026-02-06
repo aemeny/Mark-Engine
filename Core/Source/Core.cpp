@@ -1,6 +1,8 @@
 #include "Core.h"
 #include "Utils/Mark_Utils.h"
+
 #include "Platform/Window.h" // TEMP FOR ACCESSING MAIN WINDOW IN run()
+#include "imgui.h" // TEMP FOR TESTING GUI
 
 namespace Mark
 {
@@ -8,6 +10,26 @@ namespace Mark
 
     void Core::run()
     {
+        initialize();
+
+        while (!m_terminateApplication && m_windows->anyOpen())
+        {
+            m_windows->pollAll();
+
+            if (m_imguiHandler.showGUI()) {
+                m_imguiHandler.updateGUI();
+            }
+
+            m_windows->renderAll();
+        }
+
+        cleanUp();
+    }
+
+    void Core::initialize()
+    {
+        m_imguiHandler.initialize(m_appInfo.imguiSettings, &m_windows->main().vkHandler(), m_vulkanCore.get());
+
         // TEMP ADD MESH FOR MAIN WINDOW
         m_windows->main().vkHandler().addMesh("Models/Curuthers.obj");
         m_windows->main().vkHandler().initCameraController();
@@ -19,21 +41,13 @@ namespace Mark
         //Platform::Window& window3 = m_windows->create(600, 600, "Third", VkClearColorValue{ {0.0f, 0.0f, 1.0f, 1.0f} }, false);
         //window3.vkHandler().addMesh("Models/Curuthers.obj");
         //window3.vkHandler().initCameraController();
-
-        while (!m_terminateApplication && m_windows->anyOpen())
-        {
-            m_windows->pollAll();
-            m_windows->renderAll();
-        }
-
-        cleanUp();
     }
 
     void Core::cleanUp()
     {
         m_vulkanCore->waitForDeviceIdle();
 
-        m_vulkanCore->m_imguiHandler.destroy();
+        m_imguiHandler.destroy();
         m_windows->destroyAllWindows();
     }
 
