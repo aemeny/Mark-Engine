@@ -2,6 +2,8 @@
 #include <Mark/Engine.h>
 #include "Platform/WindowManager.h"
 #include "Renderer/Mark_VulkanCore.h"
+#include "Utils/TimeTracker.h"
+#include "Engine/EngineStats.h"
 
 #include <memory>
 
@@ -36,6 +38,8 @@ namespace Mark
 
         /* --== Members ==--*/
         Platform::ImGuiHandler m_imguiHandler;
+        Utils::TimeTracker m_timeTracker;
+        EngineStats m_engineStats;
         // Load shaders before any windows are created with graphics pipelines and command buffers
 
         // References and creates the main window

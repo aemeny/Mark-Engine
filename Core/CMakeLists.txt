@@ -27,6 +27,8 @@ Source/Platform/imguiHandler.cpp
 Source/Utils/VulkanUtils.h
 Source/Utils/ErrorHandling.h
 Source/Utils/Mark_Utils.h
+Source/Utils/TimeTracker.h
+Source/Utils/TimeTracker.cpp
 
 Source/Renderer/Mark_VulkanCore.h
 Source/Renderer/Mark_VulkanCore.cpp
@@ -59,6 +61,8 @@ Source/Renderer/Mark_imguiRenderer.cpp
 
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp
+Source/Engine/EngineStats.h
+Source/Engine/EngineStats.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

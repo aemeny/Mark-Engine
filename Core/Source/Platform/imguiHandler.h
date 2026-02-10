@@ -5,6 +5,8 @@
 #include <functional>
 
 #include <glm/glm.hpp>
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
 
 // Forward declarations
 struct ImFont;
@@ -49,7 +51,7 @@ namespace Mark::Platform
             bool* isOpen;
         };
 
-        void registerWindow(const std::string& _title, DrawFunction _drawFunction, bool* _isOpen = nullptr)
+        static void registerWindow(const std::string& _title, DrawFunction _drawFunction, bool* _isOpen = nullptr)
         {
             m_GUIWindows.push_back(GUIWindow{_title, _drawFunction, _isOpen});
         }
@@ -73,12 +75,12 @@ namespace Mark::Platform
         void applyTheme();
 
         void drawMainMenuBar();
-        void setMainMenuStyle();
-        void drawMainToolbar();
+        void setMainMenuStyle() const;
+        void drawMainToolbar() const;
         void drawDockSpace();
 
         /* Handling adding windows */
-        std::vector<GUIWindow> m_GUIWindows;
+        inline static std::vector<GUIWindow> m_GUIWindows{};
 
         // Font handling
         struct MarkFonts

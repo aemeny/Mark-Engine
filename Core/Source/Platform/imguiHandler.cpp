@@ -1,9 +1,6 @@
 ﻿#include "imguiHandler.h"
 #include "Window.h"
 
-
-#define IMGUI_DEFINE_MATH_OPERATORS
-#include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
 
@@ -31,32 +28,6 @@ namespace Mark::Platform
         m_imguiRenderer.initialize();
         
         handleUISettings();
-
-        // TEMP TEST
-        registerWindow(
-            "Renderer",
-            [this]()
-            {
-                ImGui::Text("Renderer stats");
-                ImGui::Separator();
-                ImGui::Text("FPS: %.1f", m_rendererFPS);
-
-                ImGui::SliderFloat("Exposure", &m_rendererExposure, 0.0f, 5.0f);
-                ImGui::Checkbox("VSync", &m_rendererVSync);
-            },
-            &m_rendererWindowOpen);
-
-        registerWindow(
-            "Lighting",
-            [this]()
-            {
-                ImGui::Text("Lighting Tang");
-                ImGui::Separator();
-
-                ImGui::Checkbox("VSync", &m_rendererVSync);
-                ImGui::SliderFloat("Exposure", &m_rendererExposure, 0.0f, 5.0f);
-            },
-            &m_rendererWindowOpen2);
     }
 
     void ImGuiHandler::updateGUI()
@@ -109,7 +80,7 @@ namespace Mark::Platform
     }
 
 
-    void ImGuiHandler::setMainMenuStyle()
+    void ImGuiHandler::setMainMenuStyle() const
     {
         // Change to smaller font and black text for better contrast on white menu bar
         ImGui::PushFont(m_fonts.menu);
@@ -125,18 +96,18 @@ namespace Mark::Platform
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0, 0, 0, 0));
     }
 
-    void ImGuiHandler::drawMainToolbar()
+    void ImGuiHandler::drawMainToolbar() const
     {
         ImGuiStyle& style = ImGui::GetStyle();
 
         // Height proportional to current UI frame height so it scales with DPI/font
         const float frameH = ImGui::GetFrameHeight();
-        const float toolbarHeight = frameH * 1.4f;
+        const float toolbarHeight = frameH * 1.7f;
 
         // Dark strip background
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(12.0f, 0.0f));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8.0f, 0.0f));
-        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.01f, 0.01f, 0.01f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.005f, 0.005f, 0.005f, 1.0f));
 
         if (ImGui::BeginChild("MainToolbar", 
             ImVec2(0.0f, toolbarHeight), 
@@ -151,14 +122,14 @@ namespace Mark::Platform
             ImGui::PushFont(m_fonts.bold);
             const char* leftLabel = "Mark";
             const float leftTextWidth = ImGui::CalcTextSize(leftLabel).x;
-            const float leftMargin = 20.0f; // distance from left edge
+            const float leftMargin = 40.0f; // distance from left edge
             ImGui::SetCursorPos(ImVec2(leftMargin, midTextY));
             ImGui::TextUnformatted("Mark");
             ImGui::PopFont(); // Reset
 
 
             // ---- Center: Play / Pause / Stop ----
-            const float buttonWidth = 90.0f;
+            const float buttonWidth = 85.0f;
             const float buttonHeight = 30.0f;
             ImVec2 buttonSize(buttonWidth, buttonHeight);
 
@@ -178,21 +149,23 @@ namespace Mark::Platform
 
             float totalButtonsWidth = 3.0f * buttonSize.x + 2.0f * style.ItemSpacing.x;
             float startX = contentMinX + (fullWidth - totalButtonsWidth) * 0.5f;
+            float buttonSpacing = style.ItemSpacing.x - 2.2f;
             ImGui::SetCursorPosX(startX);
 
             if (ImGui::Button("Play", buttonSize)) {
                 // TODO: hook up play
             }
 
-            ImGui::SameLine(0.0f, style.ItemSpacing.x);
+            ImGui::SameLine(0.0f, buttonSpacing);
             if (ImGui::Button("Pause", buttonSize)) {
                 // TODO: hook up pause
             }
 
-            ImGui::SameLine(0.0f, style.ItemSpacing.x);
-            if (ImGui::Button("Stop", buttonSize)) {
-                // TODO: hook up stop
-            }
+            // When editor had a play mode seperate from editor mode
+            //ImGui::SameLine(0.0f, buttonSpacing);
+            //if (ImGui::Button("Stop", buttonSize)) {
+            //    // TODO: hook up stop
+            //}
             
             ImGui::PopStyleVar(2);
 
@@ -243,6 +216,8 @@ namespace Mark::Platform
             ImGuiWindowFlags_NoMove |
             ImGuiWindowFlags_NoBringToFrontOnFocus |
             ImGuiWindowFlags_NoNavFocus |
+            ImGuiWindowFlags_NoScrollWithMouse |
+            ImGuiWindowFlags_NoScrollbar |
             ImGuiWindowFlags_MenuBar |
             ImGuiWindowFlags_NoBackground;
 
@@ -292,7 +267,7 @@ namespace Mark::Platform
 
         m_fonts.body = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), baseFontSize);
         m_fonts.menu = io.Fonts->AddFontFromFileTTF(fontPath.c_str(), baseFontSize * 0.85f);
-        m_fonts.bold = io.Fonts->AddFontFromFileTTF(fontPathBold.c_str(), baseFontSize);
+        m_fonts.bold = io.Fonts->AddFontFromFileTTF(fontPathBold.c_str(), baseFontSize * 0.95f);
 
         io.FontDefault = m_fonts.body;
 
@@ -343,31 +318,28 @@ namespace Mark::Platform
         style.TabRounding = 6.0f;
 
         style.WindowBorderSize = 0.0f;
+        style.ChildBorderSize = 0.0f;
+        style.PopupBorderSize = 0.0f;
         style.FrameBorderSize = 0.0f;
         style.TabBorderSize = 0.0f;
 
-        // Colors
-        // Main backgrounds
+        // ---------- Base palette ----------
         ImVec4 col_bg = ImVec4(0.045f, 0.045f, 0.045f, 1.0f); // main window bg
         ImVec4 col_panel = ImVec4(0.23f, 0.23f, 0.23f, 1.0f); // panel / child bg
         ImVec4 col_panel_dark = ImVec4(0.14f, 0.14f, 0.14f, 1.0f); // very dark
 
-        // Tab strip
-        ImVec4 col_tab_bar = ImVec4(0.01f, 0.01f, 0.01f, 1.0f);
+        ImVec4 col_tab_active = ImVec4(0.05f, 0.05f, 0.05f, 1.0f); // active tab
 
-        // Tabs
-        ImVec4 col_tab_active = ImVec4(0.05f, 0.05f, 0.05f, 1.0f); // active tab a bit lighter
-
-        // Accent
-        ImVec4 col_accent = ImVec4(0.16f, 0.54f, 0.75f, 1.0f);
-        ImVec4 col_accent_hi = ImVec4(0.22f, 0.70f, 0.90f, 1.0f);
-        ImVec4 col_accent_soft = ImVec4(0.13f, 0.42f, 0.60f, 1.0f);
+        // Coral accent
+        ImVec4 col_accent = ImVec4(0.96f, 0.47f, 0.40f, 1.0f); // #F57966
+        ImVec4 col_accent_hi = ImVec4(1.00f, 0.60f, 0.52f, 1.0f); // brighter
+        ImVec4 col_accent_soft = ImVec4(0.78f, 0.36f, 0.32f, 1.0f); // softer
 
         // Text
         ImVec4 col_text = ImVec4(0.92f, 0.92f, 0.92f, 1.0f);
         ImVec4 col_text_muted = ImVec4(0.60f, 0.60f, 0.60f, 1.0f);
-        ImVec4 white = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-        ImVec4 black = ImVec4(0.00f, 0.00f, 0.00f, 1.0f);
+        ImVec4 white = ImVec4(1.00f, 1.00f, 1.00f, 1.0f);
+        ImVec4 black = ImVec4(0.005f, 0.005f, 0.005f, 1.0f);
 
         // --- Text ---
         colors[ImGuiCol_Text] = col_text;
@@ -379,7 +351,7 @@ namespace Mark::Platform
         colors[ImGuiCol_ChildBg] = col_panel;
         colors[ImGuiCol_PopupBg] = col_panel_dark;
 
-        colors[ImGuiCol_Border] = ImVec4(0.10f, 0.10f, 0.10f, 1.0f);
+        colors[ImGuiCol_Border] = ImVec4(0, 0, 0, 0);
         colors[ImGuiCol_BorderShadow] = ImVec4(0, 0, 0, 0);
 
         // --- Frames / controls ---
@@ -397,37 +369,54 @@ namespace Mark::Platform
 
         // --- Menu bar (top strip) ---
         colors[ImGuiCol_MenuBarBg] = white;
-        colors[ImGuiCol_Text] = col_text; 
 
         // --- Window titles / dock tab bar ---
-        colors[ImGuiCol_TitleBg] = col_tab_bar;
-        colors[ImGuiCol_TitleBgActive] = col_tab_bar;
-        colors[ImGuiCol_TitleBgCollapsed] = col_tab_bar;
+        colors[ImGuiCol_TitleBg] = black;
+        colors[ImGuiCol_TitleBgActive] = black;
+        colors[ImGuiCol_TitleBgCollapsed] = black;
 
         // --- Tabs ---
-        colors[ImGuiCol_Tab] = col_tab_bar;
-        colors[ImGuiCol_TabUnfocused] = col_tab_active;
+        colors[ImGuiCol_Tab] = black;
+        colors[ImGuiCol_TabUnfocused] = black;
         colors[ImGuiCol_TabHovered] = col_tab_active;
         colors[ImGuiCol_TabActive] = col_tab_active;
         colors[ImGuiCol_TabUnfocusedActive] = col_tab_active;
+        colors[ImGuiCol_TabSelectedOverline] = col_accent;
+        colors[ImGuiCol_TabDimmedSelectedOverline] = ImVec4(col_accent.x, col_accent.y, col_accent.z, 0.3f);
 
         // --- Docking ---
-        colors[ImGuiCol_DockingEmptyBg] = col_bg;
+        colors[ImGuiCol_DockingEmptyBg] = black;
         colors[ImGuiCol_DockingPreview] = ImVec4(col_accent.x, col_accent.y, col_accent.z, 0.40f);
 
         // --- Separators / misc ---
-        colors[ImGuiCol_Separator] = ImVec4(0.26f, 0.26f, 0.26f, 1.0f);
+        colors[ImGuiCol_Separator] = col_accent;
         colors[ImGuiCol_SeparatorHovered] = col_accent_soft;
         colors[ImGuiCol_SeparatorActive] = col_accent_hi;
 
-        colors[ImGuiCol_ScrollbarBg] = col_panel_dark;
-        colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.34f, 0.34f, 0.34f, 1.0f);
-        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.40f, 0.40f, 0.40f, 1.0f);
-        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.46f, 0.46f, 0.46f, 1.0f);
+        colors[ImGuiCol_ScrollbarBg] = black;
+        colors[ImGuiCol_ScrollbarGrab] = black;
+        colors[ImGuiCol_ScrollbarGrabHovered] = black;
+        colors[ImGuiCol_ScrollbarGrabActive] = black;
 
-        // Resize grip mostly invisible
         colors[ImGuiCol_ResizeGrip] = ImVec4(0, 0, 0, 0);
         colors[ImGuiCol_ResizeGripHovered] = col_accent_soft;
         colors[ImGuiCol_ResizeGripActive] = col_accent_hi;
+
+        // --- Navigation / focus ---
+        colors[ImGuiCol_NavHighlight] = col_accent;
+        colors[ImGuiCol_NavWindowingHighlight] = ImVec4(col_accent.x, col_accent.y, col_accent.z, 0.70f);
+        colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0, 0, 0, 0.4f);
+        colors[ImGuiCol_DragDropTarget] = col_accent_hi;
+
+        // Menu items-
+        colors[ImGuiCol_Header] = col_panel;
+        colors[ImGuiCol_HeaderHovered] = col_accent_soft;
+        colors[ImGuiCol_HeaderActive] = col_accent;
+
+        // --- Plots ---
+        colors[ImGuiCol_PlotLines] = col_accent;
+        colors[ImGuiCol_PlotLinesHovered] = col_accent_hi;
+        colors[ImGuiCol_PlotHistogram] = col_accent;
+        colors[ImGuiCol_PlotHistogramHovered] = col_accent_hi;
     }
 }
