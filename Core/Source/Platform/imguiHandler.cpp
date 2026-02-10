@@ -1,8 +1,11 @@
 ﻿#include "imguiHandler.h"
 #include "Window.h"
+#include "Engine/SettingsHandler.h"
 
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_glfw.h"
+
+#include <GLFW/glfw3.h>
 
 namespace Mark::Platform
 {
@@ -17,9 +20,10 @@ namespace Mark::Platform
         m_ImGuiSettings = nullptr;
     }
 
-    void ImGuiHandler::initialize(const Settings::ImGuiSettings& _settings, WindowToVulkanHandler* _mainWindowHandler, VulkanCore* _vulkanCoreRef)
+    void ImGuiHandler::initialize(const Settings::ImGuiSettings& _settings, WindowToVulkanHandler* _mainWindowHandler, VulkanCore* _vulkanCoreRef, Settings::MarkSettings& _markSettings)
     {
         m_ImGuiSettings = &_settings;
+        m_markSettings = &_markSettings;
         m_mainWindowHandler = _mainWindowHandler;
         m_vulkanCoreRef = _vulkanCoreRef;
 
@@ -32,6 +36,11 @@ namespace Mark::Platform
 
     void ImGuiHandler::updateGUI()
     {        
+        pollToggleGUIShortCut();
+
+        if (!m_showGUI)
+            return;
+
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
@@ -40,6 +49,8 @@ namespace Mark::Platform
 
         setScreenDocking();
         drawDockSpace();
+
+        drawAdditionTabs();
 
         ImGui::End(); // Main dock space end
         ImGui::Render();
@@ -58,6 +69,9 @@ namespace Mark::Platform
 
             if (ImGui::BeginMenu("Settings"))
             {
+                if (ImGui::MenuItem("UI Settings", nullptr, m_markSettings->m_showUISettings)) {
+                    m_markSettings->toggleUISettings();
+                }
                 ImGui::EndMenu();
             }
 
@@ -199,6 +213,27 @@ namespace Mark::Platform
             }
             ImGui::End();
         }
+    }
+
+    void ImGuiHandler::drawAdditionTabs()
+    {
+        m_markSettings->drawSettingsUI();
+    }
+
+    void ImGuiHandler::pollToggleGUIShortCut()
+    {
+        if (!m_markSettings->m_toggleGuiKey)
+            return;
+
+        GLFWwindow* window = m_mainWindowHandler->m_windowRef.handle();
+
+        // Default shortcut: Ctrl + Shift + G
+        bool keyPressed = glfwGetKey(window, m_markSettings->m_toggleGuiKey) == GLFW_PRESS;
+
+        if (keyPressed && !m_markSettings->m_toggleKeyDownLastFrame) {
+            m_showGUI = !m_showGUI;
+        }
+        m_markSettings->m_toggleKeyDownLastFrame = keyPressed;
     }
 
     void ImGuiHandler::setScreenDocking()

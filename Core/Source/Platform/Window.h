@@ -32,6 +32,8 @@ namespace Mark::Platform
 
         void waitUntilFramebufferValid() const;
 
+        void setTitle(std::string _title);
+
         // Vulkan Renderering
         RendererVK::WindowToVulkanHandler& vkHandler() { return *m_vkHandler; }
 

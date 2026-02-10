@@ -63,6 +63,8 @@ Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp
 Source/Engine/EngineStats.h
 Source/Engine/EngineStats.cpp
+Source/Engine/SettingsHandler.h
+Source/Engine/SettingsHandler.cpp
 )
 
 target_sources(Core PRIVATE ${SOURCES})

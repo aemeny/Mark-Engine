@@ -71,6 +71,11 @@ namespace Mark::Platform
         while (w == 0 || h == 0);
     }
 
+    void Window::setTitle(std::string _title)
+    {
+        glfwSetWindowTitle(m_window, (m_windowName + " " + _title).c_str());
+    }
+
     void Window::KeyCallback(GLFWwindow* _window, int _key, int _scancode, int _action, int _mods)
     {
         if (_action != GLFW_PRESS) return;

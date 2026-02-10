@@ -4,6 +4,7 @@
 #include "Renderer/Mark_VulkanCore.h"
 #include "Utils/TimeTracker.h"
 #include "Engine/EngineStats.h"
+#include "Engine/SettingsHandler.h"
 
 #include <memory>
 
@@ -44,5 +45,8 @@ namespace Mark
 
         // References and creates the main window
         Platform::Window& coreWindow = m_windows->main(m_vulkanCore);
+
+        /* Member refering to main window */
+        Settings::MarkSettings m_markSettings { coreWindow };
     };
 } // namespace Mark

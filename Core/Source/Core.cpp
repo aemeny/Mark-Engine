@@ -20,9 +20,7 @@ namespace Mark
             // Poll windows / update engine
             m_windows->pollAll();
 
-            if (m_imguiHandler.showGUI()) {
-                m_imguiHandler.updateGUI();
-            }
+            m_imguiHandler.updateGUI();
 
             // Start Rendering
             m_windows->renderAll();
@@ -37,7 +35,7 @@ namespace Mark
 
     void Core::initialize()
     {
-        m_imguiHandler.initialize(m_appInfo.imguiSettings, &m_windows->main().vkHandler(), m_vulkanCore.get());
+        m_imguiHandler.initialize(m_appInfo.imguiSettings, &m_windows->main().vkHandler(), m_vulkanCore.get(), m_markSettings);
 
         m_timeTracker.start();
         m_engineStats.reset();
