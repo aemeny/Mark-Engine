@@ -87,12 +87,25 @@ namespace Mark::Settings
                 }
             }
 
+            // Tick box for displaying FPS in title bar
             ImGui::Spacing();
-            ImGui::SeparatorText("FPS Toggle");
+            ImGui::SeparatorText("FPS Tracking");
 
             ImGui::Text("Display FPS in window title:");
             ImGui::SameLine();
-            ImGui::Checkbox(" ", &displayFPSInTitleBar);
+            ImGui::Checkbox("##ShowFPSInTitle", &displayFPSInTitleBar);
+
+            // Slider to control how often FPS is recomputed
+            ImGui::Spacing();
+
+            float prevPeriod = m_fpsUpdateInterval;
+            ImGui::Text("Update Interval");
+            ImGui::SliderFloat("##FpsInterval", &m_fpsUpdateInterval,
+                0.0f, 10.0f, "%.1f s");
+
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Shorter updates cost more CPU usage and can make the FPS number flicker.");
+            }
         }
         ImGui::End();
     }

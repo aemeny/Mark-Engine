@@ -11,6 +11,11 @@ namespace Mark::Settings
         MarkSettings(const MarkSettings&) = delete;
         MarkSettings& operator=(const MarkSettings&) = delete;
 
+        float getFpsUpdateInterval() const { return m_fpsUpdateInterval; }
+        void setFpsUpdateInterval(float _interval) { m_fpsUpdateInterval = _interval; }
+
+        bool shouldDisplayFPSInTitleBar() const { return displayFPSInTitleBar; }
+
     private:
         friend Platform::ImGuiHandler;
         Platform::Window& m_mainWindowRef;
@@ -22,16 +27,16 @@ namespace Mark::Settings
             m_rebindingGuiKey = false;
         }
 
-        const char* KeyNameForDisplay(int _key);
-        bool IsModifierKey(int _key);
-
         /* Input */
         void pollToggleGUIShortCut();
-        int m_toggleGuiKey { NULL };
+        const char* KeyNameForDisplay(int _key);
+        bool IsModifierKey(int _key);
+        int m_toggleGuiKey { 297 }; // GLFW_KEY_F8
         bool m_toggleKeyDownLastFrame = false;
         bool m_rebindingGuiKey = false;
 
-        /* FPS Toggle */
+        /* FPS Tracking */
         bool displayFPSInTitleBar{ false };
+        float m_fpsUpdateInterval = 1.0f;
     };
 }

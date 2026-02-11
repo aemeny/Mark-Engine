@@ -227,7 +227,6 @@ namespace Mark::Platform
 
         GLFWwindow* window = m_mainWindowHandler->m_windowRef.handle();
 
-        // Default shortcut: Ctrl + Shift + G
         bool keyPressed = glfwGetKey(window, m_markSettings->m_toggleGuiKey) == GLFW_PRESS;
 
         if (keyPressed && !m_markSettings->m_toggleKeyDownLastFrame) {

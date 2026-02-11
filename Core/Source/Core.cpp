@@ -27,7 +27,7 @@ namespace Mark
 
             // End frame
             m_timeTracker.endFrame();
-            m_engineStats.addFrameTime(Utils::TimeTracker::deltaTime);
+            m_engineStats.update(Utils::TimeTracker::deltaTime);
         }
 
         cleanUp();
@@ -38,7 +38,7 @@ namespace Mark
         m_imguiHandler.initialize(m_appInfo.imguiSettings, &m_windows->main().vkHandler(), m_vulkanCore.get(), m_markSettings);
 
         m_timeTracker.start();
-        m_engineStats.reset();
+        m_engineStats.initialize(m_markSettings, m_windows->main());
 
         // TEMP ADD MESH FOR MAIN WINDOW
         m_windows->main().vkHandler().addMesh("Models/Curuthers.obj");
