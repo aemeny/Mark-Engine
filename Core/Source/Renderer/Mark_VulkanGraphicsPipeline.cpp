@@ -285,14 +285,8 @@ namespace Mark::RendererVK
 
     void VulkanGraphicsPipeline::rebuildDescriptors()
     {
-        auto VkCore = m_vulkanCoreRef.lock();
-        VkDevice device = VkCore->device();
+        VkDevice device = m_vulkanCoreRef.lock()->device();
 
-        // Destroy old descriptor objects
-        if (m_descriptorSetLayout) { 
-            vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr); 
-            m_descriptorSetLayout = VK_NULL_HANDLE; 
-        }
         if (m_descriptorPool) { 
             vkDestroyDescriptorPool(device, m_descriptorPool, nullptr); 
             m_descriptorPool = VK_NULL_HANDLE; 
@@ -311,7 +305,9 @@ namespace Mark::RendererVK
         const uint32_t totalSets = numImages * m_meshCount;
 
         createDescriptorPool(totalSets, _device);
-        createDescriptorSetLayout(_device);
+        if (m_descriptorSetLayout == VK_NULL_HANDLE) {
+            createDescriptorSetLayout(_device);
+        }
         allocateDescriptorSets(totalSets, _device);
         updateDescriptorSets(numImages, totalSets, _device);
     }

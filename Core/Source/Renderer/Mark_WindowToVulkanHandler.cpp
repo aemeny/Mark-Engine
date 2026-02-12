@@ -48,23 +48,14 @@ namespace Mark::RendererVK
         VkCore->physicalDevices().querySurfaceProperties(m_surface);
         VkCore->selectDevicesForSurface(m_surface);
 
-        m_swapChain.createSwapChain();
+        int fbW = 0, fbH = 0;
+        m_windowRef.frameBufferSize(fbW, fbH);
+        m_swapChain.createSwapChain(fbW, fbH);
         m_swapChain.createDepthResources();
         m_swapChain.initImageLayoutsForDynamicRendering();
 
         // Create frame data sync objects
-        m_imagesInFlight.assign(m_swapChain.numImages(), VK_NULL_HANDLE);
-        m_presentSems.resize(m_swapChain.numImages());
-        for (VkSemaphore& semaphore : m_presentSems)
-        {
-            semaphore = createSemaphore(VkCore->device());
-        }
-        for (FrameSyncData& frameData : m_framesInFlight)
-        {
-            VkDevice& device = VkCore->device();
-            frameData.m_imageAvailableSem = createSemaphore(device);
-            frameData.m_inFlightFence = createFence(device);
-        }
+        createFrameSyncObjects(VkCore);
 
         m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
 
@@ -126,12 +117,30 @@ namespace Mark::RendererVK
             if (frameData.m_imageAvailableSem) vkDestroySemaphore(device, frameData.m_imageAvailableSem, nullptr);
             if (frameData.m_inFlightFence) vkDestroyFence(device, frameData.m_inFlightFence, nullptr);
         }
+        m_imagesInFlight.clear();
         for (VkSemaphore& semaphore : m_presentSems)
         {
             if (semaphore) vkDestroySemaphore(_VkCoreRef->device(), semaphore, nullptr);
         }
+        m_presentSems.clear();
 
         MARK_INFO_C(Utils::Category::Vulkan, "Window Frame Sync Objects Destroyed");
+    }
+
+    void WindowToVulkanHandler::createFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef)
+    {
+        m_imagesInFlight.assign(m_swapChain.numImages(), VK_NULL_HANDLE);
+        m_presentSems.resize(m_swapChain.numImages());
+        for (VkSemaphore& semaphore : m_presentSems)
+        {
+            semaphore = createSemaphore(_VkCoreRef->device());
+        }
+        for (FrameSyncData& frameData : m_framesInFlight)
+        {
+            VkDevice& device = _VkCoreRef->device();
+            frameData.m_imageAvailableSem = createSemaphore(device);
+            frameData.m_inFlightFence = createFence(device);
+        }
     }
 
     void WindowToVulkanHandler::initCameraController()
@@ -225,6 +234,43 @@ namespace Mark::RendererVK
 
         // Increment frames-in-flight index
         m_frame = (m_frame + 1) % static_cast<uint32_t>(m_framesInFlight.size());
+    }
+
+    void WindowToVulkanHandler::rebuildRendererResources()
+    {
+        auto VkCore = m_vulkanCoreRef.lock();
+        if (!VkCore) { MARK_ERROR("VulkanCore expired in rebuildRendererResources"); }
+
+        m_windowRef.waitUntilFramebufferValid();
+
+        // Re-query surface properties
+        VkCore->physicalDevices().querySurfaceProperties(m_surface);
+
+        // Swapchain
+        int fbW = 0, fbH = 0;
+        m_windowRef.frameBufferSize(fbW, fbH);
+        m_swapChain.recreateSwapChain(fbW, fbH);
+        m_swapChain.createDepthResources();
+
+        // Re-create frame data sync objects 
+        destroyFrameSyncObjects(VkCore); 
+        createFrameSyncObjects(VkCore);
+
+        // Uniform buffers
+        m_uniformBuffer.destroyUniformBuffers(m_vulkanCoreRef.lock()->device());
+        m_uniformBuffer.createUniformBuffers(m_swapChain.numImages());
+
+        // Graphics pipeline
+        m_graphicsPipeline.rebuildDescriptors();
+
+        // Command buffers
+        m_vulkanCommandBuffers.destroyCommandBuffers();
+        m_vulkanCommandBuffers.createCommandPool();
+        m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithGUI());
+        m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithoutGUI());
+        m_vulkanCommandBuffers.createCopyCommandBuffer();
+
+        m_vulkanCommandBuffers.recordCommandBuffers(m_clearColour);
     }
 
     void WindowToVulkanHandler::createSurface()

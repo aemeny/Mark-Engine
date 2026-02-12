@@ -5,9 +5,9 @@
 
 namespace Mark
 {
-    void EngineStats::initialize(Settings::MarkSettings& _markSettings, Platform::Window& _mainWindowRef)
+    void EngineStats::initialize(Platform::Window& _mainWindowRef)
     {
-        m_markSettings = &_markSettings;
+        m_markSettings = &Settings::MarkSettings::Get();
         m_mainWindowRef = &_mainWindowRef;
         m_fpsUpdateInterval = m_markSettings->getFpsUpdateInterval();
 
@@ -21,7 +21,7 @@ namespace Mark
             &m_guiWindowOpen);
     }
 
-    void EngineStats::drawGUI()
+    void EngineStats::drawGUI() const
     {
         if (!m_guiWindowOpen)
             return;

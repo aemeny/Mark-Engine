@@ -20,10 +20,10 @@ namespace Mark::Platform
         m_ImGuiSettings = nullptr;
     }
 
-    void ImGuiHandler::initialize(const Settings::ImGuiSettings& _settings, WindowToVulkanHandler* _mainWindowHandler, VulkanCore* _vulkanCoreRef, Settings::MarkSettings& _markSettings)
+    void ImGuiHandler::initialize(const Settings::ImGuiSettings& _settings, WindowToVulkanHandler* _mainWindowHandler, VulkanCore* _vulkanCoreRef)
     {
         m_ImGuiSettings = &_settings;
-        m_markSettings = &_markSettings;
+        m_markSettings = &Settings::MarkSettings::Get();
         m_mainWindowHandler = _mainWindowHandler;
         m_vulkanCoreRef = _vulkanCoreRef;
 
@@ -32,6 +32,16 @@ namespace Mark::Platform
         m_imguiRenderer.initialize();
         
         handleUISettings();
+    }
+
+    void ImGuiHandler::rebuildCommandBuffers()
+    {
+        m_imguiRenderer.rebuildCommandBuffers();
+    }
+
+    void ImGuiHandler::clearCommandBuffers()
+    {
+        m_imguiRenderer.clearCommandBuffers();
     }
 
     void ImGuiHandler::updateGUI()
@@ -69,8 +79,8 @@ namespace Mark::Platform
 
             if (ImGui::BeginMenu("Settings"))
             {
-                if (ImGui::MenuItem("UI Settings", nullptr, m_markSettings->m_showUISettings)) {
-                    m_markSettings->toggleUISettings();
+                if (ImGui::MenuItem("Engine Settings", nullptr, m_markSettings->m_showSettings)) {
+                    m_markSettings->toggleSettingsWindow();
                 }
                 ImGui::EndMenu();
             }

@@ -81,6 +81,18 @@ namespace Mark::Platform
         return nullptr;
     }
 
+    Window* WindowManager::returnByIndex(std::size_t _index)
+    {
+        if (_index >= m_impl->m_windows.size()) 
+            return nullptr; 
+        return m_impl->m_windows[_index].get();
+    }
+
+    int WindowManager::numberOfWindows() const
+    {
+        return static_cast<int>(m_impl->m_windows.size());
+    }
+
     bool WindowManager::closeByTitle(std::string_view _title, bool _allowMain)
     {
         if (m_impl->m_windows.empty()) return false;

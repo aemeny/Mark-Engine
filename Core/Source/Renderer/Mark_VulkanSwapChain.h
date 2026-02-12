@@ -15,7 +15,8 @@ namespace Mark::RendererVK
         VulkanSwapChain(const VulkanSwapChain&) = delete;
         VulkanSwapChain& operator=(const VulkanSwapChain&) = delete;
 
-        void createSwapChain();
+        void createSwapChain(uint32_t _fbWidth, uint32_t _fbHeight);
+        void recreateSwapChain(uint32_t _fbWidth, uint32_t _fbHeight);
         void createDepthResources();
         void initImageLayoutsForDynamicRendering();
 
@@ -43,7 +44,7 @@ namespace Mark::RendererVK
         std::vector<VkImageView> m_swapChainImageViews;
         std::vector<TextureHandler> m_depthImages;
 
-
+        VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& _capabilities, uint32_t _fbWidth, uint32_t _fbHeight);
         VkExtent2D m_extent{ 0, 0 };
         VkSurfaceFormatKHR m_surfaceFormat{ VK_FORMAT_UNDEFINED };
     };

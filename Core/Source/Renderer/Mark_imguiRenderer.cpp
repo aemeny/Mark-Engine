@@ -33,6 +33,26 @@ namespace Mark::RendererVK
         initImGui();
     }
 
+    void ImGuiRenderer::rebuildCommandBuffers()
+    {
+        auto mainWindowHandler = m_imguiHandler.m_mainWindowHandler;
+        VulkanCommandBuffers& commandBufferHandler = mainWindowHandler->m_vulkanCommandBuffers;
+
+        // Recreate to match new swapchain
+        commandBufferHandler.createCommandBuffers(static_cast<uint32_t>(mainWindowHandler->m_swapChain.numImages()), m_commandBuffers);
+    }
+
+    void ImGuiRenderer::clearCommandBuffers()
+    {
+        VulkanCommandBuffers& commandBufferHandler = m_imguiHandler.m_mainWindowHandler->m_vulkanCommandBuffers;
+
+        // Free old ImGui command buffers
+        if (!m_commandBuffers.empty()) {
+            commandBufferHandler.freeCommandBuffers(m_commandBuffers.size(), m_commandBuffers.data());
+            m_commandBuffers.clear();
+        }
+    }
+
     void ImGuiRenderer::createDescriptorPool()
     {
         VkDescriptorPoolSize poolSizes[] = {
@@ -150,6 +170,9 @@ namespace Mark::RendererVK
     VkCommandBuffer ImGuiRenderer::prepareCommandBuffer(uint32_t _imageIndex)
     {
         VulkanCommandBuffers& commandBufferHandler = m_imguiHandler.m_mainWindowHandler->m_vulkanCommandBuffers;
+
+        if (_imageIndex >= m_commandBuffers.size())
+            MARK_ERROR("ImGui command buffer index out of range after swapchain rebuild");
 
         commandBufferHandler.beginCommandBuffer(m_commandBuffers[_imageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 

@@ -191,7 +191,20 @@ namespace Mark::RendererVK
 
             MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "Number of presentation modes: %d", presentModeCount);
 
-            m_devices[i].m_surfacesLinked.push_back(surfaceProps);
+            bool replaced = false;
+            for (auto& existingSurface : m_devices[i].m_surfacesLinked)
+            {
+                if (existingSurface.m_surface == _surface)
+                {
+                    existingSurface = surfaceProps;
+                    replaced = true;
+                    break;
+                }
+            }
+            if (!replaced)
+            {
+                m_devices[i].m_surfacesLinked.push_back(surfaceProps);
+            }
         }
     }
 

@@ -1,8 +1,8 @@
 #include "Core.h"
 #include "Utils/Mark_Utils.h"
+#include "Renderer/Mark_WindowToVulkanHandler.h"
 
 #include "Platform/Window.h" // TEMP FOR ACCESSING MAIN WINDOW IN run()
-#include "imgui.h" // TEMP FOR TESTING GUI
 
 namespace Mark
 {
@@ -22,6 +22,12 @@ namespace Mark
 
             m_imguiHandler.updateGUI();
 
+            // Check for rebuild requests
+            auto windowsToRebuild = checkAndReturnForRebuildRequests();
+            if (windowsToRebuild.size() > 0) {
+                handleRebuildRequests(windowsToRebuild); 
+            }
+
             // Start Rendering
             m_windows->renderAll();
 
@@ -35,10 +41,14 @@ namespace Mark
 
     void Core::initialize()
     {
-        m_imguiHandler.initialize(m_appInfo.imguiSettings, &m_windows->main().vkHandler(), m_vulkanCore.get(), m_markSettings);
+        m_imguiHandler.initialize(m_appInfo.imguiSettings, &m_windows->main().vkHandler(), m_vulkanCore.get());
+
+        Settings::MarkSettings::Get().initialize(m_windows->main().handle());
+
+        m_engineStats.initialize(m_windows->main());
 
         m_timeTracker.start();
-        m_engineStats.initialize(m_markSettings, m_windows->main());
+
 
         // TEMP ADD MESH FOR MAIN WINDOW
         m_windows->main().vkHandler().addMesh("Models/Curuthers.obj");
@@ -47,6 +57,46 @@ namespace Mark
         //Platform::Window& window2 = m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
         //window2.vkHandler().addMesh("Models/Curuthers.obj");
         //window2.vkHandler().initCameraController();
+    }
+
+    std::vector<RendererVK::WindowToVulkanHandler*> Core::checkAndReturnForRebuildRequests()
+    {
+        std::vector<RendererVK::WindowToVulkanHandler*> windowHandlers;
+        
+        auto& settings = Settings::MarkSettings::Get();
+        if (settings.requestSwapchainRebuild())
+        { // Rebuild all windows
+            settings.acknowledgeSwapchainRebuildRequest();
+            for (size_t i = 0; i < m_windows->numberOfWindows(); i++) {
+                windowHandlers.push_back(&m_windows->returnByIndex(i)->vkHandler());
+            }
+        }
+        else
+        {
+            for (size_t i = 0; i < m_windows->numberOfWindows(); i++)
+            {
+                auto window = m_windows->returnByIndex(i);
+                if (window->framebufferResized())
+                {
+                    window->resetFramebufferResized();
+                    windowHandlers.push_back(&window->vkHandler());
+                }
+            }
+        }
+        
+        return windowHandlers;
+    }
+
+    void Core::handleRebuildRequests(std::vector<RendererVK::WindowToVulkanHandler*> _windowHandlers)
+    {
+        m_vulkanCore->waitForDeviceIdle();
+
+        m_imguiHandler.clearCommandBuffers();
+        for (RendererVK::WindowToVulkanHandler* handler : _windowHandlers) 
+        { 
+            handler->rebuildRendererResources();
+        }
+        m_imguiHandler.rebuildCommandBuffers();
     }
 
     void Core::cleanUp()

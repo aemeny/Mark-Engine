@@ -3,6 +3,7 @@
 #include "Mark_VulkanPhysicalDevices.h"
 #include "Utils/VulkanUtils.h"
 #include "Utils/ErrorHandling.h"
+#include "Engine/SettingsHandler.h"
 
 #include <cassert>
 
@@ -23,6 +24,7 @@ namespace Mark::RendererVK
         // Otherwise return the first available format
         return _surfaceFormats[0];
     }
+
     static uint32_t chooseNumImages(const VkSurfaceCapabilitiesKHR& _surfaceCapabilities)
     {
         uint32_t requestedNumImages = _surfaceCapabilities.minImageCount + 1;
@@ -39,20 +41,30 @@ namespace Mark::RendererVK
 
         return finalNumImages;
     }
+
     static VkPresentModeKHR choosePresentMode(const std::vector<VkPresentModeKHR>& _presentModes)
     {
-        // Preference MAILBOX if available
+        bool inPerformanceMode = Mark::Settings::MarkSettings::Get().isInPerformanceMode();
+
+        // Preference MAILBOX if available or Immediate in performance mode
         for (const VkPresentModeKHR& mode : _presentModes)
         {
-            if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
-            {
-                return mode;
+            if (inPerformanceMode) {
+                if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+                    return mode;
+                }
+            }
+            else {
+                if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+                    return mode;
+                }
             }
         }
 
         // Otherwise use FIFO which is guaranteed to be supported
         return VK_PRESENT_MODE_FIFO_KHR;
     }
+
     static VkImageView createImageView(VkDevice _device, VkImage _image, VkFormat _format, VkImageAspectFlags _aspectFlags, 
         VkImageViewType _viewType, uint32_t _layerCount, uint32_t _mipLevels)
     {
@@ -121,7 +133,7 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Swap Chain Destroyed");
     }
 
-    void VulkanSwapChain::createSwapChain()
+    void VulkanSwapChain::createSwapChain(uint32_t _fbWidth, uint32_t _fbHeight)
     {
         for (int i = 0; i < m_vulkanCoreRef.lock()->physicalDevices().selected().m_surfacesLinked.size(); i++)
         {
@@ -164,6 +176,7 @@ namespace Mark::RendererVK
                     .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR, // Currently ignore alpha channel
                     .presentMode = presentMode,
                     .clipped = VK_TRUE,
+                    .oldSwapchain = VK_NULL_HANDLE
                 };
                 uint32_t indices[2];
                 if (core->graphicsQueueFamilyIndex() != core->presentQueueFamilyIndex()) 
@@ -211,6 +224,23 @@ namespace Mark::RendererVK
             }
         }
         MARK_ERROR("Failed to find matching surface for swap chain creation");
+    }
+
+    void VulkanSwapChain::recreateSwapChain(uint32_t _fbWidth, uint32_t _fbHeight)
+    {
+        auto core = m_vulkanCoreRef.lock();
+        if (!core) { 
+            MARK_ERROR("VulkanCore expired in swapchain recreate"); 
+        }
+
+        // Avoid recreation while minimized
+        if (_fbWidth == 0 || _fbHeight == 0)
+            return;
+
+        destroySwapChain();
+        createSwapChain(_fbWidth, _fbHeight);
+        createDepthResources();
+        initImageLayoutsForDynamicRendering();
     }
 
     void VulkanSwapChain::createDepthResources()
@@ -356,5 +386,16 @@ namespace Mark::RendererVK
 
         vkFreeCommandBuffers(device, pool, 1, &cmd);
         vkDestroyCommandPool(device, pool, nullptr);
+    }
+
+    VkExtent2D VulkanSwapChain::chooseSwapExtent(const VkSurfaceCapabilitiesKHR& _capabilities, uint32_t _fbWidth, uint32_t _fbHeight)
+    {
+        if (_capabilities.currentExtent.width != UINT32_MAX)
+            return _capabilities.currentExtent;
+
+        VkExtent2D actual{ _fbWidth, _fbHeight };
+        actual.width = std::clamp(actual.width, _capabilities.minImageExtent.width, _capabilities.maxImageExtent.width);
+        actual.height = std::clamp(actual.height, _capabilities.minImageExtent.height, _capabilities.maxImageExtent.height);
+        return actual;
     }
 } // namespace Mark::RendererVK

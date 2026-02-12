@@ -30,6 +30,9 @@ namespace Mark
         void cleanUp();
         void initialize();
 
+        std::vector<RendererVK::WindowToVulkanHandler*> checkAndReturnForRebuildRequests();
+        void handleRebuildRequests(std::vector<RendererVK::WindowToVulkanHandler*> _windowHandlers);
+
         /* --== Window Manager ==-- */
         // Must be created before any renderer, as they'll require glfwInit() call
         std::shared_ptr<Platform::WindowManager> m_windows = std::make_shared<Platform::WindowManager>();
@@ -45,8 +48,5 @@ namespace Mark
 
         // References and creates the main window
         Platform::Window& coreWindow = m_windows->main(m_vulkanCore);
-
-        /* Member refering to main window */
-        Settings::MarkSettings m_markSettings { coreWindow };
     };
 } // namespace Mark

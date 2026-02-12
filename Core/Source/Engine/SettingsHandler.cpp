@@ -7,11 +7,7 @@
 
 namespace Mark::Settings
 {
-    MarkSettings::MarkSettings(Platform::Window& _mainWindow) :
-        m_mainWindowRef(_mainWindow)
-    {}
-
-    const char* MarkSettings::KeyNameForDisplay(int _key)
+    const char* MarkSettings::getKeyName(int _key) const
     {
         if (!m_toggleGuiKey)
             return "Not Set";
@@ -48,65 +44,131 @@ namespace Mark::Settings
 
     void MarkSettings::drawSettingsUI()
     {
-        if (!m_showUISettings)
+        if (!m_showSettings)
             return;
 
-        if (ImGui::Begin("UI Settings", &m_showUISettings))
+        ImGui::SetNextWindowSize(ImVec2(900.0f, 600.0f), ImGuiCond_FirstUseEver);
+
+        const ImVec4 settingsBg = ImVec4(0.08f, 0.08f, 0.08f, 1.0f); // Black
+        if (ImGui::Begin("Project Setttings", &m_showSettings))
         {
-            // Input for rebinding the toggle GUI key
-            ImGui::SeparatorText("Input");
+            // ---- Left: sidebar with category buttons ----
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, settingsBg);
+            ImGui::BeginChild("##SettingsSidebar", ImVec2(170.0f, 0.0f), true);
 
-            ImGui::Text("Toggle GUI key:");
-            ImGui::SameLine();
-            ImGui::Text("[%s]", KeyNameForDisplay(m_toggleGuiKey));
-
-            ImGui::SameLine();
-            if (!m_rebindingGuiKey)
+            const int numPanels = static_cast<int>(SettingsPanels::Count);
+            for (int i = 0; i < numPanels; i++)
             {
-                if (ImGui::Button("Rebind")) {
-                    m_rebindingGuiKey = true;
-                }
-            }
-            else
-            {
-                ImGui::SameLine();
-                ImGui::TextUnformatted("Press a key...");
+                SettingsPanels panel = static_cast<SettingsPanels>(i);
 
-                for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; key++)
+                const char* label = "";
+                switch (panel)
                 {
-                    if (glfwGetKey(m_mainWindowRef.handle(), key) == GLFW_PRESS)
-                    {
-                        if (!IsModifierKey(key)) {
-                            m_toggleGuiKey = key;
-                        }
+                default:
+                case SettingsPanels::UI:        label = "UI";        break;
+                case SettingsPanels::Rendering: label = "Rendering"; break;
+                }
 
-                        m_rebindingGuiKey = false;
-                        m_toggleKeyDownLastFrame = true;
-                        break;
-                    }
+                bool selected = (m_activePanel == panel);
+                if (ImGui::Selectable(label, selected))
+                {
+                    m_activePanel = panel;
                 }
             }
 
-            // Tick box for displaying FPS in title bar
-            ImGui::Spacing();
-            ImGui::SeparatorText("FPS Tracking");
-
-            ImGui::Text("Display FPS in window title:");
+            ImGui::EndChild();
             ImGui::SameLine();
-            ImGui::Checkbox("##ShowFPSInTitle", &displayFPSInTitleBar);
 
-            // Slider to control how often FPS is recomputed
-            ImGui::Spacing();
+            // ---- Right: panel content ----
+            ImGui::BeginChild("##SettingsContent", ImVec2(0.0f, 0.0f), false);
 
-            float prevPeriod = m_fpsUpdateInterval;
-            ImGui::Text("Update Interval");
-            ImGui::SliderFloat("##FpsInterval", &m_fpsUpdateInterval,
-                0.0f, 10.0f, "%.1f s");
+            switch (m_activePanel)
+            {
+            default:
+            case SettingsPanels::UI:
+                drawUISettingsPanel();
+                break;
 
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Shorter updates cost more CPU usage and can make the FPS number flicker.");
+            case SettingsPanels::Rendering:
+                drawRenderingSettingsPanel();
+                break;
             }
+
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
         }
         ImGui::End();
+    }
+
+    void MarkSettings::drawUISettingsPanel()
+    {
+        // Input for rebinding the toggle GUI key
+        ImGui::SeparatorText("Input");
+
+        ImGui::Text("Toggle GUI key:");
+        ImGui::SameLine();
+        ImGui::Text("[%s]", getKeyName(m_toggleGuiKey));
+
+        ImGui::SameLine();
+        if (!m_rebindingGuiKey)
+        {
+            if (ImGui::Button("Rebind")) {
+                m_rebindingGuiKey = true;
+            }
+        }
+        else
+        {
+            ImGui::SameLine();
+            ImGui::TextUnformatted("Press a key...");
+
+            for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; key++)
+            {
+                if (glfwGetKey(m_mainWindowHandle, key) == GLFW_PRESS)
+                {
+                    if (!IsModifierKey(key)) {
+                        m_toggleGuiKey = key;
+                    }
+
+                    m_rebindingGuiKey = false;
+                    m_toggleKeyDownLastFrame = true;
+                    break;
+                }
+            }
+        }
+
+        // Tick box for displaying FPS in title bar
+        ImGui::Spacing();
+        ImGui::SeparatorText("FPS Tracking");
+
+        ImGui::Text("Display FPS in window title:");
+        ImGui::SameLine();
+        ImGui::Checkbox("##ShowFPSInTitle", &displayFPSInTitleBar);
+
+        // Slider to control how often FPS is recomputed
+        ImGui::Spacing();
+
+        float prevPeriod = m_fpsUpdateInterval;
+        ImGui::Text("Update Interval");
+        ImGui::SliderFloat("##FpsInterval", &m_fpsUpdateInterval,
+            0.0f, 10.0f, "%.1f s");
+
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("Shorter updates cost more CPU usage and can make the FPS number flicker.");
+        }
+    }
+
+    void MarkSettings::drawRenderingSettingsPanel()
+    {
+        ImGui::SeparatorText("Rendering");
+
+        ImGui::Text("Run Mark in performance mode:");
+        ImGui::SameLine();
+        const bool prev = m_runInPerformanceMode;
+        if (ImGui::Checkbox("##PerformanceModeToggle", &m_runInPerformanceMode)) 
+        {
+            if (prev != m_runInPerformanceMode) {
+                m_requestSwapchainRebuild = true;
+            }
+        }
     }
 }

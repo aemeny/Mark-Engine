@@ -23,6 +23,9 @@ namespace Mark::RendererVK
         friend Mark::Platform::ImGuiHandler;
         Mark::Platform::ImGuiHandler& m_imguiHandler;
 
+        void rebuildCommandBuffers();
+        void clearCommandBuffers();
+
         void createDescriptorPool();
         void initImGui();
 

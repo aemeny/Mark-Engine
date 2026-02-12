@@ -27,6 +27,9 @@ namespace Mark::Platform
         bool anyOpen() const;
 
         Window* findByTitle(std::string_view _title);
+        Window* returnByIndex(std::size_t _index);
+        int numberOfWindows() const;
+
         bool closeByTitle(std::string_view _title, bool _allowMain = false);
 
         // Fullscreen controls

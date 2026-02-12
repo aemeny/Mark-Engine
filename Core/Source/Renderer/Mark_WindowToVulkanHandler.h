@@ -18,6 +18,8 @@ namespace Mark::RendererVK
 
         void renderToWindow();
 
+        void rebuildRendererResources();
+
         void createSurface();
         VkSurfaceKHR surface() const { return m_surface; }
 
@@ -30,6 +32,7 @@ namespace Mark::RendererVK
         friend Platform::ImGuiHandler;
 
         void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
+        void createFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
 
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         Platform::Window& m_windowRef;

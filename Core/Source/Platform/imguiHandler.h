@@ -31,7 +31,7 @@ namespace Mark::Platform
         ImGuiHandler& operator=(const ImGuiHandler&) = delete;
 
         /* Handling ImGui setup and rendering */
-        void initialize(const Settings::ImGuiSettings& _settings, WindowToVulkanHandler* _mainWindowHandler, VulkanCore* _vulkanCoreRef, Settings::MarkSettings& _markSettings);
+        void initialize(const Settings::ImGuiSettings& _settings, WindowToVulkanHandler* _mainWindowHandler, VulkanCore* _vulkanCoreRef);
         void destroy();
 
         void updateGUI();
@@ -42,6 +42,8 @@ namespace Mark::Platform
             return m_imguiRenderer.prepareCommandBuffer(_imageIndex);
         }
 
+        void rebuildCommandBuffers();
+        void clearCommandBuffers();
      
         /* Handling adding windows */
         using DrawFunction = std::function<void()>;

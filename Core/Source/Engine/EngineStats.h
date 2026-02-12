@@ -9,7 +9,7 @@ namespace Mark
     {
         EngineStats() = default;
 
-        void initialize(Settings::MarkSettings& _markSettings, Platform::Window& _mainWindowRef);
+        void initialize(Platform::Window& _mainWindowRef);
         void reset();
         void update(double _deltaTime);
 
@@ -31,7 +31,7 @@ namespace Mark
         bool m_canResetTitleBar{ false };
 
         // For GUI
-        void drawGUI();
+        void drawGUI() const;
         bool m_guiWindowOpen{ true };
     };
 }

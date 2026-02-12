@@ -22,6 +22,9 @@ namespace Mark::Platform
         bool shouldClose() const;
         void requestClose();
 
+        bool framebufferResized() const { return m_framebufferResized; } 
+        void resetFramebufferResized() { m_framebufferResized = false; }
+
         void setFullscreen(bool _enable, bool _borderless = true);
         void toggleFullscreen(bool _borderless = true);
         bool isFullscreen() const { return m_isFullscreen; }
@@ -43,6 +46,8 @@ namespace Mark::Platform
         std::string m_windowName{ "Mark" };
         int m_width{ 0 };
         int m_height{ 0 };
+
+        bool m_framebufferResized{ false };
 
         // Vulkan Renderering
         std::unique_ptr<RendererVK::WindowToVulkanHandler> m_vkHandler;

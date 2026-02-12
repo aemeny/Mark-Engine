@@ -23,6 +23,11 @@ namespace Mark::Platform
         glfwSetWindowUserPointer(m_window, this);
         glfwSetKeyCallback(m_window, &Window::KeyCallback);
 
+        glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* w, int /*width*/, int /*height*/) {
+            auto* self = static_cast<Window*>(glfwGetWindowUserPointer(w));
+            self->m_framebufferResized = true;
+        });
+
         MARK_INFO_C(Utils::Category::GLFW, "GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
 
         // Create Vulkan handler
