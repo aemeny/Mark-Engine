@@ -1,9 +1,9 @@
 #pragma once
 #include "Mark_VulkanCommandBuffers.h"
-
-#include "Engine/EarlyCameraController.h" // TEMP
+#include "Mark_VulkanWindowQueueHelper.h"
 
 #include <array>
+#include "Engine/EarlyCameraController.h" // TEMP
 
 struct GLFWwindow;
 namespace Mark::Platform { struct Window; struct ImGuiHandler; }
@@ -17,7 +17,6 @@ namespace Mark::RendererVK
         WindowToVulkanHandler& operator=(const WindowToVulkanHandler&) = delete;
 
         void renderToWindow();
-
         void rebuildRendererResources();
 
         void createSurface();
@@ -30,9 +29,6 @@ namespace Mark::RendererVK
     private:
         friend struct ImGuiRenderer; // Allows access to main windows info for ImGui init
         friend Platform::ImGuiHandler;
-
-        void destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
-        void createFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef);
 
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         Platform::Window& m_windowRef;
@@ -48,18 +44,6 @@ namespace Mark::RendererVK
         VulkanUniformBuffer m_uniformBuffer{ m_vulkanCoreRef };
         VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_uniformBuffer, &m_meshesToDraw };
         VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline };
-
-        struct FrameSyncData
-        {
-            VkSemaphore m_imageAvailableSem{ VK_NULL_HANDLE };
-            VkFence m_inFlightFence{ VK_NULL_HANDLE };
-        };
-        std::array<FrameSyncData, 3> m_framesInFlight; // frames-in-flight
-        uint32_t m_frame = 0;
-
-        // One present semaphore per swapchain image
-        std::vector<VkSemaphore> m_presentSems;
-        // Tracks which fence is currently each image
-        std::vector<VkFence> m_imagesInFlight;
+        VulkanWindowQueueHelper m_windowQueueHelper;
     };
 } // namespace Mark::RendererVK

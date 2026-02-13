@@ -381,7 +381,7 @@ namespace Mark::RendererVK
 
         // Submit and wait
         VulkanQueue& graphicsQueue = VkCore->graphicsQueue();
-        graphicsQueue.submit(&cmd, 1, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
+        graphicsQueue.submitAsync(&cmd, 1, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
         graphicsQueue.waitIdle();
 
         vkFreeCommandBuffers(device, pool, 1, &cmd);

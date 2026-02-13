@@ -364,7 +364,7 @@ namespace Mark::RendererVK
         vkEndCommandBuffer(m_commandBuffersRef->copyCommandBuffer());
 
         VulkanQueue& graphicsQueue = m_vulkanCoreRef.lock()->graphicsQueue();
-        graphicsQueue.submit(&m_commandBuffersRef->copyCommandBuffer(), 1, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
+        graphicsQueue.submitAsync(&m_commandBuffersRef->copyCommandBuffer(), 1, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE);
 
         graphicsQueue.waitIdle();
     }

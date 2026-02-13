@@ -9,36 +9,6 @@
 
 namespace Mark::RendererVK
 {
-    // Queue helpers
-    static VkSemaphore createSemaphore(VkDevice _device)
-    {
-        VkSemaphoreCreateInfo semaphoreCreateInfo = {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0
-        };
-
-        VkSemaphore semaphore{ VK_NULL_HANDLE };
-        VkResult res = vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &semaphore);
-        CHECK_VK_RESULT(res, "Create Semaphore");
-
-        return semaphore;
-    }
-    static VkFence createFence(VkDevice _device, bool _signaled = true)
-    { 
-        VkFenceCreateInfo fenceCreateInfo{
-            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = _signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0u
-        };
-
-        VkFence fence{ VK_NULL_HANDLE };
-        VkResult res = vkCreateFence(_device, &fenceCreateInfo, nullptr, &fence);
-        CHECK_VK_RESULT(res, "Create Fence");
-
-        return fence; 
-    }
-
     WindowToVulkanHandler::WindowToVulkanHandler(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour) :
         m_vulkanCoreRef(_vulkanCoreRef), m_windowRef(_windowRef), m_clearColour(_clearColour)
     {
@@ -55,7 +25,8 @@ namespace Mark::RendererVK
         m_swapChain.initImageLayoutsForDynamicRendering();
 
         // Create frame data sync objects
-        createFrameSyncObjects(VkCore);
+        m_windowQueueHelper.initialize(&VkCore->graphicsQueue(), &VkCore->presentQueue(), VkCore->device());
+        m_windowQueueHelper.createFrameSyncObjects(static_cast<uint32_t>(m_swapChain.numImages()));
 
         m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
 
@@ -80,7 +51,7 @@ namespace Mark::RendererVK
         VkCore->presentQueue().waitIdle();
 
         // Destroy frame data sync objects
-        destroyFrameSyncObjects(VkCore);
+        m_windowQueueHelper.destroyFrameSyncObjects();
 
         // Destroy command buffers and pool
         m_vulkanCommandBuffers.destroyCommandBuffers();
@@ -105,41 +76,6 @@ namespace Mark::RendererVK
             vkDestroySurfaceKHR(VkCore->instance(), m_surface, nullptr);
             m_surface = VK_NULL_HANDLE;
             MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Destroyed");
-        }
-    }
-
-    void WindowToVulkanHandler::destroyFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef)
-    {
-        // Destroy frame data sync objects
-        for (FrameSyncData& frameData : m_framesInFlight)
-        {
-            VkDevice& device = _VkCoreRef->device();
-            if (frameData.m_imageAvailableSem) vkDestroySemaphore(device, frameData.m_imageAvailableSem, nullptr);
-            if (frameData.m_inFlightFence) vkDestroyFence(device, frameData.m_inFlightFence, nullptr);
-        }
-        m_imagesInFlight.clear();
-        for (VkSemaphore& semaphore : m_presentSems)
-        {
-            if (semaphore) vkDestroySemaphore(_VkCoreRef->device(), semaphore, nullptr);
-        }
-        m_presentSems.clear();
-
-        MARK_INFO_C(Utils::Category::Vulkan, "Window Frame Sync Objects Destroyed");
-    }
-
-    void WindowToVulkanHandler::createFrameSyncObjects(std::shared_ptr<VulkanCore> _VkCoreRef)
-    {
-        m_imagesInFlight.assign(m_swapChain.numImages(), VK_NULL_HANDLE);
-        m_presentSems.resize(m_swapChain.numImages());
-        for (VkSemaphore& semaphore : m_presentSems)
-        {
-            semaphore = createSemaphore(_VkCoreRef->device());
-        }
-        for (FrameSyncData& frameData : m_framesInFlight)
-        {
-            VkDevice& device = _VkCoreRef->device();
-            frameData.m_imageAvailableSem = createSemaphore(device);
-            frameData.m_inFlightFence = createFence(device);
         }
     }
 
@@ -168,34 +104,10 @@ namespace Mark::RendererVK
         // Check for valid extent before rendering
         auto extent = m_swapChain.extent();
         if (extent.width == 0 || extent.height == 0) return;
-
         auto VkCore = m_vulkanCoreRef.lock();
         if (!VkCore) { MARK_ERROR("VulkanCore expired during renderFrame()"); }
 
-        VulkanQueue& graphicsQueue = VkCore->graphicsQueue();
-        VulkanQueue& presentQueue = VkCore->presentQueue();
-
-        // Choose this frame slot's sync objects
-        FrameSyncData& frameSyncData = m_framesInFlight[m_frame];
-
-        // Wait for this frame slot to be free on GPU side
-        vkWaitForFences(VkCore->device(), 1, &frameSyncData.m_inFlightFence, VK_TRUE, UINT64_MAX);
-
-        // Acquire swapchain image for window
-        uint32_t imageIndex = 0;
-        graphicsQueue.acquireNextImage(m_swapChain.swapChain(), frameSyncData.m_imageAvailableSem, VK_NULL_HANDLE, &imageIndex);
-
-        // If this image is still in use by a previous frame, wait for that fence
-        VkFence oldFence = m_imagesInFlight[imageIndex];
-        if (oldFence != VK_NULL_HANDLE && oldFence != frameSyncData.m_inFlightFence)
-        {
-            vkWaitForFences(VkCore->device(), 1, &oldFence, VK_TRUE, UINT64_MAX);
-        }
-        // This frame's fence now owns this image
-        m_imagesInFlight[imageIndex] = frameSyncData.m_inFlightFence;
-
-        // Reset this frame's fence for the upcoming submit
-        vkResetFences(VkCore->device(), 1, &frameSyncData.m_inFlightFence);
+        uint32_t imageIndex = m_windowQueueHelper.acquireNextImage(m_swapChain.swapChain());
 
         /* TEMP UNIFORM DATA UPDATING FOR TESTING */
         UniformData tempData;
@@ -208,32 +120,21 @@ namespace Mark::RendererVK
             tempData.WVP = glm::mat4(1.0f);
         }
 
-        // Update uniform buffer for this image
         m_uniformBuffer.updateUniformBuffer(imageIndex, tempData);
 
-        // Submit to graphics queue: wait on imageAvailable, signal renderFinished
-        VkSemaphore presentSem = m_presentSems[imageIndex];
-        if (presentSem == VK_NULL_HANDLE) MARK_ERROR("presentSem is VK_NULL_HANDLE!");
-
         // Submit the command buffer for this image
-        if (VkCore->imguiHandler().showGUI())
-        {
+        if (VkCore->imguiHandler().showGUI()) {
             VkCommandBuffer imguiCmdBuffer = VkCore->imguiHandler().prepareCommandBuffer(imageIndex);
-
             VkCommandBuffer cmdBuffers[] = { m_vulkanCommandBuffers.commandBufferWithGUI(imageIndex), imguiCmdBuffer };
 
-            graphicsQueue.submit(&cmdBuffers[0], 2, frameSyncData.m_imageAvailableSem, presentSem, frameSyncData.m_inFlightFence);
+            m_windowQueueHelper.submitAsync(cmdBuffers, 2);
         }
         else {
             VkCommandBuffer cmdBuffer = m_vulkanCommandBuffers.commandBufferWithoutGUI(imageIndex);
-            graphicsQueue.submit(&cmdBuffer, 1, frameSyncData.m_imageAvailableSem, presentSem, frameSyncData.m_inFlightFence);
+            m_windowQueueHelper.submitAsync(&cmdBuffer, 1);
         }
 
-        // Present the window
-        presentQueue.present(m_swapChain.swapChain(), imageIndex, presentSem);
-
-        // Increment frames-in-flight index
-        m_frame = (m_frame + 1) % static_cast<uint32_t>(m_framesInFlight.size());
+        m_windowQueueHelper.present(m_swapChain.swapChain(), imageIndex);
     }
 
     void WindowToVulkanHandler::rebuildRendererResources()
@@ -253,8 +154,8 @@ namespace Mark::RendererVK
         m_swapChain.createDepthResources();
 
         // Re-create frame data sync objects 
-        destroyFrameSyncObjects(VkCore); 
-        createFrameSyncObjects(VkCore);
+        m_windowQueueHelper.destroyFrameSyncObjects();
+        m_windowQueueHelper.createFrameSyncObjects(static_cast<uint32_t>(m_swapChain.numImages()));
 
         // Uniform buffers
         m_uniformBuffer.destroyUniformBuffers(m_vulkanCoreRef.lock()->device());

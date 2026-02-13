@@ -42,6 +42,8 @@ Source/Renderer/Mark_VulkanCommandBuffers.h
 Source/Renderer/Mark_VulkanCommandBuffers.cpp
 Source/Renderer/Mark_VulkanQueue.h
 Source/Renderer/Mark_VulkanQueue.cpp
+Source/Renderer/Mark_VulkanWindowQueueHelper.h
+Source/Renderer/Mark_VulkanWindowQueueHelper.cpp
 Source/Renderer/Mark_VulkanShader.h
 Source/Renderer/Mark_VulkanShader.cpp
 Source/Renderer/Mark_VulkanGraphicsPipeline.h

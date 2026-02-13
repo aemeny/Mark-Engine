@@ -22,7 +22,7 @@ namespace Mark::RendererVK
             uint32_t* _outImageIndex);
 
         // Submit one command buffer
-        void submit(VkCommandBuffer* _cmdBuffers,
+        void submitAsync(VkCommandBuffer* _cmdBuffers,
             int _numCmdBuffers,
             VkSemaphore _waitSemaphore,  // imageAvailable
             VkSemaphore _signalSemaphore, // renderFinished
