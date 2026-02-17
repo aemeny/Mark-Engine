@@ -34,10 +34,6 @@ namespace Mark::RendererVK
         uint32_t getMemoryTypeIndex(uint32_t _memoryTypeBits, VkMemoryPropertyFlags _propertyFlags) const;
         uint32_t getInstanceVersion() const;
 
-        // Dynamic rendering checks
-        bool usesDynamicRendering() const { return m_useDynamicRendering; }
-        bool usesDynamicRenderingAsCore() const { return m_useDynamicRenderingAsCore; }
-
         // Queue getters
         uint32_t graphicsQueueFamilyIndex() const { return m_selectedDeviceResult.m_gtxQueueFamilyIndex; }
         uint32_t presentQueueFamilyIndex()  const { return m_selectedDeviceResult.m_presentQueueFamilyIndex; }
@@ -91,9 +87,6 @@ namespace Mark::RendererVK
         VkDebugUtilsMessengerEXT m_debugMessenger{ VK_NULL_HANDLE };
         VulkanQueue m_graphicsQueue;
         VulkanQueue m_presentQueue;
-
-        bool m_useDynamicRendering{ false };
-        bool m_useDynamicRenderingAsCore{ false };
 
         // Devices and their properties
         VulkanPhysicalDevices m_physicalDevices;

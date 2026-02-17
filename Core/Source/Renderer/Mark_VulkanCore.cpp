@@ -315,63 +315,54 @@ namespace Mark::RendererVK
         }
 
         const VulkanPhysicalDevices::DeviceProperties& selectedPhysical = m_physicalDevices.selected();
-        // Any device extensions required by Vulkan are enabled here
-        std::vector<const char*> deviceExtensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-            VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME // Required for imgui to always be active
-        };
 
-
+        // Require Vulkan 1.3 for this engine
         uint32_t devApi = selectedPhysical.m_properties.apiVersion;
         uint32_t devMajor = VK_API_VERSION_MAJOR(devApi);
         uint32_t devMinor = VK_API_VERSION_MINOR(devApi);
-
         bool deviceIsVulkan13OrHigher = (devMajor > 1) || (devMajor == 1 && devMinor >= 3);
-        bool deviceIsVulkan12 = (devMajor == 1 && devMinor == 2);
 
-        bool supportsDynamicRenderingExt = selectedPhysical.isExtensionSupported(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME);
-        bool supportsSync2Ext = selectedPhysical.isExtensionSupported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-
-        // Prefer core 1.3 if available
-        if (deviceIsVulkan13OrHigher)
-        {
-            m_useDynamicRendering = true;
-            m_useDynamicRenderingAsCore = true;
-            MARK_INFO_C(Utils::Category::Vulkan, "Dynamic Rendering: using Vulkan 1.%u core", devMinor);
+        if (!deviceIsVulkan13OrHigher) {
+            MARK_LOG_ERROR_C(Utils::Category::Vulkan,
+                "Vulkan Version 1.3 or higher is required for Mark. Current: Vulkan %u.%u", devMajor, devMinor);
         }
-        // Fallback: Vulkan 1.2 + KHR extension
-        else if (deviceIsVulkan12 && supportsDynamicRenderingExt)
-        {
-            m_useDynamicRendering = true;
-            m_useDynamicRenderingAsCore = false;
 
-            MARK_INFO_C(Utils::Category::Vulkan, "Dynamic Rendering: using VK_KHR_dynamic_rendering extension");
+        // Any device extensions required by Vulkan are enabled here
+        std::vector<const char*> deviceExtensions = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
 
-            if (supportsSync2Ext)
-            {
-                deviceExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-            }
+        // Required for imgui to always be active
+        if (selectedPhysical.isExtensionSupported(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME)) {
+            deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME); 
         }
-        else
-        {
-            MARK_LOG_ERROR_C(Utils::Category::Vulkan, 
-                "Dynamic Rendering is not supported on selected physical device "
-                "(device Vulkan %u.%u)", 
-                devMajor, devMinor);
+        else {
+            MARK_ERROR("Selected GPU does not support dynamic rendering, which is required for Mark");
         }
+
+        // Enable Vulkan features
+        VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES
+        };
+
+        VkPhysicalDeviceVulkan13Features v13 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+            .pNext = &indexingFeatures,
+            .synchronization2 = VK_TRUE,
+            .dynamicRendering = VK_TRUE
+        };
 
         // Ensure the selected device supports nessesary features
-        const VkPhysicalDeviceFeatures& feats = selectedPhysical.m_features;
-        REQ_FEATURE(feats, geometryShader);
-        REQ_FEATURE(feats, tessellationShader);
-
-        // Any device features required by Vulkan, enabled here
-        VkPhysicalDeviceFeatures deviceFeatures = { 0 };
-        deviceFeatures.geometryShader = VK_TRUE;
-        deviceFeatures.tessellationShader = VK_TRUE;
+        REQ_FEATURE(selectedPhysical.m_features, geometryShader);
+        REQ_FEATURE(selectedPhysical.m_features, tessellationShader);
+        VkPhysicalDeviceFeatures deviceFeatures = { 
+            .geometryShader = VK_TRUE,
+            .tessellationShader = VK_TRUE
+        };
 
         VkDeviceCreateInfo deviceCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+            .pNext = &v13,
             .flags = 0,
             .queueCreateInfoCount = qCount,
             .pQueueCreateInfos = qInfos,
@@ -381,34 +372,6 @@ namespace Mark::RendererVK
             .ppEnabledExtensionNames = deviceExtensions.data(),
             .pEnabledFeatures = &deviceFeatures
         };
-
-        VkPhysicalDeviceVulkan13Features v13{};
-        VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamic{};
-        VkPhysicalDeviceSynchronization2FeaturesKHR sync2{};
-        if (m_useDynamicRendering)
-        {
-            if (m_useDynamicRenderingAsCore)
-            {
-                v13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-                v13.pNext = nullptr;
-                v13.synchronization2 = VK_TRUE;
-                v13.dynamicRendering = VK_TRUE;
-
-                deviceCreateInfo.pNext = &v13;
-            }
-            else
-            {
-                dynamic.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
-                dynamic.pNext = nullptr;
-                dynamic.dynamicRendering = VK_TRUE;
-
-                sync2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
-                sync2.pNext = &dynamic;
-                sync2.synchronization2 = VK_TRUE;
-
-                deviceCreateInfo.pNext = &sync2;
-            }
-        }
 
         VkResult res = vkCreateDevice(selectedPhysical.m_device, &deviceCreateInfo, nullptr, &m_device);
         CHECK_VK_RESULT(res, "Create Logical Device");

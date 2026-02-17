@@ -130,16 +130,11 @@ namespace Mark::RendererVK
                     .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
                 }
             },
-            .UseDynamicRendering = vulkanCoreRef->usesDynamicRendering(),
+            .UseDynamicRendering = true,
             .Allocator = nullptr,
             .CheckVkResultFn = checkVKResult,
             .MinAllocationSize = (1024 * 1024)
         };
-        MARK_INFO_C(Utils::Category::imgui,
-            "ImGui: UseDynamicRendering = %s, ApiVersion = %u.%u",
-            vulkanCoreRef->usesDynamicRendering() ? "true" : "false",
-            VK_API_VERSION_MAJOR(initInfo.ApiVersion),
-            VK_API_VERSION_MINOR(initInfo.ApiVersion));
 
         ImGui_ImplVulkan_Init(&initInfo);
 
