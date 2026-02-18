@@ -9,8 +9,8 @@
 
 namespace Mark::RendererVK
 {
-    WindowToVulkanHandler::WindowToVulkanHandler(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_windowRef(_windowRef), m_clearColour(_clearColour)
+    WindowToVulkanHandler::WindowToVulkanHandler(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour, bool _renderImGui) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_windowRef(_windowRef), m_clearColour(_clearColour), m_renderImGui(_renderImGui)
     {
         createSurface();
 
@@ -34,7 +34,9 @@ namespace Mark::RendererVK
 
         m_vulkanCommandBuffers.createCommandPool();
 
-        m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithGUI());
+        if (m_renderImGui) {
+            m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithGUI());
+        }
         m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithoutGUI());
 
         m_vulkanCommandBuffers.createCopyCommandBuffer();
@@ -123,7 +125,7 @@ namespace Mark::RendererVK
         m_uniformBuffer.updateUniformBuffer(imageIndex, tempData);
 
         // Submit the command buffer for this image
-        if (VkCore->imguiHandler().showGUI()) {
+        if (m_renderImGui && VkCore->imguiHandler().showGUI()) {
             VkCommandBuffer imguiCmdBuffer = VkCore->imguiHandler().prepareCommandBuffer(imageIndex);
             VkCommandBuffer cmdBuffers[] = { m_vulkanCommandBuffers.commandBufferWithGUI(imageIndex), imguiCmdBuffer };
 

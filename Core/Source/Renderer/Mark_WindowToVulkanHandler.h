@@ -11,7 +11,7 @@ namespace Mark::RendererVK
 {
     struct WindowToVulkanHandler 
     {
-        WindowToVulkanHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour);
+        WindowToVulkanHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour, bool _renderImGui = false);
         ~WindowToVulkanHandler();
         WindowToVulkanHandler(const WindowToVulkanHandler&) = delete;
         WindowToVulkanHandler& operator=(const WindowToVulkanHandler&) = delete;
@@ -33,6 +33,8 @@ namespace Mark::RendererVK
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         Platform::Window& m_windowRef;
         VkClearColorValue m_clearColour{};
+
+        bool m_renderImGui{ false }; // MainwindowMay render ImGui, seperate windows should always be false
 
         // TEMP list of meshes to render for this window
         std::vector<std::shared_ptr<MeshHandler>> m_meshesToDraw;

@@ -13,7 +13,7 @@ namespace Mark::Platform
 {
     struct Window 
     {
-        Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, VkClearColorValue _clearColour, bool _borderless = true);
+        Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, VkClearColorValue _clearColour, bool _borderless = true, bool _renderImGui = false);
         ~Window();
 
         GLFWwindow* handle() const { return m_window; }

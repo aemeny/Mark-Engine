@@ -9,7 +9,7 @@
 
 namespace Mark::Platform
 {
-    Window::Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, VkClearColorValue _clearColour, bool _borderless)
+    Window::Window(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, int _width, int _height, std::string_view _title, VkClearColorValue _clearColour, bool _borderless, bool _renderImGui)
         : m_borderless(_borderless), m_windowName(_title), m_width(_width), m_height(_height)
     {
         // Create GLFW window
@@ -31,7 +31,7 @@ namespace Mark::Platform
         MARK_INFO_C(Utils::Category::GLFW, "GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
 
         // Create Vulkan handler
-        m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, *this, _clearColour);
+        m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, *this, _clearColour, _renderImGui);
     }
 
     Window::~Window()

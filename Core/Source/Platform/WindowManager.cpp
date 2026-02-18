@@ -30,7 +30,7 @@ namespace Mark::Platform
             // Create the main editor window
             glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
             VkClearColorValue clearColour = { 0.91f, 0.1f, 0.12f, 1.0f }; // Fallback clear colour for main window
-            create(1280, 720, "Mark Editor", clearColour, true);
+            create(1280, 720, "Mark Editor", clearColour, true, true/*Main window allows ImGui to render*/);
             glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
         }
         else if (m_impl->m_windows.empty())
@@ -41,9 +41,9 @@ namespace Mark::Platform
         return *m_impl->m_windows.front(); 
     }
 
-    Window& WindowManager::create(int _width, int _height, const char* _title, VkClearColorValue _clearColour, bool _borderless)
+    Window& WindowManager::create(int _width, int _height, const char* _title, VkClearColorValue _clearColour, bool _borderless, bool _renderImGui)
     {
-        m_impl->m_windows.emplace_back(std::make_unique<Window>(m_vulkanCoreRef, _width, _height, _title, _clearColour, _borderless));
+        m_impl->m_windows.emplace_back(std::make_unique<Window>(m_vulkanCoreRef, _width, _height, _title, _clearColour, _borderless, _renderImGui));
         return *m_impl->m_windows.back();
     }
 
