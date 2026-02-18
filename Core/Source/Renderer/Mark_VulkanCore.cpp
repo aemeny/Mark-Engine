@@ -340,14 +340,47 @@ namespace Mark::RendererVK
             MARK_ERROR("Selected GPU does not support dynamic rendering, which is required for Mark");
         }
 
+        // --- Decide caps ---
+        const VkPhysicalDeviceLimits& limits = selectedPhysical.m_properties.limits;
+
+        // Meshes: each mesh requires 2 storage buffer descriptors (vertex + index)
+        const uint32_t maxMeshesFromSet = limits.maxDescriptorSetStorageBuffers / 2u;
+        const uint32_t maxMeshesFromStage = limits.maxPerStageDescriptorStorageBuffers / 2u;
+        const uint32_t maxMeshesHard = std::min(maxMeshesFromSet, maxMeshesFromStage);
+        const uint32_t requestedMaxMeshes = 4096u;
+        m_bindlessCaps.maxMeshes = std::min(requestedMaxMeshes, maxMeshesHard);
+        if (m_bindlessCaps.maxMeshes == 0) {
+            MARK_ERROR("Bindless mesh cap resolved to 0 (storage buffer descriptor limits too small)");
+        }
+
+        // Textures: combined image sampler counts against both sampler + sampled-image limits.
+        const uint32_t maxCombinedSet = std::min(limits.maxDescriptorSetSamplers, limits.maxDescriptorSetSampledImages);
+        const uint32_t maxCombinedStage = std::min(limits.maxPerStageDescriptorSamplers, limits.maxPerStageDescriptorSampledImages);
+        const uint32_t maxTexturesHard = std::min(maxCombinedSet, maxCombinedStage);
+        const uint32_t requestedMaxTextures = m_bindlessCaps.maxMeshes * m_bindlessCaps.numAttachableTextures;
+        m_bindlessCaps.maxTextureDescriptors = std::min(requestedMaxTextures, maxTexturesHard);
+        if (m_bindlessCaps.maxTextureDescriptors == 0) {
+            MARK_ERROR("Bindless texture descriptor cap resolved to 0 (sampler/sample limits too small)");
+        }
+
+        MARK_INFO_C(Utils::Category::Vulkan,
+            "Bindless feature check. Caps: maxMeshes=%u (requested=%u, set=%u, stage=%u), maxTextureDescriptors=%u",
+            m_bindlessCaps.maxMeshes, requestedMaxMeshes, maxMeshesFromSet, maxMeshesFromStage, m_bindlessCaps.maxTextureDescriptors);
+
         // Enable Vulkan features
-        VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES
+        VkPhysicalDeviceVulkan12Features v12 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+            .pNext = nullptr,
+            .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+            .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+            .descriptorBindingPartiallyBound = VK_TRUE,
+            .descriptorBindingVariableDescriptorCount = VK_TRUE,
+            .runtimeDescriptorArray = VK_TRUE
         };
 
         VkPhysicalDeviceVulkan13Features v13 = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-            .pNext = &indexingFeatures,
+            .pNext = &v12,
             .synchronization2 = VK_TRUE,
             .dynamicRendering = VK_TRUE
         };

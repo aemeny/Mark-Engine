@@ -1,4 +1,5 @@
 #version 460
+#extension GL_EXT_nonuniform_qualifier : enable
 
 struct VertexData
 {
@@ -8,15 +9,21 @@ struct VertexData
     float u,  v;        // uv
 };
 
+layout(push_constant) uniform PushConstants
+{
+    uint meshIndex;    // which mesh SSBO to read from
+    uint textureIndex; // Unsed in Vertex (kept for shared layout with Fragment Shader)
+} pushConstant;
+
 layout (binding = 0) readonly buffer Vertices { 
     VertexData data[]; 
-} in_Vertices;
+} in_Vertices[];
 
 layout (binding = 1) readonly buffer Indices { 
     uint data[]; 
-} in_Indices;
+} in_Indices[];
 
-layout (binding = 2) /*readonly*/ uniform UniformBuffer { 
+layout (binding = 2) uniform UniformBuffer { 
     mat4 WVP; 
 } ubo;
 
@@ -24,8 +31,9 @@ layout (location = 0) out vec2 out_TexCoord;
 
 void main()
 {
-    uint vertexIndex = in_Indices.data[gl_VertexIndex];
-    VertexData vertex = in_Vertices.data[vertexIndex];
+    uint meshIndex = nonuniformEXT(pushConstant.meshIndex);
+    uint vertexIndex = in_Indices[meshIndex].data[gl_VertexIndex];
+    VertexData vertex = in_Vertices[meshIndex].data[vertexIndex];
 
     vec3 pos = vec3(vertex.px, vertex.py, vertex.pz);
 

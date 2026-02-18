@@ -192,14 +192,26 @@ namespace Mark::RendererVK
     {
         auto rtn = std::make_shared<MeshHandler>(m_vulkanCoreRef, m_vulkanCommandBuffers);
 
-        const auto assetPath = m_vulkanCoreRef.lock()->assetPath(_meshPath); // Test cat model
+        const auto assetPath = m_vulkanCoreRef.lock()->assetPath(_meshPath);
         rtn->loadFromOBJ(assetPath.string().c_str(), true/*Flip texture vertically for Vulkan*/);
         rtn->uploadToGPU();
 
         m_meshesToDraw.push_back(rtn);
 
-        // Rebuild descriptors to include new mesh
-        m_graphicsPipeline.rebuildDescriptors();
+
+        // Ensure GPU isn't using descriptor sets / command buffers while being updated.
+        auto VkCore = m_vulkanCoreRef.lock();
+        if (VkCore) {
+            VkCore->graphicsQueue().waitIdle();
+            VkCore->presentQueue().waitIdle();
+        }
+
+        const uint32_t newMeshIndex = static_cast<uint32_t>(m_meshesToDraw.size() - 1);
+        if (!m_graphicsPipeline.tryUpdateDescriptorsWithMesh(newMeshIndex))
+        {
+            m_graphicsPipeline.rebuildDescriptors();
+        }
+
         // Re-record command buffers to draw the new mesh
         m_vulkanCommandBuffers.recordCommandBuffers(m_clearColour);
 

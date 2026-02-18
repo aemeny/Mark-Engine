@@ -15,6 +15,12 @@ namespace Mark::RendererVK
     struct VulkanVertexBuffer;
     struct WindowToVulkanHandler;
 
+    struct BindlessCaps
+    {
+        uint32_t maxMeshes = 0;
+        uint32_t maxTextureDescriptors = 0;
+        const uint32_t numAttachableTextures = 1; // Max number of textures that the mesh can use
+    };
     struct VulkanCore
     {
         VulkanCore(const EngineAppInfo& _appInfo, Core& _core);
@@ -54,6 +60,8 @@ namespace Mark::RendererVK
 
         // Vertex buffer uploader getter
         VulkanVertexBuffer& vertexUploader() { return *m_vertexUploader; }
+
+        BindlessCaps& bindlessCaps() noexcept { return m_bindlessCaps; }
 
         // TEMP FILE PATH
         // --- Asset root / path helpers ---
@@ -95,6 +103,9 @@ namespace Mark::RendererVK
 
         // Vertex buffer uploader
         std::unique_ptr<VulkanVertexBuffer> m_vertexUploader;
+
+        // Bindless / descriptor indexing caps
+        BindlessCaps m_bindlessCaps{};
 
         // Cache
         std::unique_ptr<VulkanShaderCache> m_shaderCache;

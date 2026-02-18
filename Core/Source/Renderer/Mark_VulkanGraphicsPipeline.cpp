@@ -5,10 +5,13 @@
 #include "Utils/VulkanUtils.h"
 #include "Utils/Mark_Utils.h"
 
+#include <algorithm>
+
 namespace Mark::RendererVK
 {
     // Hash helper for descriptor bindings (order-independent by binding index)
-    static uint64_t HashBindings(const std::vector<VkDescriptorSetLayoutBinding>& _bindings)
+    static uint64_t HashBindings(const std::vector<VkDescriptorSetLayoutBinding>& _bindings,
+        const std::vector<VkDescriptorBindingFlags>& _flags, VkDescriptorSetLayoutCreateFlags _layoutFlags)
     {
         // FNV-1a 64-bit
         uint64_t h = 1469598103934665603ull;
@@ -18,24 +21,45 @@ namespace Mark::RendererVK
             h *= 1099511628211ull;
         };
 
-        // Deterministic order
-        std::vector<VkDescriptorSetLayoutBinding> temp = _bindings;
-        std::sort(temp.begin(), temp.end(), [](auto& _a, auto& _b) 
-            { return _a.binding < _b.binding; }
-        );
+        mix(static_cast<uint64_t>(_layoutFlags));
 
-        for (const auto& b : temp)
+        // Deterministic order
+        struct Entry { VkDescriptorSetLayoutBinding b; VkDescriptorBindingFlags f; };
+        std::vector<Entry> temp;
+        temp.reserve(_bindings.size());
+        for (size_t i = 0; i < _bindings.size(); i++) 
         {
-            mix(b.binding);
-            mix(static_cast<uint64_t>(b.descriptorType));
-            mix(b.descriptorCount);
-            mix(static_cast<uint64_t>(b.stageFlags));
+            VkDescriptorBindingFlags f = (i < _flags.size()) ? _flags[i] : 0;
+            temp.push_back({ _bindings[i], f });
+        }
+        std::sort(temp.begin(), temp.end(), [](const Entry& a, const Entry& b) { return a.b.binding < b.b.binding; });
+
+        for (const auto& e : temp)
+        {
+            mix(e.b.binding);
+            mix(static_cast<uint64_t>(e.b.descriptorType));
+            mix(e.b.descriptorCount);
+            mix(static_cast<uint64_t>(e.b.stageFlags));
+            mix(static_cast<uint64_t>(e.f));
         }
         return h;
     }
 
+    static uint32_t GrowPow2Capacity(uint32_t required, uint32_t maxCap)
+    {
+        required = std::max(1u, required);
+        maxCap = std::max(1u, maxCap);
+
+        uint32_t cap = 64u;
+        if (cap > maxCap) cap = maxCap;
+        while (cap < required && cap < maxCap) cap <<= 1u;
+        if (cap < required) cap = required;
+        cap = std::min(cap, maxCap);
+        return std::max(1u, cap);
+    }
+
     VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanUniformBuffer& _uniformBufferRef, const std::vector<std::shared_ptr<MeshHandler>>* _meshesToDraw) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_uniformBufferRef(_uniformBufferRef), m_meshesToDraw(_meshesToDraw)
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_uniformBufferRef(_uniformBufferRef), m_meshesToDraw(_meshesToDraw), m_bindlessCaps(_vulkanCoreRef.lock()->bindlessCaps())
     {}
 
     void VulkanGraphicsPipeline::destroyGraphicsPipeline()
@@ -81,19 +105,37 @@ namespace Mark::RendererVK
             return;
         }
 
+        m_maxMeshesLayout = m_bindlessCaps.maxMeshes;
+        m_maxTexturesLayout = std::min<uint32_t>(4096u, m_bindlessCaps.maxTextureDescriptors);
+        if (m_maxTexturesLayout == 0) m_maxTexturesLayout = 1;
+        if (m_maxTexturesLayout < m_maxMeshesLayout)
+        {
+            MARK_WARN_C(Utils::Category::Vulkan,
+                "Bindless: maxTexturesLayout (%u) < maxMeshesLayout (%u). Clamping mesh layout to textures.",
+                m_maxTexturesLayout, m_maxMeshesLayout);
+            m_maxMeshesLayout = m_maxTexturesLayout / m_bindlessCaps.numAttachableTextures;
+        }
+
         // Create descriptor sets for each mesh we have to draw if preloading meshes
-        if (m_meshesToDraw && !m_meshesToDraw->empty()) {
-            MARK_INFO_C(Utils::Category::Vulkan, "Preloading meshes for graphics pipeline");
+        if (m_meshesToDraw && !m_meshesToDraw->empty()) 
+        {
             m_meshCount = static_cast<uint32_t>(m_meshesToDraw->size());
-            createDescriptorSets(device);
+            if (m_meshCount > m_maxMeshesLayout) {
+                MARK_ERROR("Mesh count (%u) exceeds bindless MAX_MESHES (%u). Clamping.", m_meshCount, m_maxMeshesLayout);
+                m_meshCount = m_maxMeshesLayout;
+            }
+            const uint32_t requiredTextures = std::min(m_meshCount, m_maxTexturesLayout);
+            m_textureDescriptorCount = GrowPow2Capacity(requiredTextures, m_maxTexturesLayout);
         }
         else {
             m_meshCount = 0;
+            m_textureDescriptorCount = 1;
         }
 
         // Ensure descriptor set layout exists for hashing
-        if (m_descriptorSetLayout == VK_NULL_HANDLE)
-            createDescriptorSetLayout(device);
+        createDescriptorSetLayout(device);
+
+        if (m_meshCount) createDescriptorSets(device);
 
         // Cache key for this render-target + program + baked state
         const VkFormat colourFormat = m_swapChainRef.surfaceFormat().format;
@@ -118,10 +160,18 @@ namespace Mark::RendererVK
             [&](const VulkanGraphicsPipelineKey& _key)->GraphicsPipelineCreateResult
             {
                 VkPipelineLayout layout = VK_NULL_HANDLE;
+                // Push constants required by bindless shaders (meshIndex, textureIndex)
+                VkPushConstantRange pcRange = {
+                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                    .offset = 0,
+                    .size = sizeof(uint32_t) * 2u
+                };
                 VkPipelineLayoutCreateInfo pipelineLayoutInfo = { 
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
                     .setLayoutCount = m_descriptorSetLayout ? 1u : 0u,
-                    .pSetLayouts = m_descriptorSetLayout ? &m_descriptorSetLayout : nullptr
+                    .pSetLayouts = m_descriptorSetLayout ? &m_descriptorSetLayout : nullptr,
+                    .pushConstantRangeCount = 1,
+                    .pPushConstantRanges = &pcRange
                 };
 
                 VkResult res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout);
@@ -263,19 +313,18 @@ namespace Mark::RendererVK
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Created");
     }
 
-    void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex, uint32_t _meshIndex)
+    void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex)
     {
         vkCmdBindPipeline(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_cachedRef.get());
 
-        if (!m_descriptorSets.empty() && m_meshCount) 
+        if (!m_descriptorSets.empty()) 
         {
-            const uint32_t index = _imageIndex * m_meshCount + _meshIndex;
-            if (index < m_descriptorSets.size()) 
+            if (_imageIndex < m_descriptorSets.size())
             {
                 vkCmdBindDescriptorSets(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout,
                     0, // firstSet
                     1, // descriptorSetCount
-                    &m_descriptorSets[index],
+                    &m_descriptorSets[_imageIndex],
                     0, // dynamicOffsetCount
                     nullptr // pDynamicOffsets
                 );
@@ -283,48 +332,161 @@ namespace Mark::RendererVK
         }
     }
 
+    bool VulkanGraphicsPipeline::tryUpdateDescriptorsWithMesh(const uint32_t _newMeshIndex)
+    {
+        auto VkCore = m_vulkanCoreRef.lock();
+        if (!VkCore) return false;
+        VkDevice device = VkCore->device();
+
+        // If no sets yet, caller must rebuild
+        if (m_descriptorSets.empty() || m_descriptorPool == VK_NULL_HANDLE || m_descriptorSetLayout == VK_NULL_HANDLE)
+            return false;
+        if (!m_meshesToDraw) return false;
+        if (_newMeshIndex >= m_meshesToDraw->size()) return false;
+
+        const uint32_t requiredMeshes = _newMeshIndex + 1u;
+        // Can grow until m_maxMeshesLayout
+        if (requiredMeshes > m_maxMeshesLayout)
+            return false;
+
+        // Textures cannot grow past allocated capacity without reallocating sets.
+        if (requiredMeshes > m_textureDescriptorCount)
+            return false;
+
+        const auto& mesh = *m_meshesToDraw->at(_newMeshIndex);
+        if (!mesh.hasVertexBuffer() || !mesh.hasIndexBuffer()) {
+            MARK_ERROR("tryAppendMeshAndUpdateDescriptors: mesh %u missing GPU buffers", _newMeshIndex);
+            return false;
+        }
+
+        VkDescriptorBufferInfo vbInfo{ mesh.vertexBuffer(), 0, VK_WHOLE_SIZE };
+        VkDescriptorBufferInfo ibInfo{ mesh.indexBuffer(), 0, VK_WHOLE_SIZE };
+
+        TextureHandler* tex = mesh.texture();
+        VkDescriptorImageInfo imgInfo{};
+        if (tex)
+        {
+            imgInfo = {
+                .sampler = tex->sampler(),
+                .imageView = tex->imageView(),
+                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            };
+        }
+
+        const uint32_t numImages = static_cast<uint32_t>(m_swapChainRef.numImages());
+        std::vector<VkWriteDescriptorSet> writes;
+        writes.reserve(numImages * (2u + (tex ? 1u : 0u)));
+
+        for (uint32_t img = 0; img < numImages; ++img)
+        {
+            VkDescriptorSet set = m_descriptorSets[img];
+
+            // Vertices SSBO slot
+            writes.push_back(VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = set,
+                .dstBinding = Binding::verticesSSBO,
+                .dstArrayElement = _newMeshIndex,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .pImageInfo = nullptr,
+                .pBufferInfo = &vbInfo,
+                .pTexelBufferView = nullptr
+            });
+
+            // Indices SSBO slot
+            writes.push_back(VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = set,
+                .dstBinding = Binding::indicesSSBO,
+                .dstArrayElement = _newMeshIndex,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .pImageInfo = nullptr,
+                .pBufferInfo = &ibInfo,
+                .pTexelBufferView = nullptr
+            });
+
+            // Texture slot
+            if (tex) {
+                writes.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = set,
+                    .dstBinding = Binding::texture,
+                    .dstArrayElement = _newMeshIndex,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &imgInfo,
+                    .pBufferInfo = nullptr,
+                    .pTexelBufferView = nullptr
+                });
+
+            }
+        }
+
+        vkUpdateDescriptorSets(device, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+
+        // Increase mesh count for command buffer recording loops.
+        m_meshCount = requiredMeshes;
+        return true;
+    }
+
     void VulkanGraphicsPipeline::rebuildDescriptors()
     {
         VkDevice device = m_vulkanCoreRef.lock()->device();
 
-        if (m_descriptorPool) { 
-            vkDestroyDescriptorPool(device, m_descriptorPool, nullptr); 
-            m_descriptorPool = VK_NULL_HANDLE; 
+        if (m_descriptorPool) {
+            vkDestroyDescriptorPool(device, m_descriptorPool, nullptr);
+            m_descriptorPool = VK_NULL_HANDLE;
         }
         m_descriptorSets.clear();
 
-        m_meshCount = m_meshesToDraw ? static_cast<uint32_t>(m_meshesToDraw->size()) : 0;
-        if (m_meshCount) {
-            createDescriptorSets(device);
+        if (m_maxMeshesLayout == 0)  m_maxMeshesLayout = m_bindlessCaps.maxMeshes;
+        if (m_maxTexturesLayout == 0) m_maxTexturesLayout = std::min<uint32_t>(4096u, m_bindlessCaps.maxTextureDescriptors);
+        if (m_maxTexturesLayout < m_maxMeshesLayout) 
+        {
+            MARK_WARN_C(Utils::Category::Vulkan, "Bindless: maxTexturesLayout (%u) < maxMeshesLayout (%u). Clamping mesh layout to textures for safety.",
+                m_maxTexturesLayout, m_maxMeshesLayout);
+            m_maxMeshesLayout = (m_maxTexturesLayout / m_bindlessCaps.numAttachableTextures);
         }
+
+        m_meshCount = m_meshesToDraw ? static_cast<uint32_t>(m_meshesToDraw->size()) : 0;
+        if (m_meshCount > m_maxMeshesLayout) {
+            MARK_ERROR("Mesh count (%u) exceeds bindless MAX_MESHES (%u). Clamping.", m_meshCount, m_maxMeshesLayout);
+            m_meshCount = m_maxMeshesLayout;
+        }
+        const uint32_t requiredTextures = std::min(m_meshCount, m_maxTexturesLayout);
+        m_textureDescriptorCount = GrowPow2Capacity(requiredTextures, m_maxTexturesLayout);
+
+        if (m_meshCount) createDescriptorSets(device);
     }
 
     void VulkanGraphicsPipeline::createDescriptorSets(VkDevice _device)
     {
         const uint32_t numImages = static_cast<uint32_t>(m_swapChainRef.numImages());
-        const uint32_t totalSets = numImages * m_meshCount;
 
-        createDescriptorPool(totalSets, _device);
-        if (m_descriptorSetLayout == VK_NULL_HANDLE) {
-            createDescriptorSetLayout(_device);
-        }
-        allocateDescriptorSets(totalSets, _device);
-        updateDescriptorSets(numImages, totalSets, _device);
+        createDescriptorPool(numImages, _device);
+        allocateDescriptorSets(numImages, _device);
+        updateDescriptorSets(numImages, _device);
     }
 
-    void VulkanGraphicsPipeline::createDescriptorPool(uint32_t _numSets, VkDevice _device)
+    void VulkanGraphicsPipeline::createDescriptorPool(uint32_t _numImages, VkDevice _device)
     {
         std::vector<VkDescriptorPoolSize> sizes;
-        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numSets * 2 }); // vertex + index SSBO per set (0)
-        if (m_uniformBufferRef.bufferCount() > 0) {
-            sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numSets }); // binding UBO per set (2)
-        }
-        sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _numSets }); // Binding texture (3)
+        // NOTE: descriptor pool counts are in DESCRIPTORS, not sets.
+        // Each set contains:
+        //  - binding 0: MAX_MESHES storage buffers
+        //  - binding 1: MAX_MESHES storage buffers
+        //  - binding 2: 1 UBO
+        //  - binding 3: textureDescriptorCount combined image samplers (variable)
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, _numImages * m_maxMeshesLayout * 2u });
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _numImages });
+        sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, _numImages * m_textureDescriptorCount });
 
         VkDescriptorPoolCreateInfo poolCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .flags = 0,
-            .maxSets = _numSets,
+            .maxSets = _numImages,
             .poolSizeCount = static_cast<uint32_t>(sizes.size()),
             .pPoolSizes = sizes.data()
         };
@@ -339,24 +501,27 @@ namespace Mark::RendererVK
         if (m_descriptorSetLayout != VK_NULL_HANDLE)
             return;
         m_bindings.clear();
+        m_bindingFlags.clear();
 
         VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_VB = {
             .binding = Binding::verticesSSBO,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = 1,
+            .descriptorCount = m_maxMeshesLayout,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = nullptr
         };
         m_bindings.push_back(vertexShaderLayoutBinding_VB);
+        m_bindingFlags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT);
 
         VkDescriptorSetLayoutBinding indexBufferBinding = {
             .binding = Binding::indicesSSBO,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = 1,
+            .descriptorCount = m_maxMeshesLayout,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = nullptr
         };
         m_bindings.push_back(indexBufferBinding);
+        m_bindingFlags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT);
 
         VkDescriptorSetLayoutBinding vertexShaderLayoutBinding_UBO = {
             .binding = Binding::UBO,
@@ -365,23 +530,30 @@ namespace Mark::RendererVK
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
             .pImmutableSamplers = nullptr
         };
-        if (m_uniformBufferRef.bufferCount() > 0) {
-            m_bindings.push_back(vertexShaderLayoutBinding_UBO);
-        }
+        m_bindings.push_back(vertexShaderLayoutBinding_UBO);
+        m_bindingFlags.push_back(0);
 
         VkDescriptorSetLayoutBinding fragmentShaderLayoutBinding = {
             .binding = Binding::texture,
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 1,
+            .descriptorCount = m_maxTexturesLayout,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = nullptr
         };
         m_bindings.push_back(fragmentShaderLayoutBinding);
+        m_bindingFlags.push_back(VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT);
+
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+            .pNext = nullptr,
+            .bindingCount = static_cast<uint32_t>(m_bindingFlags.size()),
+            .pBindingFlags = m_bindingFlags.data()
+        };
 
         VkDescriptorSetLayoutCreateInfo layoutCreateInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0, // Reserved - so must be 0
+            .pNext = &bindingFlagsInfo,
+            .flags = 0, // no UPDATE_AFTER_BIND
             .bindingCount = static_cast<uint32_t>(m_bindings.size()),
             .pBindings = m_bindings.data()
         };
@@ -390,124 +562,133 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Create Descriptor Set Layout");
 
         // Hash the bindings for future reference
-        m_descSetLayoutHash = HashBindings(m_bindings);
+        m_descSetLayoutHash = HashBindings(m_bindings, m_bindingFlags, layoutCreateInfo.flags);
     }
 
-    void VulkanGraphicsPipeline::allocateDescriptorSets(uint32_t _numSets, VkDevice _device)
+    void VulkanGraphicsPipeline::allocateDescriptorSets(uint32_t _numImages, VkDevice _device)
     {
-        std::vector<VkDescriptorSetLayout> layouts(_numSets, m_descriptorSetLayout);
+        std::vector<VkDescriptorSetLayout> layouts(_numImages, m_descriptorSetLayout);
+        std::vector<uint32_t> variableCounts(_numImages, m_textureDescriptorCount);
+
+        VkDescriptorSetVariableDescriptorCountAllocateInfo varInfo = {
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorSetCount = _numImages,
+            .pDescriptorCounts = variableCounts.data()
+        };
 
         VkDescriptorSetAllocateInfo allocInfo = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .pNext = nullptr,
+            .pNext = &varInfo,
             .descriptorPool = m_descriptorPool,
-            .descriptorSetCount = _numSets,
+            .descriptorSetCount = _numImages,
             .pSetLayouts = layouts.data()
         };
 
-        m_descriptorSets.resize(_numSets);
+        m_descriptorSets.resize(_numImages);
 
         VkResult res = vkAllocateDescriptorSets(_device, &allocInfo, m_descriptorSets.data());
         CHECK_VK_RESULT(res, "Allocate Descriptor Sets");
     }
 
-    void VulkanGraphicsPipeline::updateDescriptorSets(uint32_t _numImages, uint32_t _numSets, VkDevice _device)
+    void VulkanGraphicsPipeline::updateDescriptorSets(uint32_t _numImages, VkDevice _device)
     {
-        // One SSBO info per set; one UBO info per image
-        std::vector<VkDescriptorBufferInfo> ssboInfos(_numSets);
-        std::vector<VkDescriptorBufferInfo> indexInfos(_numSets);
-        std::vector<VkDescriptorBufferInfo> uboInfos;
+        std::vector<VkDescriptorBufferInfo> ssboInfos(m_meshCount);
+        std::vector<VkDescriptorBufferInfo> indexInfos(m_meshCount);
+        std::vector<VkDescriptorBufferInfo> uboInfos(_numImages);
+        std::vector<VkDescriptorImageInfo> imageInfos(m_textureDescriptorCount);
+        std::vector<uint8_t> hasTexture(m_textureDescriptorCount, 0);
         std::vector<VkWriteDescriptorSet> writes;
 
-        const bool hasUBO = (m_uniformBufferRef.bufferCount() > 0);
-        if (hasUBO) 
-        {
-            uboInfos.resize(_numImages);
-            for (uint32_t img = 0; img < _numImages; img++) {
-                uboInfos[img] = m_uniformBufferRef.descriptorInfo(img);
-            }
+        for (uint32_t img = 0; img < _numImages; img++) {
+            uboInfos[img] = m_uniformBufferRef.descriptorInfo(img);
         }
-        writes.reserve(_numSets * (hasUBO ? 2u : 1u));
 
-        for (uint32_t img = 0; img < _numImages; img++)
+        // Build mesh buffer infos once
+        for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
         {
-            for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
+            const auto& mesh = *m_meshesToDraw->at(meshIndex);
+            if (!mesh.hasVertexBuffer()) MARK_ERROR("Mesh has no vertex GPU buffer");
+            if (!mesh.hasIndexBuffer())  MARK_ERROR("Mesh has no index GPU buffer");
+
+            ssboInfos[meshIndex] = { mesh.vertexBuffer(), 0, VK_WHOLE_SIZE };
+            indexInfos[meshIndex] = { mesh.indexBuffer(), 0, VK_WHOLE_SIZE };
+
+            if (meshIndex < m_textureDescriptorCount)
             {
-                const uint32_t index = img * m_meshCount + meshIndex;
-                const auto& mesh = *m_meshesToDraw->at(meshIndex);
-                const auto texture = mesh.texture();
-
-                if (!mesh.hasVertexBuffer()) {
-                    MARK_ERROR("Mesh has no vertex GPU buffer to bind to descriptor set");
-                }
-                ssboInfos[index] = {
-                    .buffer = mesh.vertexBuffer(),
-                    .offset = 0,
-                    .range = VK_WHOLE_SIZE
-                };
-                writes.push_back(VkWriteDescriptorSet{
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = m_descriptorSets[index],
-                    .dstBinding = Binding::verticesSSBO,
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                    .pImageInfo = nullptr,
-                    .pBufferInfo = &ssboInfos[index],
-                    .pTexelBufferView = nullptr
-                });
-
-                if (!mesh.hasIndexBuffer()) {
-                    MARK_ERROR("Mesh has no index GPU buffer to bind to descriptor set");
-                }
-                indexInfos[index] = {
-                    .buffer = mesh.indexBuffer(),
-                    .offset = 0,
-                    .range = VK_WHOLE_SIZE
-                };
-                writes.push_back(VkWriteDescriptorSet{
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = m_descriptorSets[index],
-                    .dstBinding = Binding::indicesSSBO,
-                    .dstArrayElement = 0,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                    .pImageInfo = nullptr,
-                    .pBufferInfo = &indexInfos[index],
-                    .pTexelBufferView = nullptr
-                });
-
-                if (hasUBO) 
+                auto texture = mesh.texture();
+                if (!texture) {
+                    MARK_WARN_C(Utils::Category::System ,"Mesh has no texture but shader will sample one.");
+                } 
+                else 
                 {
-                    writes.push_back(VkWriteDescriptorSet{
-                        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        .dstSet = m_descriptorSets[index],
-                        .dstBinding = Binding::UBO,
-                        .dstArrayElement = 0,
-                        .descriptorCount = 1,
-                        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                        .pImageInfo = nullptr,
-                        .pBufferInfo = &uboInfos[img],
-                        .pTexelBufferView = nullptr
-                    });
-                }
-
-                if (texture) 
-                {
-                    VkDescriptorImageInfo imageInfo = {
+                    imageInfos[meshIndex] = {
                         .sampler = texture->sampler(),
                         .imageView = texture->imageView(),
                         .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
                     };
+                    hasTexture[meshIndex] = 1;
+                }
+            }
+        }
+        writes.reserve(_numImages * (1u + (m_meshCount * 2u) + std::min(m_meshCount, m_textureDescriptorCount)));
 
+        for (uint32_t img = 0; img < _numImages; img++)
+        {
+            VkDescriptorSet set = m_descriptorSets[img];
+
+            // UBO
+            writes.push_back(VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = set,
+                .dstBinding = Binding::UBO,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pImageInfo = nullptr,
+                .pBufferInfo = &uboInfos[img],
+                .pTexelBufferView = nullptr
+            });
+
+            for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
+            {
+                // Vertices SSBO
+                writes.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = set,
+                    .dstBinding = Binding::verticesSSBO,
+                    .dstArrayElement = meshIndex,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .pImageInfo = nullptr,
+                    .pBufferInfo = &ssboInfos[meshIndex],
+                    .pTexelBufferView = nullptr
+                });
+
+                // Indices SSBO
+                writes.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = set,
+                    .dstBinding = Binding::indicesSSBO,
+                    .dstArrayElement = meshIndex,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                    .pImageInfo = nullptr,
+                    .pBufferInfo = &indexInfos[meshIndex],
+                    .pTexelBufferView = nullptr
+                });
+
+                // Texture
+                if (meshIndex < m_textureDescriptorCount && hasTexture[meshIndex])
+                {
                     writes.push_back(VkWriteDescriptorSet{
                         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                        .dstSet = m_descriptorSets[index],
+                        .dstSet = set,
                         .dstBinding = Binding::texture,
-                        .dstArrayElement = 0,
+                        .dstArrayElement = meshIndex,
                         .descriptorCount = 1,
                         .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                        .pImageInfo = &imageInfo,
+                        .pImageInfo = &imageInfos[meshIndex],
                         .pBufferInfo = nullptr,
                         .pTexelBufferView = nullptr
                     });

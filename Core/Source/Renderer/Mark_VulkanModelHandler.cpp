@@ -45,6 +45,8 @@ namespace Mark::RendererVK
 
         if (m_texture) {
             m_texture->destroyTextureHandler(VkCore->device());
+            delete m_texture;
+            m_texture = nullptr;
         }
     }
 

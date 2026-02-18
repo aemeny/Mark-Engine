@@ -54,7 +54,7 @@ namespace Mark
         m_windows->main().vkHandler().addMesh("Models/Curuthers.obj");
         m_windows->main().vkHandler().initCameraController();
         // TEMP MULTI-WINDOW TESTING
-        //Platform::Window& window2 = m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
+        Platform::Window& window2 = m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);
         //window2.vkHandler().addMesh("Models/Curuthers.obj");
         //window2.vkHandler().initCameraController();
     }

@@ -115,6 +115,16 @@ namespace Mark::RendererVK
             const uint32_t instanceCount = 1;
             const uint32_t firstVertex = 0;
             const uint32_t firstInstance = 0;
+
+            struct PushConstants
+            {
+                uint32_t meshIndex;
+                uint32_t textureIndex;
+            };
+            
+            // Bind pipeline + descriptor set once per swapchain image
+            m_graphicsPipelineRef.bindPipeline(commandBuffer, i);
+
             for (uint32_t m = 0; m < m_graphicsPipelineRef.meshCount(); m++)
             {
                 const uint32_t indexCountForMesh = m_graphicsPipelineRef.indexCountForMesh(m);
@@ -124,7 +134,15 @@ namespace Mark::RendererVK
 
                 if (vertexCount == 0) continue; // Skip empty meshes
 
-                m_graphicsPipelineRef.bindPipeline(commandBuffer, i, m);
+                // 1 texture per mesh for now: textureIndex == meshIndex
+                PushConstants pushConstant{ m, m };
+                vkCmdPushConstants(commandBuffer,
+                    m_graphicsPipelineRef.pipelineLayout(),
+                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                    0, sizeof(PushConstants), 
+                    &pushConstant
+                );
+
                 vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
             }
 
