@@ -1,6 +1,6 @@
 #pragma once
-#include "Mark_VulkanBufferAndMemoryHelper.h"
-#include "Mark_VulkanTextureHandler.h"
+#include "Mark_BufferAndMemoryHelper.h"
+#include "Mark_TextureHandler.h"
 
 #include <glm/glm.hpp>
 #include <vector>

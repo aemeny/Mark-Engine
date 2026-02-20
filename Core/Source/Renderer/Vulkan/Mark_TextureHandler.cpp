@@ -1,7 +1,7 @@
-#include "Mark_VulkanTextureHandler.h"
+#include "Mark_TextureHandler.h"
 #include "Mark_VulkanCore.h"
-#include "Mark_VulkanBufferAndMemoryHelper.h"
-#include "Mark_VulkanCommandBuffers.h"
+#include "Mark_BufferAndMemoryHelper.h"
+#include "Mark_CommandBuffers.h"
 
 #include "Utils/Mark_Utils.h"
 #include "Utils/VulkanUtils.h"

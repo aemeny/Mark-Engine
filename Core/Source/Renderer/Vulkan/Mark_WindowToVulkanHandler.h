@@ -1,7 +1,7 @@
 #pragma once
-#include "Mark_VulkanCommandBuffers.h"
-#include "Mark_VulkanWindowQueueHelper.h"
-#include "Mark_VulkanVertexBuffer.h"
+#include "Mark_CommandBuffers.h"
+#include "Mark_WindowQueueHelper.h"
+#include "Mark_VertexBuffer.h"
 
 #include <array>
 #include "Engine/EarlyCameraController.h" // TEMP

@@ -1,8 +1,8 @@
 #pragma once
-#include "Mark_VulkanPhysicalDevices.h"
-#include "Mark_VulkanShader.h"
-#include "Mark_VulkanQueue.h"
-#include "Mark_VulkanGraphicsPipelineCache.h"
+#include "Mark_PhysicalDevices.h"
+#include "Mark_Shader.h"
+#include "Mark_Queue.h"
+#include "Mark_GraphicsPipelineCache.h"
 #include "Platform/imguiHandler.h"
 
 #include <filesystem>

@@ -1,6 +1,6 @@
 #include <Mark/Engine.h>
 #include "Mark_VulkanCore.h"
-#include "Mark_VulkanVertexBuffer.h"
+#include "Mark_VertexBuffer.h"
 #include "Mark_WindowToVulkanHandler.h"
 
 #include "Core.h"

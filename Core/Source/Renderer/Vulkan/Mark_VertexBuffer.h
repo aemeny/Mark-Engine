@@ -1,5 +1,5 @@
 #pragma once
-#include "Mark_VulkanBufferAndMemoryHelper.h"
+#include "Mark_BufferAndMemoryHelper.h"
 
 namespace Mark::RendererVK
 {

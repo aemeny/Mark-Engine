@@ -1,7 +1,7 @@
-#include "Mark_VulkanGraphicsPipeline.h"
+#include "Mark_GraphicsPipeline.h"
 #include "Mark_VulkanCore.h"
-#include "Mark_VulkanShader.h"
-#include "Mark_VulkanPhysicalDevices.h"
+#include "Mark_Shader.h"
+#include "Mark_PhysicalDevices.h"
 #include "Utils/VulkanUtils.h"
 #include "Utils/Mark_Utils.h"
 

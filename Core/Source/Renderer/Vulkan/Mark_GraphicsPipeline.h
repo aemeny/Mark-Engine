@@ -1,8 +1,8 @@
 #pragma once
-#include "Mark_VulkanGraphicsPipelineCache.h" 
-#include "Mark_VulkanSwapChain.h"
-#include "Mark_VulkanUniformBuffer.h"
-#include "Mark_VulkanModelHandler.h"
+#include "Mark_GraphicsPipelineCache.h" 
+#include "Mark_SwapChain.h"
+#include "Mark_UniformBuffer.h"
+#include "Mark_ModelHandler.h"
 
 namespace Mark::Platform{ struct Window; }
 namespace Mark::RendererVK

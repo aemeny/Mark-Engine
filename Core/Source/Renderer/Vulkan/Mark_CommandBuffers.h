@@ -1,6 +1,6 @@
 #pragma once
-#include "Mark_VulkanSwapChain.h"
-#include "Mark_VulkanGraphicsPipeline.h"
+#include "Mark_SwapChain.h"
+#include "Mark_GraphicsPipeline.h"
 #include "Utils/Mark_Utils.h"
 
 namespace Mark::RendererVK
