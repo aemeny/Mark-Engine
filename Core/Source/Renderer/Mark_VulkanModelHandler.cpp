@@ -1,5 +1,6 @@
 #include "Mark_VulkanModelHandler.h"
 #include "Renderer/Mark_VulkanCore.h"
+#include "Renderer/Mark_VulkanVertexBuffer.h"
 #include "Utils/Mark_Utils.h"
 
 #define GLM_ENABLE_EXPERIMENTAL

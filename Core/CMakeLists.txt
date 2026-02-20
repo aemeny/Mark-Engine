@@ -60,6 +60,8 @@ Source/Renderer/Mark_VulkanTextureHandler.h
 Source/Renderer/Mark_VulkanTextureHandler.cpp
 Source/Renderer/Mark_imguiRenderer.h
 Source/Renderer/Mark_imguiRenderer.cpp
+Source/Renderer/Mark_VulkanBufferAndMemoryHelper.h
+Source/Renderer/Mark_VulkanBufferAndMemoryHelper.cpp
 
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp

@@ -1,5 +1,5 @@
 #pragma once
-#include "Mark_VulkanVertexBuffer.h"
+#include "Mark_VulkanBufferAndMemoryHelper.h"
 #include "Mark_VulkanTextureHandler.h"
 
 #include <glm/glm.hpp>
