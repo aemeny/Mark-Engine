@@ -67,9 +67,8 @@ namespace Mark::RendererVK
         // Drop cache ref (decrements refcount inside the cache)
         m_cachedRef = {};
 
-        if (m_vulkanCoreRef.expired())
-        {
-            MARK_LOG_ERROR_C(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy graphics pipeline");
+        if (m_vulkanCoreRef.expired()) {
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy graphics pipeline");
         }
         auto device = m_vulkanCoreRef.lock()->device();
 
@@ -85,7 +84,7 @@ namespace Mark::RendererVK
 
         m_pipelineLayout = VK_NULL_HANDLE;
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Destroyed");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Destroyed");
     }
 
     void VulkanGraphicsPipeline::createGraphicsPipeline()
@@ -99,9 +98,8 @@ namespace Mark::RendererVK
         const auto fsPath = VkCore->assetPath("Shaders/TriangleTest.frag");
         VkShaderModule vs = VkCore->shaderCache().getOrCreateFromGLSL(vsPath.string().c_str());
         VkShaderModule fs = VkCore->shaderCache().getOrCreateFromGLSL(fsPath.string().c_str());
-        if (!vs || !fs)
-        {
-            MARK_LOG_ERROR_C(Utils::Category::Vulkan, "Failed to load shaders");
+        if (!vs || !fs) {
+            MARK_ERROR(Utils::Category::Vulkan, "Failed to load shaders");
             return;
         }
 
@@ -110,7 +108,7 @@ namespace Mark::RendererVK
         if (m_maxTexturesLayout == 0) m_maxTexturesLayout = 1;
         if (m_maxTexturesLayout < m_maxMeshesLayout)
         {
-            MARK_WARN_C(Utils::Category::Vulkan,
+            MARK_WARN(Utils::Category::Vulkan,
                 "Bindless: maxTexturesLayout (%u) < maxMeshesLayout (%u). Clamping mesh layout to textures.",
                 m_maxTexturesLayout, m_maxMeshesLayout);
             m_maxMeshesLayout = m_maxTexturesLayout / m_bindlessCaps.numAttachableTextures;
@@ -121,7 +119,7 @@ namespace Mark::RendererVK
         {
             m_meshCount = static_cast<uint32_t>(m_meshesToDraw->size());
             if (m_meshCount > m_maxMeshesLayout) {
-                MARK_ERROR("Mesh count (%u) exceeds bindless MAX_MESHES (%u). Clamping.", m_meshCount, m_maxMeshesLayout);
+                MARK_FATAL(Utils::Category::Vulkan, "Mesh count (%u) exceeds bindless MAX_MESHES (%u). Clamping.", m_meshCount, m_maxMeshesLayout);
                 m_meshCount = m_maxMeshesLayout;
             }
             const uint32_t requiredTextures = std::min(m_meshCount, m_maxTexturesLayout);
@@ -297,14 +295,13 @@ namespace Mark::RendererVK
                 return out;
             });
 
-        if (!m_cachedRef) 
-        {
-            MARK_ERROR("Failed to create/acquire graphics pipeline");
+        if (!m_cachedRef) {
+            MARK_FATAL(Utils::Category::Vulkan, "Failed to create/acquire graphics pipeline");
         }
 
         // Keep convenience handle for existing callers
         m_pipelineLayout = m_cachedRef.layout();
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Created");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Created");
     }
 
     void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex)
@@ -349,7 +346,7 @@ namespace Mark::RendererVK
 
         const auto& mesh = *m_meshesToDraw->at(_newMeshIndex);
         if (!mesh.hasVertexBuffer() || !mesh.hasIndexBuffer()) {
-            MARK_ERROR("tryAppendMeshAndUpdateDescriptors: mesh %u missing GPU buffers", _newMeshIndex);
+            MARK_FATAL(Utils::Category::Vulkan, "tryAppendMeshAndUpdateDescriptors: mesh %u missing GPU buffers", _newMeshIndex);
             return false;
         }
 
@@ -439,14 +436,14 @@ namespace Mark::RendererVK
         if (m_maxTexturesLayout == 0) m_maxTexturesLayout = std::min<uint32_t>(4096u, m_bindlessCaps.maxTextureDescriptors);
         if (m_maxTexturesLayout < m_maxMeshesLayout) 
         {
-            MARK_WARN_C(Utils::Category::Vulkan, "Bindless: maxTexturesLayout (%u) < maxMeshesLayout (%u). Clamping mesh layout to textures for safety.",
+            MARK_WARN(Utils::Category::Vulkan, "Bindless: maxTexturesLayout (%u) < maxMeshesLayout (%u). Clamping mesh layout to textures for safety.",
                 m_maxTexturesLayout, m_maxMeshesLayout);
             m_maxMeshesLayout = m_maxTexturesLayout / m_bindlessCaps.numAttachableTextures;
         }
 
         m_meshCount = m_meshesToDraw ? static_cast<uint32_t>(m_meshesToDraw->size()) : 0;
         if (m_meshCount > m_maxMeshesLayout) {
-            MARK_ERROR("Mesh count (%u) exceeds bindless MAX_MESHES (%u). Clamping.", m_meshCount, m_maxMeshesLayout);
+            MARK_FATAL(Utils::Category::Vulkan, "Mesh count (%u) exceeds bindless MAX_MESHES (%u). Clamping.", m_meshCount, m_maxMeshesLayout);
             m_meshCount = m_maxMeshesLayout;
         }
         const uint32_t requiredTextures = std::min(m_meshCount, m_maxTexturesLayout);
@@ -489,7 +486,7 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Create Descriptor Pool");
         MARK_VK_NAME(_device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, m_descriptorPool, "VulkPipeline.DescPool");
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Descriptor Pool Created");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Descriptor Pool Created");
     }
 
     void VulkanGraphicsPipeline::createDescriptorSetLayout(VkDevice _device)
@@ -608,8 +605,8 @@ namespace Mark::RendererVK
         for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
         {
             const auto& mesh = *m_meshesToDraw->at(meshIndex);
-            if (!mesh.hasVertexBuffer()) MARK_ERROR("Mesh has no vertex GPU buffer");
-            if (!mesh.hasIndexBuffer())  MARK_ERROR("Mesh has no index GPU buffer");
+            if (!mesh.hasVertexBuffer()) MARK_FATAL(Utils::Category::Vulkan, "Mesh has no vertex GPU buffer");
+            if (!mesh.hasIndexBuffer())  MARK_FATAL(Utils::Category::Vulkan, "Mesh has no index GPU buffer");
 
             ssboInfos[meshIndex] = { mesh.vertexBuffer(), 0, VK_WHOLE_SIZE };
             indexInfos[meshIndex] = { mesh.indexBuffer(), 0, VK_WHOLE_SIZE };
@@ -618,7 +615,7 @@ namespace Mark::RendererVK
             {
                 auto texture = mesh.texture();
                 if (!texture) {
-                    MARK_WARN_C(Utils::Category::System ,"Mesh has no texture but shader will sample one.");
+                    MARK_WARN(Utils::Category::System ,"Mesh has no texture but shader will sample one.");
                 } 
                 else 
                 {

@@ -12,14 +12,14 @@ namespace Mark::RendererVK
 
         // Create the queue
         vkGetDeviceQueue(m_device, _queueFamily, _queueIndex, &m_queue);
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan queue acquired");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan queue acquired");
     }
 
     void VulkanQueue::destroy()
     {
         m_queue = VK_NULL_HANDLE;
         m_device = VK_NULL_HANDLE;
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan queue destroyed");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan queue destroyed");
     }
 
     void VulkanQueue::waitIdle()

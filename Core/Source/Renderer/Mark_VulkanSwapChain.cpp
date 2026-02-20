@@ -2,7 +2,6 @@
 #include "Mark_VulkanCore.h"
 #include "Mark_VulkanPhysicalDevices.h"
 #include "Utils/VulkanUtils.h"
-#include "Utils/ErrorHandling.h"
 #include "Engine/SettingsHandler.h"
 
 #include <cassert>
@@ -105,9 +104,8 @@ namespace Mark::RendererVK
 
     void VulkanSwapChain::destroySwapChain()
     {
-        if (m_vulkanCoreRef.expired())
-        {
-            MARK_ERROR("VulkanCore reference expired, cannot destroy swap chain");
+        if (m_vulkanCoreRef.expired()) {
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy swap chain");
         }
         VkDevice device = m_vulkanCoreRef.lock()->device();
 
@@ -132,7 +130,7 @@ namespace Mark::RendererVK
             vkDestroySwapchainKHR(device, m_swapChain, nullptr);
             m_swapChain = VK_NULL_HANDLE;
         }
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Swap Chain Destroyed");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Swap Chain Destroyed");
     }
 
     void VulkanSwapChain::createSwapChain(uint32_t _fbWidth, uint32_t _fbHeight)
@@ -143,7 +141,7 @@ namespace Mark::RendererVK
             {
                 // Found the matching surface
                 auto core = m_vulkanCoreRef.lock();
-                if (!core) { MARK_ERROR("VulkanCore expired in swap chain creation"); }
+                if (!core) { MARK_FATAL(Utils::Category::Vulkan, "VulkanCore expired in swap chain creation"); }
                 const VulkanPhysicalDevices::SurfaceProperties& surfaceProps = core->physicalDevices().selected().m_surfacesLinked[i];
 
                 const VkSurfaceCapabilitiesKHR& surfaceCapabilities = surfaceProps.m_surfaceCapabilities;
@@ -195,14 +193,14 @@ namespace Mark::RendererVK
                 CHECK_VK_RESULT(res, "Create Swap Chain");
 
                 MARK_VK_NAME(device, VK_OBJECT_TYPE_SWAPCHAIN_KHR, m_swapChain, "VulkSwapChain.SwapChain");
-                MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Swap Chain Created");
+                MARK_INFO(Utils::Category::Vulkan, "Vulkan Swap Chain Created");
 
                 uint32_t numSwapChainImages = 0;
                 res = vkGetSwapchainImagesKHR(device, m_swapChain, &numSwapChainImages, nullptr);
                 CHECK_VK_RESULT(res, "Get Swap Chain Images Count");
                 assert(numImages == numSwapChainImages);
 
-                MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Swap Chain number of images: %u", numSwapChainImages);
+                MARK_DEBUG(Utils::Category::Vulkan, "Vulkan Swap Chain number of images: %u", numSwapChainImages);
 
                 m_swapChainImages.resize(numSwapChainImages);
                 m_swapChainImageViews.resize(numSwapChainImages);
@@ -230,14 +228,14 @@ namespace Mark::RendererVK
                 return;
             }
         }
-        MARK_ERROR("Failed to find matching surface for swap chain creation");
+        MARK_FATAL(Utils::Category::Vulkan, "Failed to find matching surface for swap chain creation");
     }
 
     void VulkanSwapChain::recreateSwapChain(uint32_t _fbWidth, uint32_t _fbHeight)
     {
         auto core = m_vulkanCoreRef.lock();
         if (!core) { 
-            MARK_ERROR("VulkanCore expired in swapchain recreate"); 
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore expired in swapchain recreate"); 
         }
 
         // Avoid recreation while minimized
@@ -278,7 +276,7 @@ namespace Mark::RendererVK
         auto VkCore = m_vulkanCoreRef.lock();
         if (!VkCore)
         {
-            MARK_ERROR("VulkanCore expired in VulkanSwapChain::initImageLayoutsForDynamicRendering");
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore expired in VulkanSwapChain::initImageLayoutsForDynamicRendering");
             return;
         }
         VkDevice device = VkCore->device();

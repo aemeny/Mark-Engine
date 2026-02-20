@@ -17,19 +17,19 @@ namespace Mark
         );
 
         // Initialize the engines core
-        MARK_INFO_C(Utils::Category::Engine, "Core Initialization");
+        MARK_INFO(Utils::Category::Engine, "Core Initialization");
         Core engineCore(_appInfo);
 
         // Run the main loop
         try
         {
-            MARK_INFO_C(Utils::Category::Engine, "Core Run() Called");
+            MARK_INFO(Utils::Category::Engine, "Core Run() Called");
             engineCore.run();
         }
         catch (const std::exception& e)
         {
             std::cerr << e.what() << '\n';
-            MARK_LOG_ERROR("Program Exit Failure");
+            MARK_ERROR(Utils::Category::Engine, "Program Exit Failure");
             return EXIT_FAILURE;
         }
 

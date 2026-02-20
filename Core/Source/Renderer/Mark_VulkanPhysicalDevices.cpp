@@ -10,31 +10,31 @@ namespace Mark::RendererVK
     {
         if (_flags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
         {
-            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage transfer src is supported");
+            MARK_DEBUG(Utils::Category::Vulkan, "Image usage transfer src is supported");
         }
         if (_flags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
         {
-            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage transfer dest is supported");
+            MARK_DEBUG(Utils::Category::Vulkan, "Image usage transfer dest is supported");
         }
         if (_flags & VK_IMAGE_USAGE_SAMPLED_BIT)
         {
-            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage sampled is supported");
+            MARK_DEBUG(Utils::Category::Vulkan, "Image usage sampled is supported");
         }
         if (_flags & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
         {
-            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage color attachment is supported");
+            MARK_DEBUG(Utils::Category::Vulkan, "Image usage color attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
         {
-            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage depth stencil attachment is supported");
+            MARK_DEBUG(Utils::Category::Vulkan, "Image usage depth stencil attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
         {
-            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage transient attachment is supported");
+            MARK_DEBUG(Utils::Category::Vulkan, "Image usage transient attachment is supported");
         }
         if (_flags & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT)
         {
-            MARK_DEBUG_C(Utils::Category::Vulkan, "Image usage input attachment is supported");
+            MARK_DEBUG(Utils::Category::Vulkan, "Image usage input attachment is supported");
         }
     }
     static void printMemoryProperty(VkMemoryPropertyFlags _PropertyFlags)
@@ -64,7 +64,7 @@ namespace Mark::RendererVK
         {
             out += "PROTECTED ";
         }
-        MARK_DEBUG_C(Utils::Category::Vulkan, "%s", out.c_str());
+        MARK_DEBUG(Utils::Category::Vulkan, "%s", out.c_str());
     }
 
     void VulkanPhysicalDevices::initialize(const VkInstance& _instance)
@@ -75,8 +75,8 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Enumerate Physical Devices Count");
 
         if (deviceCount == 0) 
-            MARK_ERROR("No Vulkan physical devices found");
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Found %u Physical Devices", deviceCount);
+            MARK_FATAL(Utils::Category::Vulkan, "No Vulkan physical devices found");
+        MARK_DEBUG(Utils::Category::Vulkan, "Found %u Physical Devices", deviceCount);
 
         m_devices.resize(deviceCount);
 
@@ -93,9 +93,9 @@ namespace Mark::RendererVK
 
             vkGetPhysicalDeviceProperties(currentDevice, &m_devices[i].m_properties);
 
-            MARK_SCOPE_C_L(Utils::Category::Vulkan, Utils::Level::Debug, "Device name: %s", m_devices[i].m_properties.deviceName);
+            MARK_SCOPE(Utils::Category::Vulkan, Utils::Level::Debug, "Device name: %s", m_devices[i].m_properties.deviceName);
             uint32_t apiVersion = m_devices[i].m_properties.apiVersion;
-            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    API Version: %d.%d.%d.%d",
+            MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "    API Version: %d.%d.%d.%d",
                 VK_API_VERSION_VARIANT(apiVersion),
                 VK_API_VERSION_MAJOR(apiVersion),
                 VK_API_VERSION_MINOR(apiVersion),
@@ -105,18 +105,18 @@ namespace Mark::RendererVK
 
             vkGetPhysicalDeviceMemoryProperties(currentDevice, &(m_devices[i].m_memoryProperties));
 
-            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory types: %d", m_devices[i].m_memoryProperties.memoryTypeCount);
+            MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory types: %d", m_devices[i].m_memoryProperties.memoryTypeCount);
 
             for (uint32_t j = 0; j < m_devices[i].m_memoryProperties.memoryTypeCount; j++)
             {
-                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    %d: flags %x heap %d ", j,
+                MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "    %d: flags %x heap %d ", j,
                     m_devices[i].m_memoryProperties.memoryTypes[j].propertyFlags,
                     m_devices[i].m_memoryProperties.memoryTypes[j].heapIndex);
 
                 printMemoryProperty(m_devices[i].m_memoryProperties.memoryTypes[j].propertyFlags);
             }
 
-            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory heaps: %d", m_devices[i].m_memoryProperties.memoryHeapCount);
+            MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "    Num memory heaps: %d", m_devices[i].m_memoryProperties.memoryHeapCount);
 
             vkGetPhysicalDeviceFeatures(currentDevice, &m_devices[i].m_features);
 
@@ -133,7 +133,7 @@ namespace Mark::RendererVK
 
             uint32_t queueFamilyCount = 0;
             vkGetPhysicalDeviceQueueFamilyProperties(currentDevice, &queueFamilyCount, nullptr);
-            MARK_SCOPE_C_L(Utils::Category::Vulkan, Utils::Level::Debug, "    Queue Family Count: %d", queueFamilyCount);
+            MARK_SCOPE(Utils::Category::Vulkan, Utils::Level::Debug, "    Queue Family Count: %d", queueFamilyCount);
 
             m_devices[i].m_queueFamilyProperties.resize(queueFamilyCount);
             surfaceProps.m_qSupportsPresent.resize(queueFamilyCount);
@@ -144,9 +144,9 @@ namespace Mark::RendererVK
             {
                 const VkQueueFamilyProperties& qFamilyProps = m_devices[i].m_queueFamilyProperties[q];
 
-                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
+                MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "    Family %d Num queues: %d ", q, qFamilyProps.queueCount);
                 VkQueueFlags flags = qFamilyProps.queueFlags;
-                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    GFX %s, Compute %s, Transfer %s, Sparse binding %s",
+                MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "    GFX %s, Compute %s, Transfer %s, Sparse binding %s",
                     (flags & VK_QUEUE_GRAPHICS_BIT) ? "Yes" : "No",
                     (flags & VK_QUEUE_COMPUTE_BIT) ? "Yes" : "No",
                     (flags & VK_QUEUE_TRANSFER_BIT) ? "Yes" : "No",
@@ -160,7 +160,7 @@ namespace Mark::RendererVK
             VkResult res = vkGetPhysicalDeviceSurfaceFormatsKHR(currentDevice, _surface, &formatCount, nullptr);
             CHECK_VK_RESULT(res, "Get Physical Device Surface Formats Count");
             if (formatCount == 0)
-                MARK_ERROR("No surface formats reported for device '%s'", m_devices[i].m_properties.deviceName);
+                MARK_FATAL(Utils::Category::Vulkan, "No surface formats reported for device '%s'", m_devices[i].m_properties.deviceName);
 
             surfaceProps.m_surfaceFormats.resize(formatCount);
 
@@ -170,7 +170,7 @@ namespace Mark::RendererVK
             for (uint32_t j = 0; j < formatCount; j++)
             {
                 const VkSurfaceFormatKHR& surfaceFormat = surfaceProps.m_surfaceFormats[j];
-                MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "    Format %d: %x colorspace %x", j, surfaceFormat.format, surfaceFormat.colorSpace);
+                MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "    Format %d: %x colorspace %x", j, surfaceFormat.format, surfaceFormat.colorSpace);
             }
 
             res = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(currentDevice, _surface, &(surfaceProps.m_surfaceCapabilities));
@@ -182,14 +182,14 @@ namespace Mark::RendererVK
             res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, nullptr);
             CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes Count");
             if (presentModeCount == 0)
-                MARK_ERROR("No present modes reported for device '%s'", m_devices[i].m_properties.deviceName);
+                MARK_FATAL(Utils::Category::Vulkan, "No present modes reported for device '%s'", m_devices[i].m_properties.deviceName);
 
             surfaceProps.m_presentModes.resize(presentModeCount);
 
             res = vkGetPhysicalDeviceSurfacePresentModesKHR(currentDevice, _surface, &presentModeCount, surfaceProps.m_presentModes.data());
             CHECK_VK_RESULT(res, "Get Physical Device Surface Present Modes");
 
-            MARK_LOG_WRITE_C(Utils::Level::Debug, Utils::Category::Vulkan, "Number of presentation modes: %d", presentModeCount);
+            MARK_LOG_WRITE(Utils::Level::Debug, Utils::Category::Vulkan, "Number of presentation modes: %d", presentModeCount);
 
             bool replaced = false;
             for (auto& existingSurface : m_devices[i].m_surfacesLinked)
@@ -217,7 +217,7 @@ namespace Mark::RendererVK
                 return surfaceLinked;
             }
         }
-        MARK_LOG_ERROR_C(Utils::Category::Vulkan, "Surface properties for surface %p not found on device %s", _surface, _deviceProperties.m_properties.deviceName);
+        MARK_ERROR(Utils::Category::Vulkan, "Surface properties for surface %p not found on device %s", _surface, _deviceProperties.m_properties.deviceName);
         return _deviceProperties.m_surfacesLinked[0]; // Unreachable
     }
 
@@ -264,7 +264,7 @@ namespace Mark::RendererVK
             if (present == UINT32_MAX) continue;
 
             m_selectedDeviceIndex = static_cast<int>(i);
-            MARK_INFO_C(Utils::Category::Vulkan, "Using device %u (%s), gfx family %u, present family %u", i, deviceProps.m_properties.deviceName, gfx, present);
+            MARK_INFO(Utils::Category::Vulkan, "Using device %u (%s), gfx family %u, present family %u", i, deviceProps.m_properties.deviceName, gfx, present);
 
             return selectDeviceResult{ 
                 .m_deviceIndex = i, 
@@ -274,15 +274,14 @@ namespace Mark::RendererVK
         }
 
         // Unreachable
-        MARK_ERROR("No physical device satisfies required queue flags %x with present support for the surface", _requiredQueueFlags);
+        MARK_FATAL(Utils::Category::Vulkan, "No physical device satisfies required queue flags %x with present support for the surface", _requiredQueueFlags);
         return selectDeviceResult();
     }
 
     const VulkanPhysicalDevices::DeviceProperties& VulkanPhysicalDevices::selected() const
     {
-        if (m_selectedDeviceIndex < 0)
-        {
-            MARK_ERROR("A physical device has not been selected");
+        if (m_selectedDeviceIndex < 0) {
+            MARK_FATAL(Utils::Category::Vulkan, "A physical device has not been selected");
         }
         return m_devices[m_selectedDeviceIndex];
     }
@@ -317,7 +316,7 @@ namespace Mark::RendererVK
                 return format;
             }
         }
-        MARK_ERROR("Failed to find supported format for physical device");
+        MARK_FATAL(Utils::Category::Vulkan, "Failed to find supported format for physical device");
     }
 
     void VulkanPhysicalDevices::getExtensionsforDevice(int _deviceIndex)
@@ -330,7 +329,7 @@ namespace Mark::RendererVK
 
         vkEnumerateDeviceExtensionProperties(device.m_device, nullptr, &extensionCount, device.m_supportedExtensions.data());
 
-        MARK_SCOPE_C_L(Utils::Category::Vulkan, Utils::Level::Info, "Physical Device %d Extensions:", _deviceIndex);
+        MARK_SCOPE(Utils::Category::Vulkan, Utils::Level::Info, "Physical Device %d Extensions:", _deviceIndex);
         MARK_IN_SCOPE(Utils::Category::Vulkan, Utils::Level::Info, MARK_COL_LABEL3 "Extension Count: " MARK_COL_RESET "%u", extensionCount);
         for (const VkExtensionProperties& extProp : device.m_supportedExtensions) {
             MARK_IN_SCOPE(Utils::Category::Vulkan, Utils::Level::Debug, MARK_COL_LABEL2 "Extension Name: " MARK_COL_RESET "%s, Spec Version: %u", extProp.extensionName, extProp.specVersion);
@@ -353,7 +352,7 @@ namespace Mark::RendererVK
             }
         }
 
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Extension %s %s supported", _ext, rtn ? "is" : "is not");
+        MARK_DEBUG(Utils::Category::Vulkan, "Extension %s %s supported", _ext, rtn ? "is" : "is not");
 
         return rtn;
     }

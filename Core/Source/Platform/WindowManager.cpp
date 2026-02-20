@@ -33,9 +33,8 @@ namespace Mark::Platform
             create(1280, 720, "Mark Editor", clearColour, true, true/*Main window allows ImGui to render*/);
             glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
         }
-        else if (m_impl->m_windows.empty())
-        {
-            MARK_ERROR("Tried to return main window without creation first!");
+        else if (m_impl->m_windows.empty()) {
+            MARK_FATAL(Utils::Category::Window, "Tried to return main window without creation first!");
         }
 
         return *m_impl->m_windows.front(); 
@@ -68,7 +67,7 @@ namespace Mark::Platform
         // Main window wants to close, stop running
         if (m_impl->m_windows.empty() || m_impl->m_windows.front()->shouldClose())
         {
-            MARK_INFO_C(Utils::Category::Engine, "---Main window closed, terminating application---");
+            MARK_INFO(Utils::Category::Engine, "---Main window closed, terminating application---");
             return false;
         }
         return true;

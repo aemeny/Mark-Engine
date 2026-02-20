@@ -13,7 +13,7 @@ namespace Mark::RendererVK
     {
         auto vkCore = m_vulkanCoreRef.lock();
         if (!vkCore) { 
-            MARK_ERROR("VulkanCore expired in createUniformBuffers"); 
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore expired in createUniformBuffers"); 
         }
         if (!m_uniformBuffers.empty()) {
             destroyUniformBuffers(vkCore->device());
@@ -37,13 +37,13 @@ namespace Mark::RendererVK
             CHECK_VK_RESULT(res, "vkMapMemory (uniform buffer)");
             m_mappedPtrs[i] = ptr;
         }
-        MARK_INFO_C(::Mark::Utils::Category::Vulkan, "Created %u uniform buffers", _numImages);
+        MARK_INFO(::Mark::Utils::Category::Vulkan, "Created %u uniform buffers", _numImages);
     }
 
     void VulkanUniformBuffer::updateUniformBuffer(uint32_t _imageIndex, const UniformData& _data)
     {
         if (_imageIndex >= m_mappedPtrs.size() || m_mappedPtrs[_imageIndex] == nullptr) {
-            MARK_ERROR("UniformBuffer::update: invalid image index %u", _imageIndex);
+            MARK_FATAL(Utils::Category::Vulkan, "UniformBuffer::update: invalid image index %u", _imageIndex);
         }
         std::memcpy(m_mappedPtrs[_imageIndex], &_data, sizeof(UniformData));
     }
@@ -51,7 +51,7 @@ namespace Mark::RendererVK
     VkDescriptorBufferInfo VulkanUniformBuffer::descriptorInfo(uint32_t _imageIndex) const
     {
         if (_imageIndex >= m_uniformBuffers.size()) {
-            MARK_ERROR("UniformBuffer::descriptorInfo: invalid image index %u", _imageIndex);
+            MARK_FATAL(Utils::Category::Vulkan, "UniformBuffer::descriptorInfo: invalid image index %u", _imageIndex);
         }
 
         return VkDescriptorBufferInfo{

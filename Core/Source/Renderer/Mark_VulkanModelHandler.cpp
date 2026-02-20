@@ -39,7 +39,7 @@ namespace Mark::RendererVK
     {
         auto VkCore = m_vulkanCore.lock();
         if (!VkCore) {
-            MARK_ERROR("VulkanCore is null for mesh destruction");
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore is null for mesh destruction");
         }
 
         destroyGPUBuffer(VkCore->device());
@@ -55,10 +55,10 @@ namespace Mark::RendererVK
     {
         auto VkCore = m_vulkanCore.lock();
         if (!VkCore) {
-            MARK_ERROR("VulkanCore is null for mesh upload");
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore is null for mesh upload");
         }
         if (m_vertices.empty() && !m_usingFallBack) {
-            MARK_WARN_C(Utils::Category::Vulkan, "uploadToGPU called with empty vertex list");
+            MARK_WARN(Utils::Category::Vulkan, "uploadToGPU called with empty vertex list");
         }
 
         const VkDeviceSize vertexSize = static_cast<VkDeviceSize>(vertexBufferSize());
@@ -82,7 +82,7 @@ namespace Mark::RendererVK
             );
         }
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Mesh uploaded: %u vertices, %u indices",
+        MARK_INFO(Utils::Category::Vulkan, "Mesh uploaded: %u vertices, %u indices",
             vertexCount(), indexCount());
     }
 
@@ -108,7 +108,7 @@ namespace Mark::RendererVK
             const auto level = Utils::Level::Error;
             const auto category = Utils::Category::System;
 
-            MARK_SCOPE_C_L(category, level, "Failed to load model from:");
+            MARK_SCOPE(category, level, "Failed to load model from:");
             MARK_IN_SCOPE(category, level, "%s", Utils::ShortPathForLog(_meshPath).c_str());
             MARK_IN_SCOPE(category, level, MARK_COL_LABEL "Severity: " MARK_COL_RESET "%s", "Error");
             MARK_IN_SCOPE(category, level, MARK_COL_LABEL "Warning: " MARK_COL_RESET "%s", (warn.empty()) ? "<none>": warn.c_str());
@@ -119,7 +119,7 @@ namespace Mark::RendererVK
             m_usingFallBack = true;
             if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fallbackMeshPath))
             {
-                MARK_ERROR("Failed to load fallback model from: %s", Utils::ShortPathForLog(fallbackMeshPath).c_str());
+                MARK_FATAL(Utils::Category::Vulkan, "Failed to load fallback model from: %s", Utils::ShortPathForLog(fallbackMeshPath).c_str());
                 return;
             }
         }
@@ -181,7 +181,7 @@ namespace Mark::RendererVK
             }
         }
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Loaded OBJ Mesh From: %s", Utils::ShortPathForLog(_meshPath).c_str());
+        MARK_INFO(Utils::Category::Vulkan, "Loaded OBJ Mesh From: %s", Utils::ShortPathForLog(_meshPath).c_str());
     }
 
     void MeshHandler::destroyGPUBuffer(VkDevice _device)
@@ -192,6 +192,6 @@ namespace Mark::RendererVK
         if (hasIndexBuffer()) {
             m_indexBuffer.destroy(_device);
         }
-        MARK_INFO_C(Utils::Category::Vulkan, "Mesh buffers destroyed");
+        MARK_INFO(Utils::Category::Vulkan, "Mesh buffers destroyed");
     }
 } // namespace Mark::RendererVK

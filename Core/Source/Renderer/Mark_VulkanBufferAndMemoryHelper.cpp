@@ -21,18 +21,18 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Create Buffer");
         MARK_VK_NAME(device, VK_OBJECT_TYPE_BUFFER, m_buffer, (_objName + ".BufferMemory.Buffer").c_str());
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Buffer Created");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Buffer Created");
 
         // Get buffer memory requirements
         VkMemoryRequirements memRequirements;
         vkGetBufferMemoryRequirements(device, m_buffer, &memRequirements);
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Buffer requires %d bytes", memRequirements.size);
+        MARK_DEBUG(Utils::Category::Vulkan, "Buffer requires %d bytes", memRequirements.size);
 
         m_allocationSize = memRequirements.size;
 
         // Get memory type index
         uint32_t memoryTypeIndex = _vulkanCoreRef->getMemoryTypeIndex(memRequirements.memoryTypeBits, _propertyFlags);
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Buffer memory type index: %d", memoryTypeIndex);
+        MARK_DEBUG(Utils::Category::Vulkan, "Buffer memory type index: %d", memoryTypeIndex);
 
         // Allocate memory for the buffer
         VkMemoryAllocateInfo memoryAllocInfo = {
@@ -59,7 +59,7 @@ namespace Mark::RendererVK
     {
         if (_offset + _size > static_cast<size_t>(m_allocationSize))
         {
-            MARK_ERROR("BufferAndMemory::updateRange out of bounds (offset=%zu size=%zu alloc=%zu)",
+            MARK_FATAL(Mark::Utils::Category::Vulkan, "BufferAndMemory::updateRange out of bounds (offset=%zu size=%zu alloc=%zu)",
                 static_cast<size_t>(_offset), _size, static_cast<size_t>(m_allocationSize));
         }
 

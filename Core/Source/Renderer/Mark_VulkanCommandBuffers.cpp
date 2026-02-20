@@ -12,9 +12,8 @@ namespace Mark::RendererVK
 
     void VulkanCommandBuffers::destroyCommandBuffers()
     {
-        if (m_vulkanCoreRef.expired())
-        {
-            MARK_LOG_ERROR_C(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy command buffers");
+        if (m_vulkanCoreRef.expired()) {
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy command buffers");
         }
         auto VkCore = m_vulkanCoreRef.lock();
 
@@ -35,7 +34,7 @@ namespace Mark::RendererVK
             m_commandPool = VK_NULL_HANDLE;
         }
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Buffers & Pool Destroyed");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Command Buffers & Pool Destroyed");
     }
 
     void VulkanCommandBuffers::freeCommandBuffers(size_t _bufferSize, const VkCommandBuffer* _bufferData)
@@ -59,7 +58,7 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Create command pool");
         MARK_VK_NAME(m_vulkanCoreRef.lock()->device(), VK_OBJECT_TYPE_COMMAND_POOL, m_commandPool, "CmdBuffers.CmdPool");
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Pool Created");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Command Pool Created");
     }
 
     void VulkanCommandBuffers::createCommandBuffers(uint32_t _numImages, std::vector<VkCommandBuffer>& _commandBuffers)
@@ -79,7 +78,7 @@ namespace Mark::RendererVK
             MARK_VK_NAME_F(m_vulkanCoreRef.lock()->device(), VK_OBJECT_TYPE_COMMAND_BUFFER, _commandBuffers[img],
                 "CmdBuffer.CmdBuffers[%u]", img);
 
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Command Buffers Allocated: %zu", _commandBuffers.size());
+        MARK_DEBUG(Utils::Category::Vulkan, "Vulkan Command Buffers Allocated: %zu", _commandBuffers.size());
     }
 
     void VulkanCommandBuffers::createCopyCommandBuffer()
@@ -95,7 +94,7 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Allocate copy command buffers");
         MARK_VK_NAME(m_vulkanCoreRef.lock()->device(), VK_OBJECT_TYPE_COMMAND_BUFFER, m_copyCommandBuffer, "CmdBuffer.CopyBuffer");
 
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Copy Command Buffer Allocated");
+        MARK_DEBUG(Utils::Category::Vulkan, "Vulkan Copy Command Buffer Allocated");
     }
 
     void VulkanCommandBuffers::recordCommandBuffers(VkClearColorValue _clearColour)
@@ -124,7 +123,7 @@ namespace Mark::RendererVK
             m_graphicsPipelineRef.bindPipeline(commandBuffer, i);
 
             if (!vkCmdDrawIndirectCountKHR || m_indirectCmdBuffer == VK_NULL_HANDLE || m_indirectCountBuffer == VK_NULL_HANDLE || m_maxDrawCount == 0) {
-                MARK_ERROR("Indirect draw buffers not set before recording command buffers");
+                MARK_FATAL(Utils::Category::Vulkan, "Indirect draw buffers not set before recording command buffers");
             }
 
             vkCmdDrawIndirectCountKHR(
@@ -138,7 +137,7 @@ namespace Mark::RendererVK
             endDynamicRendering(commandBuffer, i, _withSecondBarrier);
         }
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Buffers Recorded");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Command Buffers Recorded");
     }
 
     void VulkanCommandBuffers::setIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount)

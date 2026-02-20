@@ -3,7 +3,6 @@
 #include "Platform/Window.h"
 
 #include "Utils/Mark_Utils.h"
-#include "Utils/ErrorHandling.h"
 #include "Utils/VulkanUtils.h"
 
 #include "imgui.h"
@@ -14,10 +13,10 @@ static void checkVKResult(VkResult _err)
 {
     if (_err == 0) return;
 
-    MARK_LOG_ERROR_C(Mark::Utils::Category::imgui, "VkResult: %d", _err);
+    MARK_ERROR(Mark::Utils::Category::imgui, "VkResult: %d", _err);
 
     if (_err < 0) {
-        MARK_FATAL("imgui Vulkan Renderer VkResult wrong error: %d", _err);
+        MARK_FATAL(Mark::Utils::Category::imgui, "imgui Vulkan Renderer VkResult wrong error: %d", _err);
     }
 }
 
@@ -89,7 +88,7 @@ namespace Mark::RendererVK
         auto vulkanCoreRef = m_imguiHandler.m_vulkanCoreRef;
 
         if (!vulkanCoreRef || !mainWindowHandler) {
-            MARK_ERROR("Reference expired, cannot initialize ImGui");
+            MARK_FATAL(Mark::Utils::Category::imgui, "Reference expired, cannot initialize ImGui");
         }
 
         bool installGLFWCallbacks = true;
@@ -149,7 +148,7 @@ namespace Mark::RendererVK
             return;
 
         if (!m_imguiHandler.m_vulkanCoreRef || !m_imguiHandler.m_mainWindowHandler) {
-            MARK_ERROR("Reference expired, cannot destroy ImGui");
+            MARK_FATAL(Mark::Utils::Category::imgui, "Reference expired, cannot destroy ImGui");
         }
 
         ImGui_ImplVulkan_Shutdown();
@@ -161,7 +160,7 @@ namespace Mark::RendererVK
         vkDestroyDescriptorPool(m_imguiHandler.m_vulkanCoreRef->device(), m_descriptorPool, nullptr);
         m_descriptorPool = VK_NULL_HANDLE;
 
-        MARK_INFO_C(Utils::Category::imgui, "ImGui Vulkan Renderer destroyed");
+        MARK_INFO(Utils::Category::imgui, "ImGui Vulkan Renderer destroyed");
     }
 
     VkCommandBuffer ImGuiRenderer::prepareCommandBuffer(uint32_t _imageIndex)
@@ -169,7 +168,7 @@ namespace Mark::RendererVK
         VulkanCommandBuffers& commandBufferHandler = m_imguiHandler.m_mainWindowHandler->m_vulkanCommandBuffers;
 
         if (_imageIndex >= m_commandBuffers.size())
-            MARK_ERROR("ImGui command buffer index out of range after swapchain rebuild");
+            MARK_FATAL(Mark::Utils::Category::imgui, "ImGui command buffer index out of range after swapchain rebuild");
 
         commandBufferHandler.beginCommandBuffer(m_commandBuffers[_imageIndex], VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 

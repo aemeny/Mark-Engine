@@ -1,5 +1,4 @@
 ﻿#include "Mark_VulkanShader.h"
-#include "Utils/ErrorHandling.h"
 #include "Utils/Mark_Utils.h"
 #include "Utils/VulkanUtils.h"
 
@@ -17,7 +16,7 @@ namespace Mark::RendererVK
         std::ifstream file(_fileName, std::ios::binary);
         if (!file)
         {
-            MARK_LOG_ERROR("Failed to open file: %s", _fileName);
+            MARK_ERROR(Utils::Category::Shader, "Failed to open file: %s", _fileName);
             return false;
         }
 
@@ -29,14 +28,14 @@ namespace Mark::RendererVK
         std::ifstream file(_fileName, std::ios::binary | std::ios::ate);
         if (!file)
         {
-            MARK_LOG_ERROR("Failed to open SPIR-V binary: %s", _fileName);
+            MARK_ERROR(Utils::Category::Shader, "Failed to open SPIR-V binary: %s", _fileName);
             return false;
         }
 
         std::streamsize sz = file.tellg();
         if (sz <= 0)
         {
-            MARK_LOG_ERROR("Empty SPIR-V file: %s", _fileName);
+            MARK_ERROR(Utils::Category::Shader, "Empty SPIR-V file: %s", _fileName);
             return false;
         }
 
@@ -44,12 +43,12 @@ namespace Mark::RendererVK
         std::vector<char> bytes(static_cast<size_t>(sz));
         if (!file.read(bytes.data(), sz))
         {
-            MARK_LOG_ERROR("Failed to read SPIR-V file: %s", _fileName);
+            MARK_ERROR(Utils::Category::Shader, "Failed to read SPIR-V file: %s", _fileName);
             return false;
         }
         if ((bytes.size() % 4) != 0)
         {
-            MARK_LOG_ERROR("SPIR-V file size is not a multiple of 4: %s", _fileName);
+            MARK_ERROR(Utils::Category::Shader, "SPIR-V file size is not a multiple of 4: %s", _fileName);
             return false;
         }
 
@@ -73,44 +72,44 @@ namespace Mark::RendererVK
         if (fileStr.ends_with(".tese"))
             return GLSLANG_STAGE_TESSEVALUATION;
 
-        MARK_ERROR("Unknown shader stage for file: %s", _fileName);
+        MARK_FATAL(Utils::Category::Shader, "Unknown shader stage for file: %s", _fileName);
         return GLSLANG_STAGE_VERTEX; // Default
     }
     // Pretty logging for glslang shader failures (preprocess/parse)
     static void logGlslangShaderFailure(const char* _phase, const char* _fileName,
         const std::string& _source, glslang_shader_t* _shader)
     {
-        MARK_SCOPE_C_L(Utils::Category::Shader, Utils::Level::Error, "%s failed", _phase);
+        MARK_SCOPE(Utils::Category::Shader, Utils::Level::Error, "%s failed", _phase);
         if (const char* log = glslang_shader_get_info_log(_shader)) 
         {
-            MARK_LOG_ERROR_C(Utils::Category::Shader, "InfoLog: %s", log);
+            MARK_ERROR(Utils::Category::Shader, "InfoLog: %s", log);
         }
         if (const char* dbg = glslang_shader_get_info_debug_log(_shader)) 
         {
-            MARK_LOG_ERROR_C(Utils::Category::Shader, "DebugLog: %s", dbg);
+            MARK_ERROR(Utils::Category::Shader, "DebugLog: %s", dbg);
         }
 
         std::istringstream iss(_source);
         std::string line; int ln = 1;
 
-        MARK_LOG_ERROR_C(Utils::Category::Shader, "----- %s (numbered) -----", _fileName);
+        MARK_ERROR(Utils::Category::Shader, "----- %s (numbered) -----", _fileName);
         while (std::getline(iss, line)) 
         {
-            MARK_LOG_ERROR_C(Utils::Category::Shader, "%4d | %s", ln++, line.c_str());
+            MARK_ERROR(Utils::Category::Shader, "%4d | %s", ln++, line.c_str());
         }
-        MARK_LOG_ERROR_C(Utils::Category::Shader, "----- end of source -----");
+        MARK_ERROR(Utils::Category::Shader, "----- end of source -----");
     }
     // Pretty logging for program link failures
     static void logGlslangProgramFailure(const char* _phase, const char* _fileName, glslang_program_t* _program)
     {
-        MARK_SCOPE_C_L(Utils::Category::Shader, Utils::Level::Error, "%s failed", _phase);
+        MARK_SCOPE(Utils::Category::Shader, Utils::Level::Error, "%s failed", _phase);
         if (const char* log = glslang_program_get_info_log(_program)) 
         {
-            MARK_LOG_ERROR_C(Utils::Category::Shader, "InfoLog: %s", log);
+            MARK_ERROR(Utils::Category::Shader, "InfoLog: %s", log);
         }
         if (const char* dbg = glslang_program_get_info_debug_log(_program)) 
         {
-            MARK_LOG_ERROR_C(Utils::Category::Shader, "DebugLog: %s", dbg);
+            MARK_ERROR(Utils::Category::Shader, "DebugLog: %s", dbg);
         }
     }
     // Write compiled SPIR-V next to the source (simple cache).
@@ -119,7 +118,7 @@ namespace Mark::RendererVK
         std::ofstream file(_outPath, std::ios::binary | std::ios::trunc);
         if (!file)
         {
-            MARK_LOG_ERROR("Failed to open for write: %s", _outPath.string().c_str());
+            MARK_ERROR(Utils::Category::Shader, "Failed to open for write: %s", _outPath.string().c_str());
             return false;
         }
         file.write(reinterpret_cast<const char*>(_words.data()), static_cast<std::streamsize>(_words.size() * sizeof(uint32_t)));
@@ -181,8 +180,8 @@ namespace Mark::RendererVK
 
         if (SPIRV_messages)
         {
-            MARK_SCOPE_C_L(Utils::Category::Shader, Utils::Level::Warn, "SPIR-V Generation messages");
-            MARK_WARN_C(Utils::Category::Shader, "%s", SPIRV_messages);
+            MARK_SCOPE(Utils::Category::Shader, Utils::Level::Warn, "SPIR-V Generation messages");
+            MARK_WARN(Utils::Category::Shader, "%s", SPIRV_messages);
         }
 
         VkShaderModuleCreateInfo shaderModuleCreateInfo = {
@@ -229,7 +228,7 @@ namespace Mark::RendererVK
         auto lwt = std::filesystem::last_write_time(spvPath, ec);
         if (ec) 
         {
-            MARK_WARN_C(Utils::Category::Shader, "last_write_time failed for '%s': %s",
+            MARK_WARN(Utils::Category::Shader, "last_write_time failed for '%s': %s",
                 spvPath.c_str(), ec.message().c_str());
             _spvTime = {};
         }
@@ -297,7 +296,7 @@ namespace Mark::RendererVK
 
             const std::string spvName = makeSiblingSpvName(path);
             const std::string pretty = Utils::ShortPathForLog(spvName);
-            MARK_INFO_C(Utils::Category::Shader, "Loaded cached SPIR-V: %s", pretty.c_str());
+            MARK_INFO(Utils::Category::Shader, "Loaded cached SPIR-V: %s", pretty.c_str());
             return m_map.find(k)->second.m_module;
         }
 
@@ -321,7 +320,7 @@ namespace Mark::RendererVK
         auto lwt = std::filesystem::last_write_time(spvPath, ec);
         if (ec)
         {
-            MARK_WARN_C(Utils::Category::Shader,
+            MARK_WARN(Utils::Category::Shader,
                 "last_write_time failed for '%s': %s",
                 spvPath.c_str(), ec.message().c_str()
             );
@@ -342,7 +341,7 @@ namespace Mark::RendererVK
         m_map.emplace(k, std::move(entry));
 
         const std::string pretty = Utils::ShortPathForLog(_glslPath);
-        MARK_INFO_C(Utils::Category::Shader, "Compiled GLSL -> SPIR-V: %s", pretty.c_str());
+        MARK_INFO(Utils::Category::Shader, "Compiled GLSL -> SPIR-V: %s", pretty.c_str());
 
         return m_map.find(k)->second.m_module;
     }
@@ -380,7 +379,7 @@ namespace Mark::RendererVK
         m_map.emplace(k, std::move(entry));
 
         const std::string pretty = Utils::ShortPathForLog(_spvPath);
-        MARK_INFO_C(Utils::Category::Shader, "Loaded SPIR-V: %s", pretty.c_str());
+        MARK_INFO(Utils::Category::Shader, "Loaded SPIR-V: %s", pretty.c_str());
 
         return m_map.find(k)->second.m_module;
     }

@@ -17,10 +17,10 @@ namespace Mark::RendererVK
         m_vulkanCoreRef(_vulkanCoreRef), m_commandBuffersRef(_commandBuffersRef)
     {
         if (_vulkanCoreRef.expired()) {
-            MARK_ERROR("Vulkan Core Reference Is Null In TextureHandler!");
+            MARK_FATAL(Utils::Category::Vulkan, "Vulkan Core Reference Is Null In TextureHandler!");
         }
         if (!m_commandBuffersRef) {
-            MARK_ERROR("Vulkan Command Buffer Reference Is Null In TextureHandler!");
+            MARK_FATAL(Utils::Category::Vulkan, "Vulkan Command Buffer Reference Is Null In TextureHandler!");
         }
 
         generateTexture(_texturePath);
@@ -48,7 +48,7 @@ namespace Mark::RendererVK
             vkFreeMemory(_device, m_textureMemory, nullptr);
             m_textureMemory = VK_NULL_HANDLE;
         }
-        MARK_INFO_C(Utils::Category::Vulkan, "Texture Handler Destroyed");
+        MARK_INFO(Utils::Category::Vulkan, "Texture Handler Destroyed");
     }
 
     void TextureHandler::generateTexture(const char* _texturePath)
@@ -58,7 +58,7 @@ namespace Mark::RendererVK
         stbi_uc* pixels = stbi_load(_texturePath, &imageWidth, &imageHeight, &imageChannels, STBI_rgb_alpha);
 
         if (!pixels) {
-            MARK_ERROR("Failed to load texture image: %s  (Check File Path/Type Is Correct)", Utils::ShortPathForLog(_texturePath).c_str());
+            MARK_ERROR(Utils::Category::Vulkan, "Failed to load texture image: %s  (Check File Path/Type Is Correct)", Utils::ShortPathForLog(_texturePath).c_str());
         }
 
         VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -75,7 +75,7 @@ namespace Mark::RendererVK
 
         m_textureSampler = createTextureSampler(minFilter, maxFilter, adressMode);
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Texture Loaded To Vulkan From: %s", Utils::ShortPathForLog(_texturePath).c_str());
+        MARK_INFO(Utils::Category::Vulkan, "Texture Loaded To Vulkan From: %s", Utils::ShortPathForLog(_texturePath).c_str());
     }
 
     void TextureHandler::createTextureImageFromData(const void* _pixels, int _width, int _height, VkFormat _format)
@@ -118,10 +118,10 @@ namespace Mark::RendererVK
 
         VkMemoryRequirements memRequirements = { 0 };
         vkGetImageMemoryRequirements(device, m_textureImage, &memRequirements);
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Texture Image Memory Requirements - Size: %llu Alignment: %llu MemoryTypeBits: 0x%08X", memRequirements.size, memRequirements.alignment, memRequirements.memoryTypeBits);
+        MARK_DEBUG(Utils::Category::Vulkan, "Texture Image Memory Requirements - Size: %llu Alignment: %llu MemoryTypeBits: 0x%08X", memRequirements.size, memRequirements.alignment, memRequirements.memoryTypeBits);
 
         uint32_t memoryTypeIndex = getMemoryTypeIndex(memRequirements.memoryTypeBits, _properties);
-        MARK_DEBUG_C(Utils::Category::Vulkan, "Texture Image Memory Type Index: %u", memoryTypeIndex);
+        MARK_DEBUG(Utils::Category::Vulkan, "Texture Image Memory Type Index: %u", memoryTypeIndex);
 
         VkMemoryAllocateInfo allocInfo{
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -153,7 +153,7 @@ namespace Mark::RendererVK
             }
         }
 
-        MARK_ERROR("Failed to find suitable memory type for %x requested mem props %x", _typeFilter, _properties);
+        MARK_FATAL(Utils::Category::Vulkan, "Failed to find suitable memory type for %x requested mem props %x", _typeFilter, _properties);
         return -1;
     }
 
@@ -201,7 +201,7 @@ namespace Mark::RendererVK
         case VK_FORMAT_R32G32B32A32_SFLOAT:
             return 4 * sizeof(float);
         default:
-            MARK_ERROR("GetBytesPerTexFormat: Unsupported VkFormat %s", string_VkFormat(_format));
+            MARK_FATAL(Utils::Category::Vulkan, "GetBytesPerTexFormat: Unsupported VkFormat %s", string_VkFormat(_format));
             return 0;
         }
     }
@@ -300,7 +300,7 @@ namespace Mark::RendererVK
         } /* Wait for render pass to complete */
         else
         {
-            MARK_ERROR("Unsupported layout transition from %s to %s", string_VkImageLayout(_oldLayout), string_VkImageLayout(_newLayout));
+            MARK_FATAL(Utils::Category::Vulkan, "Unsupported layout transition from %s to %s", string_VkImageLayout(_oldLayout), string_VkImageLayout(_newLayout));
         }
 
         vkCmdPipelineBarrier(m_commandBuffersRef->copyCommandBuffer(),

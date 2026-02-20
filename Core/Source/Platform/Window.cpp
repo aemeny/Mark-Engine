@@ -18,7 +18,7 @@ namespace Mark::Platform
         glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
 
         m_window = glfwCreateWindow(_width, _height, m_windowName.c_str(), nullptr, nullptr);
-        if (!m_window) MARK_ERROR("Failed to create GLFW window");
+        if (!m_window) MARK_FATAL(Utils::Category::GLFW, "Failed to create GLFW window");
 
         glfwSetWindowUserPointer(m_window, this);
         glfwSetKeyCallback(m_window, &Window::KeyCallback);
@@ -28,7 +28,7 @@ namespace Mark::Platform
             self->m_framebufferResized = true;
         });
 
-        MARK_INFO_C(Utils::Category::GLFW, "GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
+        MARK_INFO(Utils::Category::GLFW, "GLFW Window Created: %s (%dx%d)", m_windowName.c_str(), _width, _height);
 
         // Create Vulkan handler
         m_vkHandler = std::make_unique<RendererVK::WindowToVulkanHandler>(_vulkanCoreRef, *this, _clearColour, _renderImGui);
@@ -46,7 +46,7 @@ namespace Mark::Platform
             glfwSetWindowUserPointer(m_window, nullptr);
             glfwDestroyWindow(m_window);
             m_window = nullptr;
-            MARK_INFO_C(Utils::Category::GLFW, "GLFW Window Destroyed: %s", m_windowName.c_str());
+            MARK_INFO(Utils::Category::GLFW, "GLFW Window Destroyed: %s", m_windowName.c_str());
         }
     }
 
@@ -107,9 +107,9 @@ namespace Mark::Platform
             glfwGetWindowSize(m_window, &m_width, &m_height);
 
             GLFWmonitor* monitor = WindowManager::monitorForWindow(m_window);
-            if (!monitor) MARK_ERROR("No monitor available for fullscreen");
+            if (!monitor) MARK_FATAL(Utils::Category::GLFW, "No monitor available for fullscreen");
             const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            if (!mode) MARK_ERROR("Failed to get video mode");
+            if (!mode) MARK_FATAL(Utils::Category::GLFW, "Failed to get video mode");
 
             m_borderless = _borderless;
             if (m_borderless)

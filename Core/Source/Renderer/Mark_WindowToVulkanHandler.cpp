@@ -1,7 +1,6 @@
 #include "Mark_WindowToVulkanHandler.h"
 #include "Mark_VulkanCore.h"
 #include "Platform/Window.h"
-#include "Utils/ErrorHandling.h"
 #include "Utils/VulkanUtils.h"
 
 #include <GLFW/glfw3.h>
@@ -47,7 +46,7 @@ namespace Mark::RendererVK
 
     WindowToVulkanHandler::~WindowToVulkanHandler()
     {
-        if (m_vulkanCoreRef.expired()) { MARK_ERROR("VulkanCore reference expired, cannot destroy surface"); }
+        if (m_vulkanCoreRef.expired()) { MARK_FATAL(Utils::Category::Vulkan, "VulkanCore reference expired, cannot destroy surface"); }
         auto VkCore = m_vulkanCoreRef.lock();
 
         // Ensure GPU finished with this window's work before destroying resources
@@ -76,7 +75,7 @@ namespace Mark::RendererVK
         {
             vkDestroySurfaceKHR(VkCore->instance(), m_surface, nullptr);
             m_surface = VK_NULL_HANDLE;
-            MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Destroyed");
+            MARK_INFO(Utils::Category::Vulkan, "GLFW Window Surface Destroyed");
         }
     }
 
@@ -103,7 +102,7 @@ namespace Mark::RendererVK
     void WindowToVulkanHandler::createIndirectDrawBuffers()
     {
         auto VkCore = m_vulkanCoreRef.lock();
-        if (!VkCore) { MARK_ERROR("VulkanCore expired in createIndirectDrawBuffers"); }
+        if (!VkCore) { MARK_FATAL(Utils::Category::Vulkan, "VulkanCore expired in createIndirectDrawBuffers"); }
 
         // Cap draw count by both bindless mesh cap and device maxDrawIndirectCount.
         const uint32_t maxMeshes = VkCore->bindlessCaps().maxMeshes;
@@ -196,7 +195,7 @@ namespace Mark::RendererVK
 
         const uint32_t meshCount = static_cast<uint32_t>(m_meshesToDraw.size());
         if (meshCount > m_maxDraws) {
-            MARK_WARN_C(Utils::Category::Vulkan,
+            MARK_WARN(Utils::Category::Vulkan,
                 "Mesh count (%u) exceeds indirect capacity (%u). Extra meshes will not be drawn.",
                 meshCount, m_maxDraws);
         }
@@ -211,7 +210,7 @@ namespace Mark::RendererVK
         auto extent = m_swapChain.extent();
         if (extent.width == 0 || extent.height == 0) return;
         auto VkCore = m_vulkanCoreRef.lock();
-        if (!VkCore) { MARK_ERROR("VulkanCore expired during renderFrame()"); }
+        if (!VkCore) { MARK_FATAL(Utils::Category::Vulkan, "VulkanCore expired during renderFrame()"); }
 
         uint32_t imageIndex = m_windowQueueHelper.acquireNextImage(m_swapChain.swapChain());
 
@@ -246,7 +245,7 @@ namespace Mark::RendererVK
     void WindowToVulkanHandler::rebuildRendererResources()
     {
         auto VkCore = m_vulkanCoreRef.lock();
-        if (!VkCore) { MARK_ERROR("VulkanCore expired in rebuildRendererResources"); }
+        if (!VkCore) { MARK_FATAL(Utils::Category::Vulkan, "VulkanCore expired in rebuildRendererResources"); }
 
         VkCore->graphicsQueue().waitIdle();
         VkCore->presentQueue().waitIdle();
@@ -291,14 +290,14 @@ namespace Mark::RendererVK
         if (m_surface != VK_NULL_HANDLE) return;
         if (m_vulkanCoreRef.expired())
         {
-            MARK_ERROR("VulkanCore reference expired, cannot create surface");
+            MARK_FATAL(Utils::Category::Vulkan, "VulkanCore reference expired, cannot create surface");
         }
 
         VkResult res = glfwCreateWindowSurface(m_vulkanCoreRef.lock()->instance(), m_windowRef.handle(), nullptr, &m_surface);
         CHECK_VK_RESULT(res, "Create window surface");
         MARK_VK_NAME(m_vulkanCoreRef.lock()->device(), VK_OBJECT_TYPE_SURFACE_KHR, m_surface, "WinToVulk.WinSurface");
 
-        MARK_INFO_C(Utils::Category::Vulkan, "GLFW Window Surface Created");
+        MARK_INFO(Utils::Category::Vulkan, "GLFW Window Surface Created");
     }
 
     void WindowToVulkanHandler::setMeshVisible(uint32_t _meshIndex, bool _visible)

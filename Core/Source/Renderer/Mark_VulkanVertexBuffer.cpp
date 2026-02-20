@@ -46,7 +46,7 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Create Vertex Buffer Transfer Fence");
         MARK_VK_NAME(m_device, VK_OBJECT_TYPE_FENCE, m_transferFence, "VulkVertexBuffer.TransferFence");
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Vertex Buffer Uploader Initialized");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Vertex Buffer Uploader Initialized");
     }
 
     void VulkanVertexBuffer::destroy()

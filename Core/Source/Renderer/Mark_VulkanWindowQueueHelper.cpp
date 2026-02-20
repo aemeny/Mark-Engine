@@ -80,7 +80,7 @@ namespace Mark::RendererVK
 
         m_imagesInFlight.clear();
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Window Frame Sync Objects Destroyed");
+        MARK_INFO(Utils::Category::Vulkan, "Window Frame Sync Objects Destroyed");
     }
 
     uint32_t VulkanWindowQueueHelper::acquireNextImage(VkSwapchainKHR _swapchain)

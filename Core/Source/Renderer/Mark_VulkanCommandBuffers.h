@@ -1,7 +1,7 @@
 #pragma once
 #include "Mark_VulkanSwapChain.h"
 #include "Mark_VulkanGraphicsPipeline.h"
-#include "Utils/ErrorHandling.h"
+#include "Utils/Mark_Utils.h"
 
 namespace Mark::RendererVK
 {
@@ -34,7 +34,7 @@ namespace Mark::RendererVK
         std::vector<VkCommandBuffer>& commandBuffersWithGUI() { return m_commandBuffers.withGUI; }
         VkCommandBuffer commandBufferWithGUI(uint32_t _index) {
             if (_index >= m_commandBuffers.withGUI.size())
-                MARK_ERROR("Command buffer index %u out of range (max %zu)", _index, m_commandBuffers.withGUI.size());
+                MARK_FATAL(Utils::Category::Vulkan, "Command buffer index %u out of range (max %zu)", _index, m_commandBuffers.withGUI.size());
             return m_commandBuffers.withGUI[_index];
         }
 
@@ -42,7 +42,7 @@ namespace Mark::RendererVK
         std::vector<VkCommandBuffer>& commandBuffersWithoutGUI() { return m_commandBuffers.withoutGUI; }
         VkCommandBuffer commandBufferWithoutGUI(uint32_t _index) {
             if (_index >= m_commandBuffers.withoutGUI.size())
-                MARK_ERROR("Command buffer index %u out of range (max %zu)", _index, m_commandBuffers.withoutGUI.size());
+                MARK_FATAL(Utils::Category::Vulkan, "Command buffer index %u out of range (max %zu)", _index, m_commandBuffers.withoutGUI.size());
             return m_commandBuffers.withoutGUI[_index];
         }
 

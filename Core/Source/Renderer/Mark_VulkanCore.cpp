@@ -41,7 +41,7 @@ namespace Mark::RendererVK
         else
             MARK_ERROR("MARK_ASSETS_DIR not defined and could not find default asset path");
 #endif
-        MARK_INFO_C(Utils::Category::System, "Asset root: %s", m_assetRoot.string().c_str());
+        MARK_INFO(Utils::Category::System, "Asset root: %s", m_assetRoot.string().c_str());
     }
 
     Platform::ImGuiHandler& VulkanCore::imguiHandler()
@@ -53,7 +53,7 @@ namespace Mark::RendererVK
     {
         std::filesystem::path path = (m_assetRoot / _file).lexically_normal();
         if (!std::filesystem::exists(path)) {
-            MARK_LOG_ERROR_C(Utils::Category::System, "Asset not found at: %s", Utils::ShortPathForLog(path.string()).c_str());
+            MARK_ERROR(Utils::Category::System, "Asset not found at: %s", Utils::ShortPathForLog(path.string()).c_str());
         }
         return path;
     }
@@ -83,21 +83,21 @@ namespace Mark::RendererVK
 
             vkDestroyDevice(m_device, nullptr);
             m_device = VK_NULL_HANDLE;
-            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Logical Device Destroyed");
+            MARK_INFO(Utils::Category::Vulkan, "Vulkan Logical Device Destroyed");
         }
 
         if (m_debugMessenger != VK_NULL_HANDLE)
         {
             vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
             m_debugMessenger = VK_NULL_HANDLE;
-            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Debug Callback Destroyed");
+            MARK_INFO(Utils::Category::Vulkan, "Vulkan Debug Callback Destroyed");
         }
 
         if (m_instance != VK_NULL_HANDLE)
         {
             vkDestroyInstance(m_instance, nullptr);
             m_instance = VK_NULL_HANDLE;
-            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Destroyed");
+            MARK_INFO(Utils::Category::Vulkan, "Vulkan Instance Destroyed");
         }
     }
 
@@ -130,15 +130,13 @@ namespace Mark::RendererVK
                 break; 
             }
         }
-        if (!cachedSurfaceProps)
-        {
-            MARK_ERROR("Surface properties not cached for new window surface");
+        if (!cachedSurfaceProps) {
+            MARK_FATAL(Utils::Category::Vulkan, "Surface properties not cached for new window surface");
         }
 
         const uint32_t presentIdx = m_selectedDeviceResult.m_presentQueueFamilyIndex;
-        if (presentIdx >= cachedSurfaceProps->m_qSupportsPresent.size() || !cachedSurfaceProps->m_qSupportsPresent[presentIdx])
-        {
-            MARK_ERROR("Existing present queue family %u cannot present to the new surface", presentIdx);
+        if (presentIdx >= cachedSurfaceProps->m_qSupportsPresent.size() || !cachedSurfaceProps->m_qSupportsPresent[presentIdx]) {
+            MARK_FATAL(Utils::Category::Vulkan, "Existing present queue family %u cannot present to the new surface", presentIdx);
         }
     }
 
@@ -157,7 +155,7 @@ namespace Mark::RendererVK
                 return i;
             }
         }
-        MARK_ERROR("Failed to find memory type for %x requested memory properties %x", _memoryTypeBits, _propertyFlags);
+        MARK_FATAL(Utils::Category::Vulkan, "Failed to find memory type for %x requested memory properties %x", _memoryTypeBits, _propertyFlags);
         return -1;
     }
 
@@ -177,9 +175,8 @@ namespace Mark::RendererVK
 
         uint32_t extCount = 0;
         const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&extCount);
-        if (!glfwExtensions || extCount == 0)
-        {
-            MARK_ERROR("GLFW did not report required Vulkan instance extensions");
+        if (!glfwExtensions || extCount == 0) {
+            MARK_FATAL(Utils::Category::Vulkan, "GLFW did not report required Vulkan instance extensions");
         }
         std::vector<const char*> extensions(glfwExtensions, glfwExtensions + extCount);
 
@@ -215,7 +212,7 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Create Vk Instance");
 
         volkLoadInstance(m_instance);
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Created");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Instance Created");
     }
 
     void VulkanCore::createInstanceVersion()
@@ -229,7 +226,7 @@ namespace Mark::RendererVK
         m_instanceVersion.minor = VK_API_VERSION_MINOR(instanceVersion);
         m_instanceVersion.patch = VK_API_VERSION_PATCH(instanceVersion);
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Version: %u.%u.%u",
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Instance Version: %u.%u.%u",
             m_instanceVersion.major, m_instanceVersion.minor, m_instanceVersion.patch);
     }
 
@@ -242,7 +239,7 @@ namespace Mark::RendererVK
         const auto severityLevel = VkSeverityToLevel(_severity);
         const auto category = Utils::Category::Vulkan;
 
-        MARK_SCOPE_C_L(category, severityLevel, "Vulkan Debug Callback:");
+        MARK_SCOPE(category, severityLevel, "Vulkan Debug Callback:");
         MARK_IN_SCOPE(category, severityLevel, "%s", _pCallbackData->pMessage);
         MARK_IN_SCOPE(category, severityLevel, MARK_COL_LABEL "Severity: " MARK_COL_RESET "%s", GetDebugSeverityStr(_severity));
         const std::string typeStr = GetDebugType(_type);
@@ -286,7 +283,7 @@ namespace Mark::RendererVK
         CHECK_VK_RESULT(res, "Create Debug Utils Messenger");
         MARK_VK_NAME(m_device, VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT, m_debugMessenger, "VulkCore.DebugMessenger");
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Debug Callback Created");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Debug Callback Created");
     }
 
     void VulkanCore::createLogicalDevice()
@@ -325,7 +322,7 @@ namespace Mark::RendererVK
         bool deviceIsVulkan13OrHigher = (devMajor > 1) || (devMajor == 1 && devMinor >= 3);
 
         if (!deviceIsVulkan13OrHigher) {
-            MARK_LOG_ERROR_C(Utils::Category::Vulkan,
+            MARK_ERROR(Utils::Category::Vulkan,
                 "Vulkan Version 1.3 or higher is required for Mark. Current: Vulkan %u.%u", devMajor, devMinor);
         }
 
@@ -339,14 +336,14 @@ namespace Mark::RendererVK
             deviceExtensions.push_back(VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME); 
         }
         else {
-            MARK_ERROR("Selected GPU does not support dynamic rendering, which is required for Mark");
+            MARK_FATAL(Utils::Category::Vulkan, "Selected GPU does not support dynamic rendering, which is required for Mark");
         }
 
         if (selectedPhysical.isExtensionSupported(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME)) {
             deviceExtensions.push_back(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
         }
         else {
-            MARK_ERROR("Selected GPU does not support draw indirect count, which is required for Mark");
+            MARK_FATAL(Utils::Category::Vulkan, "Selected GPU does not support draw indirect count, which is required for Mark");
         }
 
         // --- Decide caps ---
@@ -362,7 +359,7 @@ namespace Mark::RendererVK
         const uint32_t requestedMaxMeshes = 4096u;
         m_bindlessCaps.maxMeshes = std::min(requestedMaxMeshes, maxMeshesHard);
         if (m_bindlessCaps.maxMeshes == 0) {
-            MARK_ERROR("Bindless mesh cap resolved to 0 (storage buffer descriptor limits too small)");
+            MARK_FATAL(Utils::Category::Vulkan, "Bindless mesh cap resolved to 0 (storage buffer descriptor limits too small)");
         }
 
         // Textures: combined image sampler counts against both sampler + sampled-image limits.
@@ -372,10 +369,10 @@ namespace Mark::RendererVK
         const uint32_t requestedMaxTextures = m_bindlessCaps.maxMeshes * m_bindlessCaps.numAttachableTextures;
         m_bindlessCaps.maxTextureDescriptors = std::min(requestedMaxTextures, maxTexturesHard);
         if (m_bindlessCaps.maxTextureDescriptors == 0) {
-            MARK_ERROR("Bindless texture descriptor cap resolved to 0 (sampler/sample limits too small)");
+            MARK_FATAL(Utils::Category::Vulkan, "Bindless texture descriptor cap resolved to 0 (sampler/sample limits too small)");
         }
 
-        MARK_INFO_C(Utils::Category::Vulkan,
+        MARK_INFO(Utils::Category::Vulkan,
             "Bindless feature check. Caps: maxMeshes=%u (requested=%u, set=%u, stage=%u), maxTextureDescriptors=%u",
             m_bindlessCaps.maxMeshes, requestedMaxMeshes, maxMeshesFromSet, maxMeshesFromStage, m_bindlessCaps.maxTextureDescriptors);
 
@@ -429,22 +426,22 @@ namespace Mark::RendererVK
         // Load device for volk to be able to call device functions
         volkLoadDevice(m_device);
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Logical Device Created");
+        MARK_INFO(Utils::Category::Vulkan, "Logical Device Created");
     }
 
     void VulkanCore::initializeQueue()
     {
         m_graphicsQueue.initialize(m_device, m_selectedDeviceResult.m_gtxQueueFamilyIndex, 0);
-        MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Graphics Queue Initialized");
+        MARK_INFO(Utils::Category::Vulkan, "Vulkan Graphics Queue Initialized");
 
         if (m_selectedDeviceResult.m_presentQueueFamilyIndex != m_selectedDeviceResult.m_gtxQueueFamilyIndex) 
         {
             m_presentQueue.initialize(m_device, m_selectedDeviceResult.m_presentQueueFamilyIndex, 0);
-            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Present Queue Initialized");
+            MARK_INFO(Utils::Category::Vulkan, "Vulkan Present Queue Initialized");
         }
         else 
         {
-            MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Present Queue uses Graphics Queue");
+            MARK_INFO(Utils::Category::Vulkan, "Vulkan Present Queue uses Graphics Queue");
         }
     }
 

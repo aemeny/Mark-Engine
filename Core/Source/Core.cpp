@@ -110,6 +110,6 @@ namespace Mark
     void Core::stop()
     {
         m_terminateApplication = true;
-        MARK_INFO_C(Utils::Category::Engine, "---Mark Core Stop Called, terminating application---");
+        MARK_INFO(Utils::Category::Engine, "---Mark Core Stop Called, terminating application---");
     }
 } // namespace Mark

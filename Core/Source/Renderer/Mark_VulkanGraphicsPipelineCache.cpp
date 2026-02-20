@@ -40,7 +40,7 @@ namespace Mark::RendererVK
         if (it != m_map.end())
         {
             it->second.m_refCount++;
-            MARK_INFO_C(Utils::Category::Vulkan, "Graphics-Pipeline-Cache reuse: refs=%u (entries=%zu)",
+            MARK_INFO(Utils::Category::Vulkan, "Graphics-Pipeline-Cache reuse: refs=%u (entries=%zu)",
                 it->second.m_refCount, m_map.size());
             return VulkanGraphicsPipelineRef(this, _key, it->second.m_pipeline, it->second.m_layout);
         }
@@ -48,7 +48,7 @@ namespace Mark::RendererVK
         GraphicsPipelineCreateResult cr = _creator(_key);
         if (!cr.m_pipeline || !cr.m_layout)
         {
-            MARK_LOG_ERROR_C(Utils::Category::Vulkan, "Pipeline creator returned null handles");
+            MARK_ERROR(Utils::Category::Vulkan, "Pipeline creator returned null handles");
             return VulkanGraphicsPipelineRef{};
         }
 
@@ -58,7 +58,7 @@ namespace Mark::RendererVK
         e.m_refCount = 1;
         auto [insIt, _] = m_map.emplace(_key, e);
 
-        MARK_INFO_C(Utils::Category::Vulkan, "Graphics Pipeline Cached: entries=%zu", m_map.size());
+        MARK_INFO(Utils::Category::Vulkan, "Graphics Pipeline Cached: entries=%zu", m_map.size());
         return VulkanGraphicsPipelineRef(this, _key, insIt->second.m_pipeline, insIt->second.m_layout);
     }
 
@@ -70,7 +70,7 @@ namespace Mark::RendererVK
 
         if (it->second.m_refCount == 0)
         {
-            MARK_WARN_C(Utils::Category::Vulkan, "Graphics pipeline cache: release on zero refCount");
+            MARK_WARN(Utils::Category::Vulkan, "Graphics pipeline cache: release on zero refCount");
             return;
         }
 

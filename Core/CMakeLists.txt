@@ -25,7 +25,7 @@ Source/Platform/imguiHandler.h
 Source/Platform/imguiHandler.cpp
 
 Source/Utils/VulkanUtils.h
-Source/Utils/ErrorHandling.h
+Source/Utils/MarkFatalHandling.h
 Source/Utils/Mark_Utils.h
 Source/Utils/TimeTracker.h
 Source/Utils/TimeTracker.cpp
