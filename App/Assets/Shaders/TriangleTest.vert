@@ -9,11 +9,7 @@ struct VertexData
     float u,  v;        // uv
 };
 
-layout(push_constant) uniform PushConstants
-{
-    uint meshIndex;    // which mesh SSBO to read from
-    uint textureIndex; // Unsed in Vertex (kept for shared layout with Fragment Shader)
-} pushConstant;
+
 
 layout (binding = 0) readonly buffer Vertices { 
     VertexData data[]; 
@@ -28,10 +24,11 @@ layout (binding = 2) uniform UniformBuffer {
 } ubo;
 
 layout (location = 0) out vec2 out_TexCoord;
+layout (location = 1) flat out uint out_MeshIndex;
 
 void main()
 {
-    uint meshIndex = nonuniformEXT(pushConstant.meshIndex);
+    uint meshIndex = nonuniformEXT(uint(gl_InstanceIndex));
     uint vertexIndex = in_Indices[meshIndex].data[gl_VertexIndex];
     VertexData vertex = in_Vertices[meshIndex].data[vertexIndex];
 
@@ -40,4 +37,5 @@ void main()
     gl_Position = ubo.WVP * vec4(pos, 1.0);
 
     out_TexCoord = vec2(vertex.u, vertex.v);
+    out_MeshIndex = uint(gl_InstanceIndex);
 }

@@ -213,6 +213,7 @@ namespace Mark::RendererVK
 
         res = vkCreateInstance(&createInfo, nullptr, &m_instance);
         CHECK_VK_RESULT(res, "Create Vk Instance");
+
         volkLoadInstance(m_instance);
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Instance Created");
     }
@@ -283,6 +284,7 @@ namespace Mark::RendererVK
 
         VkResult res = vkCreateDebugUtilsMessengerEXT(m_instance, &messengerCreateInfo, nullptr, &m_debugMessenger);
         CHECK_VK_RESULT(res, "Create Debug Utils Messenger");
+        MARK_VK_NAME(m_device, VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT, m_debugMessenger, "VulkCore.DebugMessenger");
 
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Debug Callback Created");
     }
@@ -340,8 +342,18 @@ namespace Mark::RendererVK
             MARK_ERROR("Selected GPU does not support dynamic rendering, which is required for Mark");
         }
 
+        if (selectedPhysical.isExtensionSupported(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME)) {
+            deviceExtensions.push_back(VK_KHR_DRAW_INDIRECT_COUNT_EXTENSION_NAME);
+        }
+        else {
+            MARK_ERROR("Selected GPU does not support draw indirect count, which is required for Mark");
+        }
+
         // --- Decide caps ---
         const VkPhysicalDeviceLimits& limits = selectedPhysical.m_properties.limits;
+
+        // Indirect multi-draw upper bound
+        m_bindlessCaps.maxDrawIndirectCount = limits.maxDrawIndirectCount;
 
         // Meshes: each mesh requires 2 storage buffer descriptors (vertex + index)
         const uint32_t maxMeshesFromSet = limits.maxDescriptorSetStorageBuffers / 2u;
@@ -371,6 +383,7 @@ namespace Mark::RendererVK
         VkPhysicalDeviceVulkan12Features v12 = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
             .pNext = nullptr,
+            .drawIndirectCount = VK_TRUE,
             .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
             .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
             .descriptorBindingPartiallyBound = VK_TRUE,
@@ -388,9 +401,13 @@ namespace Mark::RendererVK
         // Ensure the selected device supports nessesary features
         REQ_FEATURE(selectedPhysical.m_features, geometryShader);
         REQ_FEATURE(selectedPhysical.m_features, tessellationShader);
+        REQ_FEATURE(selectedPhysical.m_features, multiDrawIndirect);
+        REQ_FEATURE(selectedPhysical.m_features, drawIndirectFirstInstance);
         VkPhysicalDeviceFeatures deviceFeatures = { 
             .geometryShader = VK_TRUE,
-            .tessellationShader = VK_TRUE
+            .tessellationShader = VK_TRUE,
+            .multiDrawIndirect = VK_TRUE,
+            .drawIndirectFirstInstance = VK_TRUE
         };
 
         VkDeviceCreateInfo deviceCreateInfo = {

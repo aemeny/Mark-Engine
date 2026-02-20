@@ -30,7 +30,7 @@ namespace Mark::RendererVK
         
         for (uint32_t i = 0; i < _numImages; i++)
         {
-            m_uniformBuffers.emplace_back(BufferAndMemory(vkCore, dataSize, usage, properties));
+            m_uniformBuffers.emplace_back(BufferAndMemory(vkCore, dataSize, usage, properties, "VulkUniBuff.UniBuffs." + std::to_string(i)));
 
             void* ptr = nullptr;
             VkResult res = vkMapMemory(device, m_uniformBuffers.back().m_memory, 0, dataSize, 0, &ptr);

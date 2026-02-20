@@ -93,6 +93,8 @@ namespace Mark::RendererVK
         VkImageView imageView;
         VkResult res = vkCreateImageView(_device, &viewCreateInfo, nullptr, &imageView);
         CHECK_VK_RESULT(res, "Create Image View");
+        MARK_VK_NAME(_device, VK_OBJECT_TYPE_IMAGE_VIEW, imageView, "VulkSwapChain.ImageView");
+
         return imageView;
     }
 
@@ -187,13 +189,16 @@ namespace Mark::RendererVK
                     swapChainCreateInfo.pQueueFamilyIndices = indices;
                 }
 
-                VkResult res = vkCreateSwapchainKHR(m_vulkanCoreRef.lock()->device(), &swapChainCreateInfo, nullptr, &m_swapChain);
+                VkDevice device = core->device();
+
+                VkResult res = vkCreateSwapchainKHR(device, &swapChainCreateInfo, nullptr, &m_swapChain);
                 CHECK_VK_RESULT(res, "Create Swap Chain");
 
+                MARK_VK_NAME(device, VK_OBJECT_TYPE_SWAPCHAIN_KHR, m_swapChain, "VulkSwapChain.SwapChain");
                 MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Swap Chain Created");
 
                 uint32_t numSwapChainImages = 0;
-                res = vkGetSwapchainImagesKHR(m_vulkanCoreRef.lock()->device(), m_swapChain, &numSwapChainImages, nullptr);
+                res = vkGetSwapchainImagesKHR(device, m_swapChain, &numSwapChainImages, nullptr);
                 CHECK_VK_RESULT(res, "Get Swap Chain Images Count");
                 assert(numImages == numSwapChainImages);
 
@@ -202,15 +207,17 @@ namespace Mark::RendererVK
                 m_swapChainImages.resize(numSwapChainImages);
                 m_swapChainImageViews.resize(numSwapChainImages);
 
-                res = vkGetSwapchainImagesKHR(m_vulkanCoreRef.lock()->device(), m_swapChain, &numSwapChainImages, m_swapChainImages.data());
+                res = vkGetSwapchainImagesKHR(device, m_swapChain, &numSwapChainImages, m_swapChainImages.data());
                 CHECK_VK_RESULT(res, "Get Swap Chain Images");
+                for (uint32_t img = 0; img < numSwapChainImages; img++)
+                    MARK_VK_NAME_F(device, VK_OBJECT_TYPE_IMAGE, m_swapChainImages[img], "VulkSwapChain.Image[%u]", img);
 
                 int layerCount = 1;
                 int mipLevels = 1;
                 for (uint32_t imgIdx = 0; imgIdx < numSwapChainImages; imgIdx++)
                 {
                     m_swapChainImageViews[imgIdx] = createImageView(
-                        m_vulkanCoreRef.lock()->device(),
+                        device,
                         m_swapChainImages[imgIdx],
                         m_surfaceFormat.format,
                         VK_IMAGE_ASPECT_COLOR_BIT,
@@ -287,6 +294,7 @@ namespace Mark::RendererVK
         VkCommandPool pool = VK_NULL_HANDLE;
         VkResult res = vkCreateCommandPool(device, &poolInfo, nullptr, &pool);
         CHECK_VK_RESULT(res, "Create command pool for initImageLayoutsForDynamicRendering");
+        MARK_VK_NAME(device, VK_OBJECT_TYPE_COMMAND_POOL, pool, "VulkSwapChain.DynamicRender.CmdPool");
 
         VkCommandBufferAllocateInfo allocInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -299,6 +307,7 @@ namespace Mark::RendererVK
         VkCommandBuffer cmd = VK_NULL_HANDLE;
         res = vkAllocateCommandBuffers(device, &allocInfo, &cmd);
         CHECK_VK_RESULT(res, "Allocate command buffer for initImageLayoutsForDynamicRendering");
+        MARK_VK_NAME(device, VK_OBJECT_TYPE_COMMAND_BUFFER, cmd, "VulkSwapChain.DynamicRender.CmdBuffer");
 
         VkCommandBufferBeginInfo beginInfo = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

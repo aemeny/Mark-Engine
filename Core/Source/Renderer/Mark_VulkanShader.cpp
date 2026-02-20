@@ -195,6 +195,7 @@ namespace Mark::RendererVK
 
         VkResult res = vkCreateShaderModule(_device, &shaderModuleCreateInfo, nullptr, &_shaderModule.m_shaderModule);
         CHECK_VK_RESULT(res, "Create Shader Module");
+        MARK_VK_NAME(_device, VK_OBJECT_TYPE_SHADER_MODULE, _shaderModule.m_shaderModule, "VulkShader.ShaderModule");
 
         glslang_program_delete(program);
         glslang_shader_delete(shader);

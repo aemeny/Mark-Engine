@@ -79,6 +79,8 @@ namespace Mark::RendererVK
 
         VkResult res = vkCreateDescriptorPool(m_imguiHandler.m_vulkanCoreRef->device(), &poolCreateInfo, nullptr, &m_descriptorPool);
         CHECK_VK_RESULT(res, "Failed to create descriptor pool for ImGui");
+
+        MARK_VK_NAME(m_imguiHandler.m_vulkanCoreRef->device(), VK_OBJECT_TYPE_DESCRIPTOR_POOL, m_descriptorPool, "ImGui.DescPool");
     }
 
     void ImGuiRenderer::initImGui()

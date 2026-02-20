@@ -129,13 +129,13 @@ namespace Mark::RendererVK
         }
         else {
             m_meshCount = 0;
-            m_textureDescriptorCount = 1;
+            m_textureDescriptorCount = GrowPow2Capacity(0, m_maxTexturesLayout);
         }
 
         // Ensure descriptor set layout exists for hashing
         createDescriptorSetLayout(device);
 
-        if (m_meshCount) createDescriptorSets(device);
+        createDescriptorSets(device);
 
         // Cache key for this render-target + program + baked state
         const VkFormat colourFormat = m_swapChainRef.surfaceFormat().format;
@@ -160,22 +160,15 @@ namespace Mark::RendererVK
             [&](const VulkanGraphicsPipelineKey& _key)->GraphicsPipelineCreateResult
             {
                 VkPipelineLayout layout = VK_NULL_HANDLE;
-                // Push constants required by bindless shaders (meshIndex, textureIndex)
-                VkPushConstantRange pcRange = {
-                    .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                    .offset = 0,
-                    .size = sizeof(uint32_t) * 2u
-                };
                 VkPipelineLayoutCreateInfo pipelineLayoutInfo = { 
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
                     .setLayoutCount = m_descriptorSetLayout ? 1u : 0u,
-                    .pSetLayouts = m_descriptorSetLayout ? &m_descriptorSetLayout : nullptr,
-                    .pushConstantRangeCount = 1,
-                    .pPushConstantRanges = &pcRange
+                    .pSetLayouts = m_descriptorSetLayout ? &m_descriptorSetLayout : nullptr
                 };
 
                 VkResult res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout);
                 CHECK_VK_RESULT(res, "Failed to create pipeline layout");
+                MARK_VK_NAME(device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, layout, "VulkPipeline.PipeLayout");
 
                 // Shader stages
                 VkPipelineShaderStageCreateInfo shaderStageCreateInfo[2] = {
@@ -298,6 +291,7 @@ namespace Mark::RendererVK
                 GraphicsPipelineCreateResult out{};
                 res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &out.m_pipeline);
                 CHECK_VK_RESULT(res, "Create Graphics Pipeline");
+                MARK_VK_NAME(device, VK_OBJECT_TYPE_PIPELINE, out.m_pipeline, "VulkPipeline.GraphicsPipe");
 
                 out.m_layout = layout;
                 return out;
@@ -447,7 +441,7 @@ namespace Mark::RendererVK
         {
             MARK_WARN_C(Utils::Category::Vulkan, "Bindless: maxTexturesLayout (%u) < maxMeshesLayout (%u). Clamping mesh layout to textures for safety.",
                 m_maxTexturesLayout, m_maxMeshesLayout);
-            m_maxMeshesLayout = (m_maxTexturesLayout / m_bindlessCaps.numAttachableTextures);
+            m_maxMeshesLayout = m_maxTexturesLayout / m_bindlessCaps.numAttachableTextures;
         }
 
         m_meshCount = m_meshesToDraw ? static_cast<uint32_t>(m_meshesToDraw->size()) : 0;
@@ -458,7 +452,7 @@ namespace Mark::RendererVK
         const uint32_t requiredTextures = std::min(m_meshCount, m_maxTexturesLayout);
         m_textureDescriptorCount = GrowPow2Capacity(requiredTextures, m_maxTexturesLayout);
 
-        if (m_meshCount) createDescriptorSets(device);
+        createDescriptorSets(device);
     }
 
     void VulkanGraphicsPipeline::createDescriptorSets(VkDevice _device)
@@ -493,6 +487,8 @@ namespace Mark::RendererVK
 
         VkResult res = vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &m_descriptorPool);
         CHECK_VK_RESULT(res, "Create Descriptor Pool");
+        MARK_VK_NAME(_device, VK_OBJECT_TYPE_DESCRIPTOR_POOL, m_descriptorPool, "VulkPipeline.DescPool");
+
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Descriptor Pool Created");
     }
 
@@ -560,6 +556,7 @@ namespace Mark::RendererVK
 
         VkResult res = vkCreateDescriptorSetLayout(_device, &layoutCreateInfo, nullptr, &m_descriptorSetLayout);
         CHECK_VK_RESULT(res, "Create Descriptor Set Layout");
+        MARK_VK_NAME(_device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, m_descriptorSetLayout, "VulkPipeline.DescSetLayout");
 
         // Hash the bindings for future reference
         m_descSetLayoutHash = HashBindings(m_bindings, m_bindingFlags, layoutCreateInfo.flags);
@@ -589,6 +586,9 @@ namespace Mark::RendererVK
 
         VkResult res = vkAllocateDescriptorSets(_device, &allocInfo, m_descriptorSets.data());
         CHECK_VK_RESULT(res, "Allocate Descriptor Sets");
+        for (uint32_t i = 0; i < _numImages; i++) {
+            MARK_VK_NAME_F(_device, VK_OBJECT_TYPE_DESCRIPTOR_SET, m_descriptorSets[i], "VulkPipeline.DescripSet[%u]", i);
+        }
     }
 
     void VulkanGraphicsPipeline::updateDescriptorSets(uint32_t _numImages, VkDevice _device)

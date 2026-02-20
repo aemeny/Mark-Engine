@@ -20,6 +20,7 @@ namespace Mark::RendererVK
         uint32_t maxMeshes = 0;
         uint32_t maxTextureDescriptors = 0;
         const uint32_t numAttachableTextures = 1; // Max number of textures that the mesh can use
+        uint32_t maxDrawIndirectCount = 0;
     };
     struct VulkanCore
     {

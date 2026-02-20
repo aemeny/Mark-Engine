@@ -29,8 +29,9 @@ namespace Mark::RendererVK
         VulkanGraphicsPipeline& operator=(const VulkanGraphicsPipeline&) = delete;
 
         void createGraphicsPipeline();
-        void bindPipeline(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex);
 
+        void bindPipeline(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex);
+        
         // When meshes change during runtime
         bool tryUpdateDescriptorsWithMesh(const uint32_t _meshIndex);
         void rebuildDescriptors();

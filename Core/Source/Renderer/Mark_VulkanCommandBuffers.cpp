@@ -57,6 +57,7 @@ namespace Mark::RendererVK
         };
         VkResult res = vkCreateCommandPool(m_vulkanCoreRef.lock()->device(), &cmdPoolCreateInfo, nullptr, &m_commandPool);
         CHECK_VK_RESULT(res, "Create command pool");
+        MARK_VK_NAME(m_vulkanCoreRef.lock()->device(), VK_OBJECT_TYPE_COMMAND_POOL, m_commandPool, "CmdBuffers.CmdPool");
 
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Pool Created");
     }
@@ -73,6 +74,11 @@ namespace Mark::RendererVK
         };
         VkResult res = vkAllocateCommandBuffers(m_vulkanCoreRef.lock()->device(), &cmdBufferAllocInfo, _commandBuffers.data());
         CHECK_VK_RESULT(res, "Allocate command buffers");
+
+        for (uint32_t img = 0; img < _numImages; img++)
+            MARK_VK_NAME_F(m_vulkanCoreRef.lock()->device(), VK_OBJECT_TYPE_COMMAND_BUFFER, _commandBuffers[img],
+                "CmdBuffer.CmdBuffers[%u]", img);
+
         MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Command Buffers Allocated: %zu", _commandBuffers.size());
     }
 
@@ -87,6 +93,8 @@ namespace Mark::RendererVK
         };
         VkResult res = vkAllocateCommandBuffers(m_vulkanCoreRef.lock()->device(), &cmdBufferAllocInfo, &m_copyCommandBuffer);
         CHECK_VK_RESULT(res, "Allocate copy command buffers");
+        MARK_VK_NAME(m_vulkanCoreRef.lock()->device(), VK_OBJECT_TYPE_COMMAND_BUFFER, m_copyCommandBuffer, "CmdBuffer.CopyBuffer");
+
         MARK_DEBUG_C(Utils::Category::Vulkan, "Vulkan Copy Command Buffer Allocated");
     }
 
@@ -112,44 +120,32 @@ namespace Mark::RendererVK
 
             setViewportAndScissor(commandBuffer, m_swapChainRef.extent());
 
-            const uint32_t instanceCount = 1;
-            const uint32_t firstVertex = 0;
-            const uint32_t firstInstance = 0;
-
-            struct PushConstants
-            {
-                uint32_t meshIndex;
-                uint32_t textureIndex;
-            };
-            
             // Bind pipeline + descriptor set once per swapchain image
             m_graphicsPipelineRef.bindPipeline(commandBuffer, i);
 
-            for (uint32_t m = 0; m < m_graphicsPipelineRef.meshCount(); m++)
-            {
-                const uint32_t indexCountForMesh = m_graphicsPipelineRef.indexCountForMesh(m);
-                const uint32_t vertexCount = indexCountForMesh > 0
-                    ? indexCountForMesh   // SSBO index path
-                    : m_graphicsPipelineRef.vertexCountForMesh(m); // fallback if no indices
-
-                if (vertexCount == 0) continue; // Skip empty meshes
-
-                // 1 texture per mesh for now: textureIndex == meshIndex
-                PushConstants pushConstant{ m, m };
-                vkCmdPushConstants(commandBuffer,
-                    m_graphicsPipelineRef.pipelineLayout(),
-                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-                    0, sizeof(PushConstants), 
-                    &pushConstant
-                );
-
-                vkCmdDraw(commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
+            if (!vkCmdDrawIndirectCountKHR || m_indirectCmdBuffer == VK_NULL_HANDLE || m_indirectCountBuffer == VK_NULL_HANDLE || m_maxDrawCount == 0) {
+                MARK_ERROR("Indirect draw buffers not set before recording command buffers");
             }
+
+            vkCmdDrawIndirectCountKHR(
+                commandBuffer,
+                m_indirectCmdBuffer, 0,
+                m_indirectCountBuffer, 0,
+                m_maxDrawCount,
+                sizeof(VkDrawIndirectCommand)
+            );
 
             endDynamicRendering(commandBuffer, i, _withSecondBarrier);
         }
 
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Command Buffers Recorded");
+    }
+
+    void VulkanCommandBuffers::setIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount)
+    {
+        m_indirectCmdBuffer = _indirectCmdBuffer;
+        m_indirectCountBuffer = _indirectCountBuffer;
+        m_maxDrawCount = _maxDrawCount;
     }
 
     void VulkanCommandBuffers::beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags)

@@ -23,6 +23,9 @@ namespace Mark::RendererVK
         void createCopyCommandBuffer();
         void recordCommandBuffers(VkClearColorValue _clearColour);
 
+        // Must be set before recording command buffers.
+        void setIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount);
+
         void beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags);
         void beginDynamicRendering(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex, VkClearValue* _clearColour, VkClearValue* _depthValue, bool _transitionFromPresent = true);
         void endDynamicRendering(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex, bool _withSecondBarrier);
@@ -56,6 +59,11 @@ namespace Mark::RendererVK
             std::vector<VkCommandBuffer> withoutGUI;
         } m_commandBuffers;
         VkCommandBuffer m_copyCommandBuffer{ VK_NULL_HANDLE };
+
+        // Indirect draw buffers
+        VkBuffer m_indirectCmdBuffer{ VK_NULL_HANDLE };
+        VkBuffer m_indirectCountBuffer{ VK_NULL_HANDLE };
+        uint32_t m_maxDrawCount{ 0 };
 
         void setViewportAndScissor(VkCommandBuffer _cmdBuffer, const VkExtent2D& _extent);
 

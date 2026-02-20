@@ -22,6 +22,7 @@ namespace Mark::RendererVK
         };
         VkResult res = vkCreateCommandPool(m_device, &poolCreateInfo, nullptr, &m_transferPool);
         CHECK_VK_RESULT(res, "Create Vertex Buffer Command Pool");
+        MARK_VK_NAME(m_device, VK_OBJECT_TYPE_COMMAND_POOL, m_transferPool, "VulkVertexBuffer.TransferCmdPool");
         
         // Allocate command buffer for transfer operations
         VkCommandBufferAllocateInfo cmdBuffAllocInfo = {
@@ -33,6 +34,7 @@ namespace Mark::RendererVK
         };
         res = vkAllocateCommandBuffers(m_device, &cmdBuffAllocInfo, &m_transferCmd);
         CHECK_VK_RESULT(res, "Allocate Vertex Buffer Command Buffer");
+        MARK_VK_NAME(m_device, VK_OBJECT_TYPE_COMMAND_BUFFER, m_transferCmd, "VulkVertexBuffer.TransferCmdBuff");
 
         // Create fence for transfer synchronization
         VkFenceCreateInfo fenceCreateInfo = {
@@ -42,6 +44,7 @@ namespace Mark::RendererVK
         };
         res = vkCreateFence(m_device, &fenceCreateInfo, nullptr, &m_transferFence);
         CHECK_VK_RESULT(res, "Create Vertex Buffer Transfer Fence");
+        MARK_VK_NAME(m_device, VK_OBJECT_TYPE_FENCE, m_transferFence, "VulkVertexBuffer.TransferFence");
 
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Vertex Buffer Uploader Initialized");
     }
@@ -69,7 +72,8 @@ namespace Mark::RendererVK
             _vulkanCoreRef, 
             _size, 
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            "VulkVertexBuffer.StagingBuffer"
         );
 
         // Map memory of the staging buffer
@@ -90,7 +94,8 @@ namespace Mark::RendererVK
             _vulkanCoreRef,
             _size,
             _usageFlags | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            "VulkVertexBuffer.DeviceLocalBuffer"
         );
 
         // Copy data from staging buffer to final buffer
@@ -172,7 +177,7 @@ namespace Mark::RendererVK
     }
 
     // -------- BufferAndMemory --------
-    BufferAndMemory::BufferAndMemory(std::shared_ptr<VulkanCore> _vulkanCoreRef, VkDeviceSize _size, VkBufferUsageFlags _usageFlags, VkMemoryPropertyFlags _propertyFlags)
+    BufferAndMemory::BufferAndMemory(std::shared_ptr<VulkanCore> _vulkanCoreRef, VkDeviceSize _size, VkBufferUsageFlags _usageFlags, VkMemoryPropertyFlags _propertyFlags, std::string _objName)
     {
         // Create buffer
         VkBufferCreateInfo bufferCreateInfo = {
@@ -182,14 +187,17 @@ namespace Mark::RendererVK
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE
         };
 
-        VkResult res = vkCreateBuffer(_vulkanCoreRef->device(), &bufferCreateInfo, nullptr, &m_buffer);
+        VkDevice device = _vulkanCoreRef->device();
+
+        VkResult res = vkCreateBuffer(device, &bufferCreateInfo, nullptr, &m_buffer);
         CHECK_VK_RESULT(res, "Create Buffer");
+        MARK_VK_NAME(device, VK_OBJECT_TYPE_BUFFER, m_buffer, (_objName + ".BufferMemory.Buffer").c_str());
 
         MARK_INFO_C(Utils::Category::Vulkan, "Vulkan Buffer Created");
 
         // Get buffer memory requirements
         VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(_vulkanCoreRef->device(), m_buffer, &memRequirements);
+        vkGetBufferMemoryRequirements(device, m_buffer, &memRequirements);
         MARK_DEBUG_C(Utils::Category::Vulkan, "Buffer requires %d bytes", memRequirements.size);
 
         m_allocationSize = memRequirements.size;
@@ -205,18 +213,30 @@ namespace Mark::RendererVK
             .memoryTypeIndex = memoryTypeIndex
         };
 
-        res = vkAllocateMemory(_vulkanCoreRef->device(), &memoryAllocInfo, nullptr, &m_memory);
+        res = vkAllocateMemory(device, &memoryAllocInfo, nullptr, &m_memory);
         CHECK_VK_RESULT(res, "Allocate Buffer Memory");
+        MARK_VK_NAME(device, VK_OBJECT_TYPE_DEVICE_MEMORY, m_memory, (_objName + ".BufferMemory.Memory").c_str());
 
         // Bind buffer to allocated memory
-        res = vkBindBufferMemory(_vulkanCoreRef->device(), m_buffer, m_memory, 0);
+        res = vkBindBufferMemory(device, m_buffer, m_memory, 0);
         CHECK_VK_RESULT(res, "Bind Buffer Memory");
     }
 
     void BufferAndMemory::update(VkDevice _device, const void* _data, size_t _size)
     {
+        updateRange(_device, _data, _size, 0);
+    }
+
+    void BufferAndMemory::updateRange(VkDevice _device, const void* _data, size_t _size, VkDeviceSize _offset)
+    {
+        if (_offset + _size > static_cast<size_t>(m_allocationSize))
+        {
+            MARK_ERROR("BufferAndMemory::updateRange out of bounds (offset=%zu size=%zu alloc=%zu)",
+                static_cast<size_t>(_offset), _size, static_cast<size_t>(m_allocationSize));
+        }
+
         void* mem = nullptr;
-        VkResult res = vkMapMemory(_device, m_memory, 0, _size, 0, &mem);
+        VkResult res = vkMapMemory(_device, m_memory, _offset, _size, 0, &mem);
         CHECK_VK_RESULT(res, "Map Buffer Memory for Update");
         memcpy(mem, _data, _size);
         vkUnmapMemory(_device, m_memory);

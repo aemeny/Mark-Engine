@@ -1,6 +1,7 @@
 #pragma once
 #include "Mark_VulkanCommandBuffers.h"
 #include "Mark_VulkanWindowQueueHelper.h"
+#include "Mark_VulkanVertexBuffer.h"
 
 #include <array>
 #include "Engine/EarlyCameraController.h" // TEMP
@@ -9,7 +10,7 @@ struct GLFWwindow;
 namespace Mark::Platform { struct Window; struct ImGuiHandler; }
 namespace Mark::RendererVK
 {
-    struct WindowToVulkanHandler 
+    struct WindowToVulkanHandler
     {
         WindowToVulkanHandler(std::weak_ptr<VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour, bool _renderImGui = false);
         ~WindowToVulkanHandler();
@@ -21,6 +22,9 @@ namespace Mark::RendererVK
 
         void createSurface();
         VkSurfaceKHR surface() const { return m_surface; }
+
+        void setMeshVisible(uint32_t _meshIndex, bool _visible);
+        void removeMesh(uint32_t _meshIndex);
 
         // TEMP FOR TESTING
         std::weak_ptr<MeshHandler> addMesh(const char* _meshPath);
@@ -47,5 +51,19 @@ namespace Mark::RendererVK
         VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_uniformBuffer, &m_meshesToDraw };
         VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline };
         VulkanWindowQueueHelper m_windowQueueHelper;
+
+        // --- Indirect rendering ---
+        BufferAndMemory m_indirectCmdBuffer;   // VkDrawIndirectCommand[]
+        BufferAndMemory m_indirectCountBuffer; // uint32 drawCount
+        std::vector<VkDrawIndirectCommand> m_drawsCPU;
+        std::vector<uint8_t> m_meshVisible; // 1 = visible, 0 = culled/removed
+        uint32_t m_maxDraws{ 0 };
+        uint32_t m_drawCount{ 0 };
+
+        void createIndirectDrawBuffers();
+        void destroyIndirectDrawBuffers(VkDevice _device);
+        void buildDrawCommandCPU(uint32_t _meshIndex);
+        void uploadDrawCommand(uint32_t _meshIndex);
+        void uploadDrawCount();
     };
 } // namespace Mark::RendererVK

@@ -65,7 +65,7 @@ namespace Mark::RendererVK
             .pImageIndices = &_imageIndex
         };
 
-        VkResult res =  vkQueuePresentKHR(m_queue, &presentInfo);
+        VkResult res = vkQueuePresentKHR(m_queue, &presentInfo);
         CHECK_VK_RESULT(res, "Queue Present");
     }
 } // namespace Mark::RendererVK

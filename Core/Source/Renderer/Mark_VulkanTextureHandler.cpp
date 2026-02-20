@@ -169,7 +169,7 @@ namespace Mark::RendererVK
         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-        BufferAndMemory stagingTexture = BufferAndMemory(m_vulkanCoreRef.lock(), imageSize, usage, properties);
+        BufferAndMemory stagingTexture = BufferAndMemory(m_vulkanCoreRef.lock(), imageSize, usage, properties, "TextureHandler.StagingTexture");
         stagingTexture.update(device, _pixels, static_cast<size_t>(imageSize));
 
         transitionImageLayout(m_textureImage, _format, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
