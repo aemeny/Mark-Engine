@@ -41,24 +41,29 @@ namespace Mark::RendererVK
         m_device = _device;
     }
 
-    void VulkanWindowQueueHelper::createFrameSyncObjects(uint32_t _numFrameInFlight)
+    void VulkanWindowQueueHelper::createFrameSyncObjects(uint32_t _framesInFlight, uint32_t _swapchainImageCount)
     {
-        m_imageAvailableSems.resize(_numFrameInFlight);
+        if (_framesInFlight == 0) _framesInFlight = 1;
+        m_framesInFlight = _framesInFlight;
+        if (_swapchainImageCount == 0) _swapchainImageCount = 1;
+        m_frameIndex = 0;
+
+        m_imageAvailableSems.resize(_framesInFlight);
         for (VkSemaphore& semaphore : m_imageAvailableSems) {
             semaphore = createSemaphore(m_device);
         }
 
-        m_renderFinishedSems.resize(_numFrameInFlight);
+        m_renderFinishedSems.resize(_swapchainImageCount);
         for (VkSemaphore& semaphore : m_renderFinishedSems) {
             semaphore = createSemaphore(m_device);
         }
 
-        m_inFlightFences.resize(_numFrameInFlight);
+        m_inFlightFences.resize(_framesInFlight);
         for (VkFence& fence : m_inFlightFences) {
             fence = createFence(m_device);
         }
 
-        m_imagesInFlight.resize(_numFrameInFlight, VK_NULL_HANDLE);
+        m_imagesInFlight.resize(_swapchainImageCount, VK_NULL_HANDLE);
     }
 
     void VulkanWindowQueueHelper::destroyFrameSyncObjects()
@@ -79,6 +84,9 @@ namespace Mark::RendererVK
         m_inFlightFences.clear();
 
         m_imagesInFlight.clear();
+
+        m_frameIndex = 0;
+        m_framesInFlight = 0;
 
         MARK_INFO(Utils::Category::Vulkan, "Window Frame Sync Objects Destroyed");
     }
@@ -107,13 +115,13 @@ namespace Mark::RendererVK
         return imageIndex;
     }
 
-    void VulkanWindowQueueHelper::submitAsync(VkCommandBuffer* _cmdBuffers, int _numCmdBuffers)
+    void VulkanWindowQueueHelper::submitAsync(uint32_t _imageIndex, VkCommandBuffer* _cmdBuffers, int _numCmdBuffers)
     {
         m_graphicsQueue->submitAsync(
             _cmdBuffers,
             _numCmdBuffers,
             m_imageAvailableSems[m_frameIndex],
-            m_renderFinishedSems[m_frameIndex],
+            m_renderFinishedSems[_imageIndex],
             m_inFlightFences[m_frameIndex]
         );
     }
@@ -123,9 +131,9 @@ namespace Mark::RendererVK
         m_presentQueue->present(
             _swapchain,
             _imageIndex,
-            m_renderFinishedSems[m_frameIndex]
+            m_renderFinishedSems[_imageIndex]
         );
 
-        m_frameIndex = (m_frameIndex + 1) % static_cast<uint32_t>(m_inFlightFences.size());
+        m_frameIndex = (m_frameIndex + 1) % m_framesInFlight;
     }
 }

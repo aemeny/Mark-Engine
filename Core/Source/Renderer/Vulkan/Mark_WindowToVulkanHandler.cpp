@@ -25,7 +25,7 @@ namespace Mark::RendererVK
 
         // Create frame data sync objects
         m_windowQueueHelper.initialize(&VkCore->graphicsQueue(), &VkCore->presentQueue(), VkCore->device());
-        m_windowQueueHelper.createFrameSyncObjects(static_cast<uint32_t>(m_swapChain.numImages()));
+        m_windowQueueHelper.createFrameSyncObjects(FRAMES_IN_FLIGHT, static_cast<uint32_t>(m_swapChain.numImages()));
 
         m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
 
@@ -232,11 +232,11 @@ namespace Mark::RendererVK
             VkCommandBuffer imguiCmdBuffer = VkCore->imguiHandler().prepareCommandBuffer(imageIndex);
             VkCommandBuffer cmdBuffers[] = { m_vulkanCommandBuffers.commandBufferWithGUI(imageIndex), imguiCmdBuffer };
 
-            m_windowQueueHelper.submitAsync(cmdBuffers, 2);
+            m_windowQueueHelper.submitAsync(imageIndex, cmdBuffers, 2);
         }
         else {
             VkCommandBuffer cmdBuffer = m_vulkanCommandBuffers.commandBufferWithoutGUI(imageIndex);
-            m_windowQueueHelper.submitAsync(&cmdBuffer, 1);
+            m_windowQueueHelper.submitAsync(imageIndex , &cmdBuffer, 1);
         }
 
         m_windowQueueHelper.present(m_swapChain.swapChain(), imageIndex);
@@ -263,7 +263,7 @@ namespace Mark::RendererVK
 
         // Re-create frame data sync objects 
         m_windowQueueHelper.destroyFrameSyncObjects();
-        m_windowQueueHelper.createFrameSyncObjects(static_cast<uint32_t>(m_swapChain.numImages()));
+        m_windowQueueHelper.createFrameSyncObjects(FRAMES_IN_FLIGHT, static_cast<uint32_t>(m_swapChain.numImages()));
 
         // Uniform buffers
         m_uniformBuffer.destroyUniformBuffers(m_vulkanCoreRef.lock()->device());

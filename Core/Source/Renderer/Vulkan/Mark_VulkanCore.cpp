@@ -106,7 +106,7 @@ namespace Mark::RendererVK
         if (m_device == VK_NULL_HANDLE)
         {
             // First window: pick families and create the device
-            m_selectedDeviceResult = m_physicalDevices.selectDeviceForSurface(VK_QUEUE_GRAPHICS_BIT, _surface);
+            m_selectedDeviceResult = m_physicalDevices.selectDeviceForSurface(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT, _surface);
             createLogicalDevice();
 
             // After device creation, we can initialize queues, caches and the vertex buffer

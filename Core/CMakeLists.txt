@@ -62,6 +62,8 @@ Source/Renderer/Vulkan/Mark_imguiRenderer.h
 Source/Renderer/Vulkan/Mark_imguiRenderer.cpp
 Source/Renderer/Vulkan/Mark_BufferAndMemoryHelper.h
 Source/Renderer/Vulkan/Mark_BufferAndMemoryHelper.cpp
+Source/Renderer/Vulkan/Mark_ComputePipeline.h
+Source/Renderer/Vulkan/Mark_ComputePipeline.cpp
 
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp

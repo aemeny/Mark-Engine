@@ -40,6 +40,8 @@ namespace Mark::RendererVK
 
         bool m_renderImGui{ false }; // MainwindowMay render ImGui, seperate windows should always be false
 
+        static constexpr uint32_t FRAMES_IN_FLIGHT = 3;
+
         // TEMP list of meshes to render for this window
         std::vector<std::shared_ptr<MeshHandler>> m_meshesToDraw;
         // TEMP camera controller for testing
