@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <array>
 #include <algorithm>
 
 namespace Mark::RendererVK { struct VulkanCore; }
