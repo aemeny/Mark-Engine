@@ -42,7 +42,17 @@ namespace Mark::RendererVK
         // Pipeline layout must be created from the bindless set layout
         m_graphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
 
-        m_graphicsPipeline.createGraphicsPipeline();
+
+        // ---TEMP: area for initializing basic graphics pipeline ---
+        const PipelineDesc pipelineDesc = {
+            .m_device = VkCore->device(),
+            .m_cache = VkCore->graphicsPipelineCache(),
+            .m_vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
+            .m_fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
+            .m_colourFormat = m_swapChain.surfaceFormat().format,
+            .m_depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+        };
+        m_graphicsPipeline.createGraphicsPipeline(pipelineDesc);
 
         m_indirectRenderingHelper.initialize();
 
@@ -54,6 +64,11 @@ namespace Mark::RendererVK
         m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithoutGUI());
 
         m_vulkanCommandBuffers.createCopyCommandBuffer();
+
+        /* TEMP: Sets skybox to default engine skybox for now, will be more customizable in the future with the engine side */
+        std::filesystem::path defaultSkyboxPath = std::filesystem::path(MARK_CORE_ASSETS) / "DefaultSkyboxTexture.png";
+        m_skybox.initialize(m_swapChain, defaultSkyboxPath.string().c_str());
+
         m_vulkanCommandBuffers.recordCommandBuffers(_clearColour);
     }
 
@@ -68,6 +83,9 @@ namespace Mark::RendererVK
 
         // Destroy frame data sync objects
         m_windowQueueHelper.destroyFrameSyncObjects();
+
+        // Destroy skybox resources
+        m_skybox.destroy();
 
         // Destroy command buffers and pool
         m_vulkanCommandBuffers.destroyCommandBuffers();
@@ -127,16 +145,25 @@ namespace Mark::RendererVK
 
         /* TEMP UNIFORM DATA UPDATING FOR TESTING */
         UniformData tempData;
+        glm::mat4 skyVP = glm::mat4(1.0f);
         if (m_cameraController)
         {
             m_cameraController->tick(m_windowRef.handle());
-            tempData.WVP = m_cameraController->getVPMatrix();
+            const glm::mat4 view = m_cameraController->getViewMatrix();
+            const glm::mat4 proj = m_cameraController->getProjMatrix();
+            tempData.WVP = proj * view;
+            
+            // Remove translation so the skybox doesn't "move" when the camera moves.
+            const glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(view));
+            skyVP = proj * viewNoTranslation;
         }
         else {
             tempData.WVP = glm::mat4(1.0f);
         }
 
         m_uniformBuffer.updateUniformBuffer(imageIndex, tempData);
+
+        m_skybox.update(imageIndex, skyVP);
 
         // Submit the command buffer for this image
         if (m_renderImGui && VkCore->imguiHandler().showGUI()) {
@@ -185,7 +212,17 @@ namespace Mark::RendererVK
         
         // Refresh pipeline acquisition
         m_graphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
-        m_graphicsPipeline.createGraphicsPipeline();
+
+        // ---TEMP: area for initializing basic graphics pipeline ---
+        const PipelineDesc pipelineDesc = {
+            .m_device = VkCore->device(),
+            .m_cache = VkCore->graphicsPipelineCache(),
+            .m_vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
+            .m_fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
+            .m_colourFormat = m_swapChain.surfaceFormat().format,
+            .m_depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+        };
+        m_graphicsPipeline.createGraphicsPipeline(pipelineDesc);
 
         // Command buffers
         m_vulkanCommandBuffers.destroyCommandBuffers();
@@ -193,6 +230,8 @@ namespace Mark::RendererVK
         m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithGUI());
         m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithoutGUI());
         m_vulkanCommandBuffers.createCopyCommandBuffer();
+
+        m_skybox.recreateForSwapchain(m_swapChain);
 
         // Indirect rendering buffers
         m_vulkanCommandBuffers.setIndirectDrawBuffers(m_indirectRenderingHelper.indirectCmdBuffer(), m_indirectRenderingHelper.indirectCountBuffer(), m_indirectRenderingHelper.maxDraws());

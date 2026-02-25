@@ -7,10 +7,6 @@
 
 namespace Mark::RendererVK
 {
-    VulkanGraphicsPipeline::VulkanGraphicsPipeline(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef)
-    {}
-
     void VulkanGraphicsPipeline::destroyGraphicsPipeline()
     {
         // Drop cache ref (decrements refcount inside the cache)
@@ -28,40 +24,27 @@ namespace Mark::RendererVK
         m_set0LayoutHash = _set0LayoutHash;
     }
 
-    void VulkanGraphicsPipeline::createGraphicsPipeline()
+    void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer)
     {
-        auto VkCore = m_vulkanCoreRef.lock();
-        VkDevice device = VkCore->device();
+        vkCmdBindPipeline(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_cachedRef.get());
+    }
 
-        if (m_set0Layout == VK_NULL_HANDLE || m_set0LayoutHash == 0)
-        {
+    void VulkanGraphicsPipeline::createGraphicsPipeline(const PipelineDesc& _pipelineDesc)
+    {
+        if (m_set0Layout == VK_NULL_HANDLE || m_set0LayoutHash == 0) {
             MARK_FATAL(Utils::Category::Vulkan,
                 "VulkanGraphicsPipeline::createGraphicsPipeline called without set0 resource layout. "
                 "Call setResourceLayout(setLayout, hash) first.");
         }
 
-        // ---=== Temporary area for future Engine side handling ==---
-        // Get shader modules from the device shader cache
-        const auto vsPath = VkCore->assetPath("Shaders/TriangleTest.vert");
-        const auto fsPath = VkCore->assetPath("Shaders/TriangleTest.frag");
-        VkShaderModule vs = VkCore->shaderCache().getOrCreateFromGLSL(vsPath.string().c_str());
-        VkShaderModule fs = VkCore->shaderCache().getOrCreateFromGLSL(fsPath.string().c_str());
-        if (!vs || !fs) {
-            MARK_ERROR(Utils::Category::Vulkan, "Failed to load shaders");
-            return;
-        }
-
-        // Cache key for this render-target + program + baked state
-        const VkFormat colourFormat = m_swapChainRef.surfaceFormat().format;
-        const VkFormat depthFormat = VkCore->physicalDevices().selected().m_depthFormat;
-
         const auto samples = VK_SAMPLE_COUNT_1_BIT;
         const uint32_t dynMask = (1u << 0) | (1u << 1); // viewport|scissor
 
         auto key = VulkanGraphicsPipelineKey::Make(
-            colourFormat,
-            depthFormat,
-            vs, fs,
+            _pipelineDesc.m_colourFormat,
+            _pipelineDesc.m_depthFormat,
+            _pipelineDesc.m_vertexShader, 
+            _pipelineDesc.m_fragmentShader    ,
             VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 
             samples,
             dynMask,
@@ -69,7 +52,7 @@ namespace Mark::RendererVK
         );
 
         // Acquire from the device graphics-pipeline cache with a creation lambda
-        m_cachedRef = VkCore->graphicsPipelineCache().acquire(
+        m_cachedRef = _pipelineDesc.m_cache.acquire(
             key,
             [&](const VulkanGraphicsPipelineKey& _key)->GraphicsPipelineCreateResult
             {
@@ -80,9 +63,9 @@ namespace Mark::RendererVK
                     .pSetLayouts = &m_set0Layout
                 };
 
-                VkResult res = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &layout);
+                VkResult res = vkCreatePipelineLayout(_pipelineDesc.m_device, &pipelineLayoutInfo, nullptr, &layout);
                 CHECK_VK_RESULT(res, "Failed to create pipeline layout");
-                MARK_VK_NAME(device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, layout, "VulkPipeline.PipeLayout");
+                MARK_VK_NAME(_pipelineDesc.m_device, VK_OBJECT_TYPE_PIPELINE_LAYOUT, layout, "VulkPipeline.PipeLayout");
 
                 // Shader stages
                 VkPipelineShaderStageCreateInfo shaderStageCreateInfo[2] = {
@@ -151,7 +134,7 @@ namespace Mark::RendererVK
                     .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
                     .depthTestEnable = VK_TRUE,
                     .depthWriteEnable = VK_TRUE,
-                    .depthCompareOp = VK_COMPARE_OP_LESS,
+                    .depthCompareOp = _pipelineDesc.m_depthCompareOp,
                     .depthBoundsTestEnable = VK_FALSE,
                     .stencilTestEnable = VK_FALSE,
                     .front = {},
@@ -203,9 +186,9 @@ namespace Mark::RendererVK
                 };
 
                 GraphicsPipelineCreateResult out{};
-                res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &out.m_pipeline);
+                res = vkCreateGraphicsPipelines(_pipelineDesc.m_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &out.m_pipeline);
                 CHECK_VK_RESULT(res, "Create Graphics Pipeline");
-                MARK_VK_NAME(device, VK_OBJECT_TYPE_PIPELINE, out.m_pipeline, "VulkPipeline.GraphicsPipe");
+                MARK_VK_NAME(_pipelineDesc.m_device, VK_OBJECT_TYPE_PIPELINE, out.m_pipeline, "VulkPipeline.GraphicsPipe");
 
                 out.m_layout = layout;
                 return out;
@@ -218,10 +201,5 @@ namespace Mark::RendererVK
         // Keep convenience handle for existing callers
         m_pipelineLayout = m_cachedRef.layout();
         MARK_INFO(Utils::Category::Vulkan, "Vulkan Graphics Pipeline Created");
-    }
-
-    void VulkanGraphicsPipeline::bindPipeline(VkCommandBuffer _cmdBuffer)
-    {
-        vkCmdBindPipeline(_cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_cachedRef.get());
     }
 } // namespace Mark::RendererVK

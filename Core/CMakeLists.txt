@@ -68,8 +68,12 @@ Source/Renderer/Vulkan/Mark_IndirectRenderingHelper.h
 Source/Renderer/Vulkan/Mark_IndirectRenderingHelper.cpp
 Source/Renderer/Vulkan/Mark_Skybox.h
 Source/Renderer/Vulkan/Mark_Skybox.cpp
-Source/Renderer/Vulkan/Mark_BindlessResourceSet.h
-Source/Renderer/Vulkan/Mark_BindlessResourceSet.cpp
+Source/Renderer/Vulkan/Mark_BindlessMeshResourceSet.h
+Source/Renderer/Vulkan/Mark_BindlessMeshResourceSet.cpp
+Source/Renderer/Vulkan/Mark_DescriptorSetBundle.h
+Source/Renderer/Vulkan/Mark_DescriptorSetBundle.cpp
+Source/Renderer/Vulkan/Mark_SkyboxResourceSet.h
+Source/Renderer/Vulkan/Mark_SkyboxResourceSet.cpp
 
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp
@@ -99,7 +103,7 @@ target_compile_definitions(Core
 	MARK_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
 	MARK_FALLBACK_MODEL="${MARK_FALLBACK_MODEL}"
 	MARK_FALLBACK_TEXTURE="${MARK_FALLBACK_TEXTURE}"
-	MARK_CORE_ASSETS=="${MARK_CORE_ASSETS}"
+	MARK_CORE_ASSETS="${MARK_CORE_ASSETS}"
 	MARK_ENGINE_CORE_DIR="${MARK_ENGINE_CORE_DIR}"
 )
 

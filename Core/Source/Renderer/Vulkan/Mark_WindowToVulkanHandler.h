@@ -3,6 +3,7 @@
 #include "Mark_WindowQueueHelper.h"
 #include "Mark_IndirectRenderingHelper.h"
 #include "Mark_UniformBuffer.h"
+#include "Mark_Skybox.h"
 
 #include "Engine/EarlyCameraController.h" // TEMP
 
@@ -46,13 +47,16 @@ namespace Mark::RendererVK
         // TEMP camera controller for testing
         std::shared_ptr<Systems::EarlyCameraController> m_cameraController;
 
+        // Skybox is either engine default or custom set
+        VulkanSkybox m_skybox{ m_vulkanCoreRef, &m_vulkanCommandBuffers };
+
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
+        VulkanGraphicsPipeline m_graphicsPipeline;
+        VulkanBindlessMeshResourceSet m_bindlessSet;
+        VulkanWindowQueueHelper m_windowQueueHelper;
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
         VulkanUniformBuffer m_uniformBuffer{ m_vulkanCoreRef };
-        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain };
-        VulkanBindlessResourceSet m_bindlessSet;
-        VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline,  m_bindlessSet };
+        VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline,  m_bindlessSet, m_skybox };
         VulkanIndirectRenderingHelper m_indirectRenderingHelper{ m_vulkanCoreRef, m_vulkanCommandBuffers };
-        VulkanWindowQueueHelper m_windowQueueHelper;
     };
 } // namespace Mark::RendererVK

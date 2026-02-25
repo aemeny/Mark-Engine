@@ -1,4 +1,6 @@
 #pragma once
+#include "Mark_DescriptorSetBundle.h"
+
 #include <Volk/volk.h>
 #include <cstdint>
 #include <string>
@@ -11,6 +13,7 @@ namespace Mark::RendererVK
     struct VulkanSwapChain;
     struct VulkanUniformBuffer;
     struct MeshHandler;
+    struct TextureHandler;
     struct BindlessCaps;
 
     //  binding 0: vertices SSBO array
@@ -25,12 +28,12 @@ namespace Mark::RendererVK
         constexpr uint32_t texture = 3;
     }
 
-    struct VulkanBindlessResourceSet
+    struct VulkanBindlessMeshResourceSet
     {
-        VulkanBindlessResourceSet() = default;
-        ~VulkanBindlessResourceSet() = default;
-        VulkanBindlessResourceSet(const VulkanBindlessResourceSet&) = delete;
-        VulkanBindlessResourceSet& operator=(const VulkanBindlessResourceSet&) = delete;
+        VulkanBindlessMeshResourceSet() = default;
+        ~VulkanBindlessMeshResourceSet() = default;
+        VulkanBindlessMeshResourceSet(const VulkanBindlessMeshResourceSet&) = delete;
+        VulkanBindlessMeshResourceSet& operator=(const VulkanBindlessMeshResourceSet&) = delete;
 
         // Set within engine
         struct Settings
@@ -39,10 +42,10 @@ namespace Mark::RendererVK
             const uint32_t maxTextures = 8192u;
 
             // Initial capacity for command buffers to bind (Avoids immediate full rebuild)
-            const uint32_t initialTextureCapacity = 64;
+            const uint32_t initialTextureCapacity = 64u;
 
             // Number of possible textures that the engine can handle per mesh
-            const uint32_t numAttachableTextures = 1;
+            const uint32_t numAttachableTextures = 1u;
         };
 
         void initialize(std::weak_ptr<VulkanCore> _core, const VulkanSwapChain& _swapchain, const VulkanUniformBuffer& _ubo,
@@ -69,54 +72,41 @@ namespace Mark::RendererVK
         // Bind set 0 for the given swapchain image index.
         void bind(VkCommandBuffer _cmd, VkPipelineLayout _layout, uint32_t _imageIndex) const;
 
-        VkDescriptorSetLayout layout() const noexcept { return m_descriptorSetLayout; }
-        uint64_t layoutHash() const noexcept { return m_descSetLayoutHash; }
+        VkDescriptorSetLayout layout() const noexcept { return m_set.layout(); }
+        uint64_t layoutHash() const noexcept { return m_set.layoutHash(); }
 
         // Info
         uint32_t maxMeshesLayout() const noexcept { return m_maxMeshesLayout; }
         uint32_t maxTexturesLayout() const noexcept { return m_maxTexturesLayout; }
         uint32_t textureCapacity()  const noexcept { return m_textureDescriptorCount; }
-        uint32_t meshCountUsed()    const noexcept { return m_meshCount; }
+        uint32_t meshCountUsed()    const noexcept { return m_meshCountUsed; }
 
-        bool valid() const noexcept { return m_descriptorSetLayout != VK_NULL_HANDLE && !m_descriptorSets.empty(); }
+        bool valid() const noexcept { return m_set.hasLayout() && m_set.hasSets(); }
 
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         VkDevice m_device{ VK_NULL_HANDLE };
         std::string m_debugName;
+        const Settings m_settings;
 
-        VkDescriptorPool m_descriptorPool{ VK_NULL_HANDLE };
-        VkDescriptorSetLayout m_descriptorSetLayout{ VK_NULL_HANDLE };
-        std::vector<VkDescriptorSet> m_descriptorSets; // size = numSwapchainImages
+        VulkanDescriptorSetBundle m_set;
 
         // Layout config / capacity
         uint32_t m_maxMeshesLayout{ 0 };        // DescriptorCount for bindings 0/1
         uint32_t m_maxTexturesLayout{ 0 };      // Layout maximum for binding 3
         uint32_t m_textureDescriptorCount{ 1 }; // Allocated variable descriptor count capacity for binding 3
-        uint32_t m_meshCount{ 0 };              // Used mesh count (clamped to maxMeshesLayout)
-        const Settings m_settings{};
+        uint32_t m_meshCountUsed{ 0 };          // Used mesh count (clamped to maxMeshesLayout)
 
-        // Hashing / layout bookkeeping
-        std::vector<VkDescriptorSetLayoutBinding> m_bindings;
-        std::vector<VkDescriptorBindingFlags> m_bindingFlags;
-        VkDescriptorSetLayoutCreateFlags m_layoutCreateFlags{ 0 };
-        uint64_t m_descSetLayoutHash{ 0 };
+        void configureFromCaps(const BindlessCaps& _caps, uint32_t _meshCountHint);
+        void ensureLayoutCreated();
+        void recreatePoolAndSets(uint32_t _numImages);
 
-        // Helpers
-        void configureFromCaps(const BindlessCaps& _caps, uint32_t _meshCount);
-        void createDescriptorSetLayout();
-        void createDescriptorPool(uint32_t _numImages);
-        void allocateDescriptorSets(uint32_t _numImages);
-        void updateAllDescriptors(uint32_t _numImages, const VulkanUniformBuffer& _ubo,
-            const std::vector<std::shared_ptr<MeshHandler>>* _meshes
-        );
+        void updateAllDescriptors(uint32_t _numImages,
+            const VulkanUniformBuffer& _ubo,
+            const std::vector<std::shared_ptr<MeshHandler>>* _meshes);
 
         void updateMeshSlotDescriptors(uint32_t _numImages,uint32_t _meshIndex, const MeshHandler& _mesh, const VulkanUniformBuffer& _ubo);
 
         static uint32_t growPow2Capacity(uint32_t _required, uint32_t _maxCap, uint32_t _initialCap);
-        static uint64_t hashBindings(const std::vector<VkDescriptorSetLayoutBinding>& _bindings,
-            const std::vector<VkDescriptorBindingFlags>& _flags,
-            VkDescriptorSetLayoutCreateFlags _layoutFlags
-        );
     };
 } // namespace Mark::RendererVK

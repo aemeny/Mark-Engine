@@ -1,13 +1,14 @@
 #include "Mark_CommandBuffers.h"
 #include "Mark_VulkanCore.h"
+#include "Mark_Skybox.h"
 #include "Utils/VulkanUtils.h"
 #include "Utils/Mark_Utils.h"
 #include <array>
 
 namespace Mark::RendererVK
 {
-    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanGraphicsPipeline& _graphicsPipelineRef, VulkanBindlessResourceSet& _bindlessSetRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_graphicsPipelineRef(_graphicsPipelineRef), m_bindlessSetRef(_bindlessSetRef)
+    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanGraphicsPipeline& _graphicsPipelineRef, VulkanBindlessMeshResourceSet& _bindlessSetRef, VulkanSkybox& _skyboxRef) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_graphicsPipelineRef(_graphicsPipelineRef), m_bindlessSetRef(_bindlessSetRef), m_skybox(_skyboxRef)
     {}
 
     void VulkanCommandBuffers::destroyCommandBuffers()
@@ -118,6 +119,8 @@ namespace Mark::RendererVK
             beginDynamicRendering(commandBuffer, i, &clearColourValue, &pDepthClearValue);
 
             setViewportAndScissor(commandBuffer, m_swapChainRef.extent());
+
+            m_skybox.recordCommandBuffer(commandBuffer, i);
 
             // Bind pipeline + descriptor set once per swapchain image
             m_graphicsPipelineRef.bindPipeline(commandBuffer);
