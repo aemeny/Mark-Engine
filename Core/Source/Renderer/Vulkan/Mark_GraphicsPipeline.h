@@ -14,8 +14,19 @@ namespace Mark::RendererVK
         constexpr uint32_t UBO = 2;
         constexpr uint32_t texture = 3;
     }
+    struct PipelineDesc
+    {
+        VkDevice m_device{ VK_NULL_HANDLE };
+        VulkanUniformBuffer& m_uniformBufferRef;
+        VkShaderModule m_vertexShader{ VK_NULL_HANDLE };
+        VkShaderModule m_fragmentShader{ VK_NULL_HANDLE };
+        int m_numImages{ 0 };
+        VkFormat m_colourFormat{ VK_FORMAT_UNDEFINED };
+        VkFormat m_depthFormat{ VK_FORMAT_UNDEFINED };
+        VkCompareOp m_depthCompareOp{ VK_COMPARE_OP_LESS };
+        bool m_isTexCube{ false };
+    };
 
-    struct VulkanCore;
     struct BindlessCaps;
     struct VulkanGraphicsPipeline
     {

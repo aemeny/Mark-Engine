@@ -346,8 +346,13 @@ namespace Mark::RendererVK
 
         const auto& mesh = *m_meshesToDraw->at(_newMeshIndex);
         if (!mesh.hasVertexBuffer() || !mesh.hasIndexBuffer()) {
-            MARK_FATAL(Utils::Category::Vulkan, "tryAppendMeshAndUpdateDescriptors: mesh %u missing GPU buffers", _newMeshIndex);
-            return false;
+            MARK_WARN(Utils::Category::Vulkan,
+                "tryUpdateDescriptorsWithMesh: mesh %u missing GPU buffers (VB=%s IB=%s). "
+                "Leaving descriptor array element unwritten.",
+                _newMeshIndex, mesh.hasVertexBuffer() ? "yes" : "no", mesh.hasIndexBuffer() ? "yes" : "no");
+
+            m_meshCount = requiredMeshes;
+            return true;
         }
 
         VkDescriptorBufferInfo vbInfo{ mesh.vertexBuffer(), 0, VK_WHOLE_SIZE };
@@ -595,6 +600,7 @@ namespace Mark::RendererVK
         std::vector<VkDescriptorBufferInfo> uboInfos(_numImages);
         std::vector<VkDescriptorImageInfo> imageInfos(m_textureDescriptorCount);
         std::vector<uint8_t> hasTexture(m_textureDescriptorCount, 0);
+        std::vector<uint8_t> hasMeshBuffers(m_meshCount, 0);
         std::vector<VkWriteDescriptorSet> writes;
 
         for (uint32_t img = 0; img < _numImages; img++) {
@@ -605,8 +611,9 @@ namespace Mark::RendererVK
         for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
         {
             const auto& mesh = *m_meshesToDraw->at(meshIndex);
-            if (!mesh.hasVertexBuffer()) MARK_FATAL(Utils::Category::Vulkan, "Mesh has no vertex GPU buffer");
-            if (!mesh.hasIndexBuffer())  MARK_FATAL(Utils::Category::Vulkan, "Mesh has no index GPU buffer");
+            if (!mesh.hasVertexBuffer() || !mesh.hasIndexBuffer()) {
+                continue;
+            }
 
             ssboInfos[meshIndex] = { mesh.vertexBuffer(), 0, VK_WHOLE_SIZE };
             indexInfos[meshIndex] = { mesh.indexBuffer(), 0, VK_WHOLE_SIZE };
@@ -649,6 +656,10 @@ namespace Mark::RendererVK
 
             for (uint32_t meshIndex = 0; meshIndex < m_meshCount; meshIndex++)
             {
+                if (!hasMeshBuffers[meshIndex]) {
+                    continue;
+                }
+
                 // Vertices SSBO
                 writes.push_back(VkWriteDescriptorSet{
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,

@@ -32,7 +32,8 @@ namespace Mark::RendererVK
         m_vulkanCore(_vulkanCore)
     {
         const auto assetPath = _vulkanCore.lock()->assetPath("Textures/Curuthers.png"); // Test cat texture
-        m_texture = new TextureHandler(_vulkanCore, &_commandBuffersRef, assetPath.string().c_str());
+        m_texture = new TextureHandler(_vulkanCore, &_commandBuffersRef);
+        m_texture->generateTexture(assetPath.string().c_str());
     }
 
     MeshHandler::~MeshHandler()
@@ -57,9 +58,17 @@ namespace Mark::RendererVK
         if (!VkCore) {
             MARK_FATAL(Utils::Category::Vulkan, "VulkanCore is null for mesh upload");
         }
-        if (m_vertices.empty() && !m_usingFallBack) {
-            MARK_WARN(Utils::Category::Vulkan, "uploadToGPU called with empty vertex list");
+        if (m_vertices.empty()) {
+            if (!m_usingFallBack) {
+                MARK_WARN(Utils::Category::Vulkan, "uploadToGPU called with empty vertex list");
+            }
+
+            // Ensure we don't upload this mesh
+            m_indices.clear();
+            return;
         }
+
+
 
         const VkDeviceSize vertexSize = static_cast<VkDeviceSize>(vertexBufferSize());
         const VkDeviceSize indexSize = static_cast<VkDeviceSize>(indexBufferSize());
@@ -120,7 +129,6 @@ namespace Mark::RendererVK
             if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, fallbackMeshPath))
             {
                 MARK_FATAL(Utils::Category::Vulkan, "Failed to load fallback model from: %s", Utils::ShortPathForLog(fallbackMeshPath).c_str());
-                return;
             }
         }
 
@@ -181,7 +189,7 @@ namespace Mark::RendererVK
             }
         }
 
-        MARK_INFO(Utils::Category::Vulkan, "Loaded OBJ Mesh From: %s", Utils::ShortPathForLog(_meshPath).c_str());
+        MARK_INFO(Utils::Category::Vulkan, "Loaded OBJ Mesh From: %s", Utils::ShortPathForLog(m_usingFallBack ? "MARK_FALLBACK_MODEL" : _meshPath).c_str());
     }
 
     void MeshHandler::destroyGPUBuffer(VkDevice _device)

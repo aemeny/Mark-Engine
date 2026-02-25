@@ -44,11 +44,6 @@ namespace Mark::RendererVK
         MARK_INFO(Utils::Category::System, "Asset root: %s", m_assetRoot.string().c_str());
     }
 
-    Platform::ImGuiHandler& VulkanCore::imguiHandler()
-    {
-        return m_core.imguiHandler();
-    }
-
     std::filesystem::path VulkanCore::assetPath(const std::string& _file) const
     {
         std::filesystem::path path = (m_assetRoot / _file).lexically_normal();
@@ -56,6 +51,11 @@ namespace Mark::RendererVK
             MARK_ERROR(Utils::Category::System, "Asset not found at: %s", Utils::ShortPathForLog(path.string()).c_str());
         }
         return path;
+    }
+
+    Platform::ImGuiHandler& VulkanCore::imguiHandler()
+    {
+        return m_core.imguiHandler();
     }
 
     VulkanCore::~VulkanCore()

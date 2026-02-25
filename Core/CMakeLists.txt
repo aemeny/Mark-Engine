@@ -66,6 +66,8 @@ Source/Renderer/Vulkan/Mark_ComputePipeline.h
 Source/Renderer/Vulkan/Mark_ComputePipeline.cpp
 Source/Renderer/Vulkan/Mark_IndirectRenderingHelper.h
 Source/Renderer/Vulkan/Mark_IndirectRenderingHelper.cpp
+Source/Renderer/Vulkan/Mark_Skybox.h
+Source/Renderer/Vulkan/Mark_Skybox.cpp
 
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp
@@ -73,6 +75,7 @@ Source/Engine/EngineStats.h
 Source/Engine/EngineStats.cpp
 Source/Engine/SettingsHandler.h
 Source/Engine/SettingsHandler.cpp
+Source/Engine/Bitmap.h
 )
 
 target_sources(Core PRIVATE ${SOURCES})
@@ -93,6 +96,8 @@ target_compile_definitions(Core
 	MARK_ASSETS_DIR="${MARK_ASSETS_DIR}"
 	MARK_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
 	MARK_FALLBACK_MODEL="${MARK_FALLBACK_MODEL}"
+	MARK_FALLBACK_TEXTURE="${MARK_FALLBACK_TEXTURE}"
+	MARK_CORE_ASSETS=="${MARK_CORE_ASSETS}"
 	MARK_ENGINE_CORE_DIR="${MARK_ENGINE_CORE_DIR}"
 )
 

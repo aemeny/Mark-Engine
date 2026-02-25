@@ -51,7 +51,7 @@ namespace Mark
 
 
         // TEMP ADD MESH FOR MAIN WINDOW
-        m_windows->main().vkHandler().addMesh("Models/Curuthers.obj");
+        m_windows->main().vkHandler().addMesh("Models/Curuthers1.obj");
         m_windows->main().vkHandler().initCameraController();
         // TEMP MULTI-WINDOW TESTING
         //Platform::Window& window2 = m_windows->create(600, 600, "Second", VkClearColorValue{ {0.0f, 1.0f, 0.0f, 1.0f} }, false);

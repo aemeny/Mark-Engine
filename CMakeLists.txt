@@ -46,6 +46,21 @@ endif()
 # Normalize for Windows
 file(TO_CMAKE_PATH "${MARK_FALLBACK_MODEL}" MARK_FALLBACK_MODEL)
 
+set(MARK_FALLBACK_TEXTURE "" CACHE STRING "Relative path (from repo root) to engine fallback TEXTURE")
+if (NOT MARK_FALLBACK_TEXTURE)
+  set(MARK_FALLBACK_TEXTURE "${CMAKE_SOURCE_DIR}/Core/Handling/Fallback/Mark_Fallback_Texture.png")
+endif()
+# Normalize for Windows
+file(TO_CMAKE_PATH "${MARK_FALLBACK_TEXTURE}" MARK_FALLBACK_TEXTURE)
+
+# ---- Engine core assets ----
+set(MARK_CORE_ASSETS "" CACHE STRING "Relative path (from repo root) to engine core assets")
+if (NOT MARK_CORE_ASSETS)
+  set(MARK_CORE_ASSETS "${CMAKE_SOURCE_DIR}/Core/Handling/Assets")
+endif()
+# Normalize for Windows
+file(TO_CMAKE_PATH "${MARK_CORE_ASSETS}" MARK_CORE_ASSETS)
+
 
 # Projects
 add_subdirectory(Core)
