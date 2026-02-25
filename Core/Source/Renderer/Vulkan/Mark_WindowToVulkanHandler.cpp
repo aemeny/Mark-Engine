@@ -1,5 +1,6 @@
 #include "Mark_WindowToVulkanHandler.h"
 #include "Mark_VulkanCore.h"
+#include "Mark_ModelHandler.h"
 #include "Platform/Window.h"
 #include "Utils/VulkanUtils.h"
 
@@ -28,6 +29,18 @@ namespace Mark::RendererVK
         m_windowQueueHelper.createFrameSyncObjects(FRAMES_IN_FLIGHT, static_cast<uint32_t>(m_swapChain.numImages()));
 
         m_uniformBuffer.createUniformBuffers(static_cast<uint32_t>(m_swapChain.numImages()));
+
+        // Bindless resource set: owns descriptor pool/layout/sets + writes UBO + mesh slots
+        m_bindlessSet.initialize(
+            m_vulkanCoreRef,
+            m_swapChain,
+            m_uniformBuffer,
+            &m_meshesToDraw,
+            m_windowRef.title().data()
+        );
+
+        // Pipeline layout must be created from the bindless set layout
+        m_graphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
 
         m_graphicsPipeline.createGraphicsPipeline();
 
@@ -58,6 +71,9 @@ namespace Mark::RendererVK
 
         // Destroy command buffers and pool
         m_vulkanCommandBuffers.destroyCommandBuffers();
+
+        // Destroy bindless descriptor set (pool/sets/layout)
+        m_bindlessSet.destroy(VkCore->device());
 
         // Destroy uniform buffers
         m_uniformBuffer.destroyUniformBuffers(VkCore->device());
@@ -164,8 +180,12 @@ namespace Mark::RendererVK
         m_uniformBuffer.destroyUniformBuffers(m_vulkanCoreRef.lock()->device());
         m_uniformBuffer.createUniformBuffers(m_swapChain.numImages());
 
-        // Graphics pipeline
-        m_graphicsPipeline.rebuildDescriptors();
+        // Bindless resource set: recreate pool+sets for new swapchain image count and rewrite descriptors
+        m_bindlessSet.recreateForSwapchain(m_swapChain, m_uniformBuffer, &m_meshesToDraw);
+        
+        // Refresh pipeline acquisition
+        m_graphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
+        m_graphicsPipeline.createGraphicsPipeline();
 
         // Command buffers
         m_vulkanCommandBuffers.destroyCommandBuffers();
@@ -222,8 +242,8 @@ namespace Mark::RendererVK
         // Wait for GPU to finish before updating buffers
         m_vulkanCoreRef.lock()->graphicsQueue().waitIdle();
 
-        if (!m_graphicsPipeline.tryUpdateDescriptorsWithMesh(newMeshIndex)) {
-            m_graphicsPipeline.rebuildDescriptors();
+        if (!m_bindlessSet.tryWriteMeshSlot(m_swapChain, m_uniformBuffer, newMeshIndex, *rtn)) {
+            m_bindlessSet.recreateForSwapchain(m_swapChain, m_uniformBuffer, &m_meshesToDraw);
         }
 
         // Update indirect draw commands with new mesh

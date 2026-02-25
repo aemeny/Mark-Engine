@@ -6,8 +6,8 @@
 
 namespace Mark::RendererVK
 {
-    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanGraphicsPipeline& _graphicsPipelineRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_graphicsPipelineRef(_graphicsPipelineRef)
+    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanGraphicsPipeline& _graphicsPipelineRef, VulkanBindlessResourceSet& _bindlessSetRef) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_graphicsPipelineRef(_graphicsPipelineRef), m_bindlessSetRef(_bindlessSetRef)
     {}
 
     void VulkanCommandBuffers::destroyCommandBuffers()
@@ -120,7 +120,8 @@ namespace Mark::RendererVK
             setViewportAndScissor(commandBuffer, m_swapChainRef.extent());
 
             // Bind pipeline + descriptor set once per swapchain image
-            m_graphicsPipelineRef.bindPipeline(commandBuffer, i);
+            m_graphicsPipelineRef.bindPipeline(commandBuffer);
+            m_bindlessSetRef.bind(commandBuffer, m_graphicsPipelineRef.pipelineLayout(), i);
 
             if (!vkCmdDrawIndirectCountKHR || m_indirectCmdBuffer == VK_NULL_HANDLE || m_indirectCountBuffer == VK_NULL_HANDLE || m_maxDrawCount == 0) {
                 MARK_FATAL(Utils::Category::Vulkan, "Indirect draw buffers not set before recording command buffers");

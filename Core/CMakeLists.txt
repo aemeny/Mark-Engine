@@ -68,6 +68,8 @@ Source/Renderer/Vulkan/Mark_IndirectRenderingHelper.h
 Source/Renderer/Vulkan/Mark_IndirectRenderingHelper.cpp
 Source/Renderer/Vulkan/Mark_Skybox.h
 Source/Renderer/Vulkan/Mark_Skybox.cpp
+Source/Renderer/Vulkan/Mark_BindlessResourceSet.h
+Source/Renderer/Vulkan/Mark_BindlessResourceSet.cpp
 
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp

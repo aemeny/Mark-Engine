@@ -1,6 +1,7 @@
 #pragma once
 #include "Mark_SwapChain.h"
 #include "Mark_GraphicsPipeline.h"
+#include "Mark_BindlessResourceSet.h"
 #include "Utils/Mark_Utils.h"
 
 namespace Mark::RendererVK
@@ -10,7 +11,8 @@ namespace Mark::RendererVK
     {
         VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, 
             VulkanSwapChain& _swapChainRef, 
-            VulkanGraphicsPipeline& _graphicsPipelineRef);
+            VulkanGraphicsPipeline& _graphicsPipelineRef,
+            VulkanBindlessResourceSet& _bindlessSetRef);
         ~VulkanCommandBuffers() = default;
         void destroyCommandBuffers();
         VulkanCommandBuffers(const VulkanCommandBuffers&) = delete;
@@ -52,6 +54,7 @@ namespace Mark::RendererVK
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         VulkanSwapChain& m_swapChainRef;
         VulkanGraphicsPipeline& m_graphicsPipelineRef;
+        VulkanBindlessResourceSet& m_bindlessSetRef;
 
         VkCommandPool m_commandPool{ VK_NULL_HANDLE };
         struct {

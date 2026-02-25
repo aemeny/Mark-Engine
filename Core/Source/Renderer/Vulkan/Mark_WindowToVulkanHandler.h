@@ -2,6 +2,7 @@
 #include "Mark_CommandBuffers.h"
 #include "Mark_WindowQueueHelper.h"
 #include "Mark_IndirectRenderingHelper.h"
+#include "Mark_UniformBuffer.h"
 
 #include "Engine/EarlyCameraController.h" // TEMP
 
@@ -48,8 +49,9 @@ namespace Mark::RendererVK
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
         VulkanUniformBuffer m_uniformBuffer{ m_vulkanCoreRef };
-        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain, m_uniformBuffer, &m_meshesToDraw };
-        VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline };
+        VulkanGraphicsPipeline m_graphicsPipeline{ m_vulkanCoreRef, m_swapChain };
+        VulkanBindlessResourceSet m_bindlessSet;
+        VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline,  m_bindlessSet };
         VulkanIndirectRenderingHelper m_indirectRenderingHelper{ m_vulkanCoreRef, m_vulkanCommandBuffers };
         VulkanWindowQueueHelper m_windowQueueHelper;
     };
