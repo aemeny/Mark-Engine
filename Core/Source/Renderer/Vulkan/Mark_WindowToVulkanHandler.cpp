@@ -45,12 +45,15 @@ namespace Mark::RendererVK
 
         // ---TEMP: area for initializing basic graphics pipeline ---
         const PipelineDesc pipelineDesc = {
-            .m_device = VkCore->device(),
-            .m_cache = VkCore->graphicsPipelineCache(),
-            .m_vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
-            .m_fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
-            .m_colourFormat = m_swapChain.surfaceFormat().format,
-            .m_depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+            .device = VkCore->device(),
+            .cache = VkCore->graphicsPipelineCache(),
+            .vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
+            .fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
+            .debugName = "WindowToVulkanHandler",
+            .renderTargetsDesc {
+                .colourFormats = {m_swapChain.surfaceFormat().format},
+                .depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+            }
         };
         m_graphicsPipeline.createGraphicsPipeline(pipelineDesc);
 
@@ -215,12 +218,15 @@ namespace Mark::RendererVK
 
         // ---TEMP: area for initializing basic graphics pipeline ---
         const PipelineDesc pipelineDesc = {
-            .m_device = VkCore->device(),
-            .m_cache = VkCore->graphicsPipelineCache(),
-            .m_vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
-            .m_fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
-            .m_colourFormat = m_swapChain.surfaceFormat().format,
-            .m_depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+            .device = VkCore->device(),
+            .cache = VkCore->graphicsPipelineCache(),
+            .vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
+            .fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
+            .debugName = "WindowToVulkanHandler",
+            .renderTargetsDesc {
+                .colourFormats = {m_swapChain.surfaceFormat().format},
+                .depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+            }
         };
         m_graphicsPipeline.createGraphicsPipeline(pipelineDesc);
 

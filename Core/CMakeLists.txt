@@ -74,6 +74,7 @@ Source/Renderer/Vulkan/Mark_DescriptorSetBundle.h
 Source/Renderer/Vulkan/Mark_DescriptorSetBundle.cpp
 Source/Renderer/Vulkan/Mark_SkyboxResourceSet.h
 Source/Renderer/Vulkan/Mark_SkyboxResourceSet.cpp
+Source/Renderer/Vulkan/Mark_PipelineDescription.h
 
 Source/Engine/EarlyCameraController.h
 Source/Engine/EarlyCameraController.cpp

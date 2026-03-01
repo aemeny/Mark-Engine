@@ -35,13 +35,19 @@ namespace Mark::RendererVK
         m_fragmentShader = m_vulkanCoreRef.lock()->shaderCache().getOrCreateFromGLSL(fragmentPath.string().c_str());
 
         const PipelineDesc pipelineDesc = {
-            .m_device = VkCore->device(),
-            .m_cache = VkCore->graphicsPipelineCache(),
-            .m_vertexShader = m_vertexShader,
-            .m_fragmentShader = m_fragmentShader,
-            .m_colourFormat = _swapChain.surfaceFormat().format,
-            .m_depthFormat = VkCore->physicalDevices().selected().m_depthFormat,
-            .m_depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
+            .device = VkCore->device(),
+            .cache = VkCore->graphicsPipelineCache(),
+            .vertexShader = m_vertexShader,
+            .fragmentShader = m_fragmentShader,
+            .debugName = "SkyboxPipeline",
+            .renderTargetsDesc {
+                .colourFormats = { _swapChain.surfaceFormat().format },
+                .depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+            },
+            .depthStencilDesc {
+                .depthWriteEnable = false,
+                .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
+            }
         };
 
         m_pipelineRef = new VulkanGraphicsPipeline();
@@ -104,13 +110,19 @@ namespace Mark::RendererVK
 
         if (m_pipelineRef) {
             const PipelineDesc pipelineDesc = {
-                .m_device = VkCore->device(),
-                .m_cache = VkCore->graphicsPipelineCache(),
-                .m_vertexShader = m_vertexShader,
-                .m_fragmentShader = m_fragmentShader,
-                .m_colourFormat = _swapChain.surfaceFormat().format,
-                .m_depthFormat = VkCore->physicalDevices().selected().m_depthFormat,
-                .m_depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
+                .device = VkCore->device(),
+                .cache = VkCore->graphicsPipelineCache(),
+                .vertexShader = m_vertexShader,
+                .fragmentShader = m_fragmentShader,
+                .debugName = "SkyboxPipeline",
+                .renderTargetsDesc {
+                    .colourFormats = { _swapChain.surfaceFormat().format },
+                    .depthFormat = VkCore->physicalDevices().selected().m_depthFormat
+                },
+                .depthStencilDesc {
+                    .depthWriteEnable = false,
+                    .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL
+                }
             };
             m_pipelineRef->setResourceLayout(m_resourceSet.layout(), m_resourceSet.layoutHash());
             m_pipelineRef->createGraphicsPipeline(pipelineDesc);

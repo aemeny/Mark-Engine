@@ -1,19 +1,8 @@
 #pragma once
-#include "Mark_GraphicsPipelineCache.h" 
+#include "Mark_GraphicsPipelineCache.h"
 
 namespace Mark::RendererVK
 {
-    struct PipelineDesc
-    {
-        VkDevice m_device{ VK_NULL_HANDLE };
-        VulkanGraphicsPipelineCache& m_cache;
-        VkShaderModule m_vertexShader{ VK_NULL_HANDLE };
-        VkShaderModule m_fragmentShader{ VK_NULL_HANDLE };
-        VkFormat m_colourFormat{ VK_FORMAT_UNDEFINED };
-        VkFormat m_depthFormat{ VK_FORMAT_UNDEFINED };
-        VkCompareOp m_depthCompareOp{ VK_COMPARE_OP_LESS };
-    };
-
     struct VulkanGraphicsPipeline
     {
         VulkanGraphicsPipeline() = default;
