@@ -12,7 +12,8 @@ namespace Mark::RendererVK
     {
         VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, 
             VulkanSwapChain& _swapChainRef, 
-            VulkanGraphicsPipeline& _graphicsPipelineRef,
+            VulkanGraphicsPipeline& _opaqueGraphicsPipelineRef,
+            VulkanGraphicsPipeline& _transparentGraphicsPipelineRef,
             VulkanBindlessMeshResourceSet& _bindlessSetRef,
             VulkanSkybox& _skyboxRef);
         ~VulkanCommandBuffers() = default;
@@ -28,7 +29,8 @@ namespace Mark::RendererVK
         void recordCommandBuffers(VkClearColorValue _clearColour);
 
         // Must be set before recording command buffers.
-        void setIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount);
+        void setOpaqueIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount);
+        void setTransparentIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount);
 
         void beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags);
         void beginDynamicRendering(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex, VkClearValue* _clearColour, VkClearValue* _depthValue, bool _transitionFromPresent = true);
@@ -55,7 +57,8 @@ namespace Mark::RendererVK
     private:
         std::weak_ptr<VulkanCore> m_vulkanCoreRef;
         VulkanSwapChain& m_swapChainRef;
-        VulkanGraphicsPipeline& m_graphicsPipelineRef;
+        VulkanGraphicsPipeline& m_opaqueGraphicsPipelineRef;
+        VulkanGraphicsPipeline& m_transparentGraphicsPipelineRef;
         VulkanBindlessMeshResourceSet& m_bindlessSetRef;
 
         VulkanSkybox& m_skybox;
@@ -68,12 +71,19 @@ namespace Mark::RendererVK
         VkCommandBuffer m_copyCommandBuffer{ VK_NULL_HANDLE };
 
         // Indirect draw buffers
-        VkBuffer m_indirectCmdBuffer{ VK_NULL_HANDLE };
-        VkBuffer m_indirectCountBuffer{ VK_NULL_HANDLE };
-        uint32_t m_maxDrawCount{ 0 };
+        VkBuffer m_opaqueIndirectCmdBuffer{ VK_NULL_HANDLE };
+        VkBuffer m_opaqueIndirectCountBuffer{ VK_NULL_HANDLE };
+        uint32_t m_opaqueMaxDrawCount{ 0 };
+
+        VkBuffer m_transparentIndirectCmdBuffer{ VK_NULL_HANDLE };
+        VkBuffer m_transparentIndirectCountBuffer{ VK_NULL_HANDLE };
+        uint32_t m_transparentMaxDrawCount{ 0 };
 
         void setViewportAndScissor(VkCommandBuffer _cmdBuffer, const VkExtent2D& _extent);
 
-        void recordCommanBuffersInternal(VkClearColorValue _clearColour, std::vector<VkCommandBuffer> _commandBuffers, bool _withSecondBarrier);
+        void recordOpaquePass(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex);
+        void recordTransparentPass(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex);
+
+        void recordCommanBuffersInternal(VkClearColorValue _clearColour, const std::vector<VkCommandBuffer>& _commandBuffers, bool _withSecondBarrier);
     };
 } // namespace Mark::RendererVK

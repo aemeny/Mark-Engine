@@ -19,6 +19,7 @@ namespace Mark::RendererVK
         void setResourceLayout(VkDescriptorSetLayout _set0Layout, uint64_t _set0LayoutHash);
 
         VkPipelineLayout pipelineLayout() const noexcept { return m_pipelineLayout; }
+        bool isValid() const noexcept { return m_cachedRef.get() != VK_NULL_HANDLE; }
 
     private:
         VulkanGraphicsPipelineRef m_cachedRef{};

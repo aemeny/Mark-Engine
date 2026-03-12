@@ -4,27 +4,27 @@
 
 namespace Mark
 {
-    enum eBitmapFormat
+    enum BitmapFormat
     {
-        eBitmapFormat_UnsignedByte,
-        eBitmapFormat_Float,
+        BitmapFormat_UnsignedByte,
+        BitmapFormat_Float,
     };
-    enum eBitmapType
+    enum BitmapType
     {
-        eBitmapType_2D,
-        eBitmapType_Cube
+        BitmapType_2D,
+        BitmapType_Cube
     };
 
-    static int GetBytesPerComponent(eBitmapFormat _format)
+    static int GetBytesPerComponent(BitmapFormat _format)
     {
         int BytesPerComponent = 0;
 
         switch (_format)
         {
-        case eBitmapFormat_UnsignedByte:
+        case BitmapFormat_UnsignedByte:
             BytesPerComponent = 1;
             break;
-        case eBitmapFormat_Float:
+        case BitmapFormat_Float:
             BytesPerComponent = 4;
             break;
         };
@@ -36,7 +36,7 @@ namespace Mark
     {
         Bitmap() {};
 
-        void Init(int w, int h, int comp, eBitmapFormat fmt)
+        void Init(int w, int h, int comp, BitmapFormat fmt)
         {
             m_width = w;
             m_height = h;
@@ -47,19 +47,19 @@ namespace Mark
             initGetSetFuncs();
         }
 
-        Bitmap(int _w, int _h, int _comp, eBitmapFormat _fmt)
+        Bitmap(int _w, int _h, int _comp, BitmapFormat _fmt)
             :m_width(_w), m_height(_h), m_components(_comp), m_format(_fmt), m_data(_w* _h* _comp* GetBytesPerComponent(_fmt))
         {
             initGetSetFuncs();
         }
 
-        Bitmap(int _w, int _h, int _d, int _comp, eBitmapFormat _fmt)
+        Bitmap(int _w, int _h, int _d, int _comp, BitmapFormat _fmt)
             :m_width(_w), m_height(_h), m_depth(_d), m_components(_comp), m_format(_fmt), m_data(_w* _h* _d* _comp* GetBytesPerComponent(_fmt))
         {
             initGetSetFuncs();
         }
 
-        Bitmap(int _w, int _h, int _comp, eBitmapFormat _fmt, void* ptr)
+        Bitmap(int _w, int _h, int _comp, BitmapFormat _fmt, void* ptr)
             :m_width(_w), m_height(_h), m_components(_comp), m_format(_fmt), m_data(_w* _h* _comp* GetBytesPerComponent(_fmt))
         {
             initGetSetFuncs();
@@ -70,8 +70,8 @@ namespace Mark
         int m_height = 0;
         int m_depth = 1;
         int m_components = 3;
-        eBitmapFormat m_format = eBitmapFormat_UnsignedByte;
-        eBitmapType m_type = eBitmapType_2D;
+        BitmapFormat m_format = BitmapFormat_UnsignedByte;
+        BitmapType m_type = BitmapType_2D;
         std::vector<uint8_t> m_data;
 
         void setPixel(int x, int y, glm::vec4& c)
@@ -95,11 +95,11 @@ namespace Mark
         {
             switch (m_format)
             {
-            case eBitmapFormat_UnsignedByte:
+            case BitmapFormat_UnsignedByte:
                 setPixelFunc = &Bitmap::setPixelUnsignedByte;
                 getPixelFunc = &Bitmap::getPixelUnsignedByte;
                 break;
-            case eBitmapFormat_Float:
+            case BitmapFormat_Float:
                 setPixelFunc = &Bitmap::setPixelFloat;
                 getPixelFunc = &Bitmap::getPixelFloat;
                 break;

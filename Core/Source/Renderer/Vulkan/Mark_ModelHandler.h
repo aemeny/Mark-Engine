@@ -25,6 +25,12 @@ namespace Mark::RendererVK
                 m_uv == _other.m_uv;
         }
     };
+    enum class RenderType : uint8_t // TEMP: To be moved to material/mesh descriptor when those are implemented
+    {
+        Opaque,
+        Masked,
+        Transparent
+    };
     struct MeshHandler
     {
         MeshHandler(std::weak_ptr<VulkanCore> _vulkanCore, VulkanCommandBuffers& _commandBuffersRef);
@@ -52,6 +58,18 @@ namespace Mark::RendererVK
 
         // Texture handling
         TextureHandler* texture() const { return m_texture; }
+
+        // Render type handling (TEMP: To be moved to material/mesh descriptor when those are implemented)
+        RenderType renderType() const noexcept { return m_renderType; }
+        void setRenderType(RenderType _type) noexcept { m_renderType = _type; }
+        bool isTransparent() const noexcept { return m_renderType == RenderType::Transparent; }
+        bool isMasked() const noexcept { return m_renderType == RenderType::Masked; }
+        bool isOpaque() const noexcept { return m_renderType == RenderType::Opaque || m_renderType == RenderType::Masked; }
+    
+        // TEMP: used for transparent sorting until proper transform/material instances exist
+        const glm::vec3& sortPosition() const noexcept { return m_sortPosition; }
+        void setSortPosition(const glm::vec3 & _position) noexcept { m_sortPosition = _position; }
+
     private:
         std::weak_ptr<VulkanCore> m_vulkanCore;
 
@@ -61,6 +79,10 @@ namespace Mark::RendererVK
         std::vector<VertexData> m_vertices;
         std::vector<uint32_t> m_indices{};
         TextureHandler* m_texture{ nullptr };
+
+        // TEMP: To be moved to material/mesh descriptor when those are implemented
+        RenderType m_renderType{ RenderType::Opaque };
+        glm::vec3 m_sortPosition{ 0.0f, 0.0f, 0.0f };
 
         bool m_usingFallBack{ false };
 

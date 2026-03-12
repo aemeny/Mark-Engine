@@ -479,7 +479,7 @@ namespace Mark::RendererVK
             MARK_ERROR(Utils::Category::Vulkan, "Failed to load cubemap texture image: %s  (Check File Path/Type Is Correct)", Utils::ShortPathForLog(_cubemapTexturePath).c_str());
         }
 
-        Bitmap source(width, height, 4, eBitmapFormat_UnsignedByte, pixels);
+        Bitmap source(width, height, 4, BitmapFormat_UnsignedByte, pixels);
         std::vector<Bitmap> cubeMap;
         int faceSize = convertEquirectangularImageToCubemap(source, cubeMap);
 

@@ -7,8 +7,8 @@
 
 namespace Mark::RendererVK
 {
-    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanGraphicsPipeline& _graphicsPipelineRef, VulkanBindlessMeshResourceSet& _bindlessSetRef, VulkanSkybox& _skyboxRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_graphicsPipelineRef(_graphicsPipelineRef), m_bindlessSetRef(_bindlessSetRef), m_skybox(_skyboxRef)
+    VulkanCommandBuffers::VulkanCommandBuffers(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanSwapChain& _swapChainRef, VulkanGraphicsPipeline& _opaqueGraphicsPipelineRef, VulkanGraphicsPipeline& _transparentGraphicsPipelineRef, VulkanBindlessMeshResourceSet& _bindlessSetRef, VulkanSkybox& _skyboxRef) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_swapChainRef(_swapChainRef), m_opaqueGraphicsPipelineRef(_opaqueGraphicsPipelineRef), m_transparentGraphicsPipelineRef(_transparentGraphicsPipelineRef), m_bindlessSetRef(_bindlessSetRef), m_skybox(_skyboxRef)
     {}
 
     void VulkanCommandBuffers::destroyCommandBuffers()
@@ -105,9 +105,8 @@ namespace Mark::RendererVK
         recordCommanBuffersInternal(_clearColour, m_commandBuffers.withGUI, false);
     }
 
-    void VulkanCommandBuffers::recordCommanBuffersInternal(VkClearColorValue _clearColour, std::vector<VkCommandBuffer> _commandBuffers, bool _withSecondBarrier)
+    void VulkanCommandBuffers::recordCommanBuffersInternal(VkClearColorValue _clearColour, const std::vector<VkCommandBuffer>& _commandBuffers, bool _withSecondBarrier)
     {
-        // Record each command buffer
         for (uint32_t i = 0; i < _commandBuffers.size(); i++)
         {
             VkCommandBuffer commandBuffer = _commandBuffers[i];
@@ -122,21 +121,8 @@ namespace Mark::RendererVK
 
             m_skybox.recordCommandBuffer(commandBuffer, i);
 
-            // Bind pipeline + descriptor set once per swapchain image
-            m_graphicsPipelineRef.bindPipeline(commandBuffer);
-            m_bindlessSetRef.bind(commandBuffer, m_graphicsPipelineRef.pipelineLayout(), i);
-
-            if (!vkCmdDrawIndirectCountKHR || m_indirectCmdBuffer == VK_NULL_HANDLE || m_indirectCountBuffer == VK_NULL_HANDLE || m_maxDrawCount == 0) {
-                MARK_FATAL(Utils::Category::Vulkan, "Indirect draw buffers not set before recording command buffers");
-            }
-
-            vkCmdDrawIndirectCountKHR(
-                commandBuffer,
-                m_indirectCmdBuffer, 0,
-                m_indirectCountBuffer, 0,
-                m_maxDrawCount,
-                sizeof(VkDrawIndirectCommand)
-            );
+            recordOpaquePass(commandBuffer, i);
+            recordTransparentPass(commandBuffer, i);
 
             endDynamicRendering(commandBuffer, i, _withSecondBarrier);
         }
@@ -144,11 +130,17 @@ namespace Mark::RendererVK
         MARK_INFO(Utils::Category::Vulkan, "Vulkan Command Buffers Recorded");
     }
 
-    void VulkanCommandBuffers::setIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount)
+    void VulkanCommandBuffers::setOpaqueIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount)
     {
-        m_indirectCmdBuffer = _indirectCmdBuffer;
-        m_indirectCountBuffer = _indirectCountBuffer;
-        m_maxDrawCount = _maxDrawCount;
+        m_opaqueIndirectCmdBuffer = _indirectCmdBuffer;
+        m_opaqueIndirectCountBuffer = _indirectCountBuffer;
+        m_opaqueMaxDrawCount = _maxDrawCount;
+    }
+    void VulkanCommandBuffers::setTransparentIndirectDrawBuffers(VkBuffer _indirectCmdBuffer, VkBuffer _indirectCountBuffer, uint32_t _maxDrawCount)
+    {
+        m_transparentIndirectCmdBuffer = _indirectCmdBuffer;
+        m_transparentIndirectCountBuffer = _indirectCountBuffer;
+        m_transparentMaxDrawCount = _maxDrawCount;
     }
 
     void VulkanCommandBuffers::beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkCommandBufferUsageFlags _usageFlags)
@@ -291,5 +283,41 @@ namespace Mark::RendererVK
         VkRect2D scissor{ {0,0}, _extent };
         vkCmdSetViewport(_cmdBuffer, 0, 1, &viewport);
         vkCmdSetScissor(_cmdBuffer, 0, 1, &scissor);
+    }
+
+    void VulkanCommandBuffers::recordOpaquePass(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex)
+    {
+        if (!vkCmdDrawIndirectCountKHR || m_opaqueIndirectCmdBuffer == VK_NULL_HANDLE || m_opaqueIndirectCountBuffer == VK_NULL_HANDLE || m_opaqueMaxDrawCount == 0) {
+            return;
+        }
+
+        m_opaqueGraphicsPipelineRef.bindPipeline(_cmdBuffer);
+        m_bindlessSetRef.bind(_cmdBuffer, m_opaqueGraphicsPipelineRef.pipelineLayout(), _imageIndex);
+
+        vkCmdDrawIndirectCountKHR(
+            _cmdBuffer,
+            m_opaqueIndirectCmdBuffer, 0,
+            m_opaqueIndirectCountBuffer, 0,
+            m_opaqueMaxDrawCount,
+            sizeof(VkDrawIndirectCommand)
+        );
+    }
+
+    void VulkanCommandBuffers::recordTransparentPass(VkCommandBuffer _cmdBuffer, uint32_t _imageIndex)
+    {
+        if (!vkCmdDrawIndirectCountKHR || m_transparentIndirectCmdBuffer == VK_NULL_HANDLE || m_transparentIndirectCountBuffer == VK_NULL_HANDLE || m_transparentMaxDrawCount == 0) {
+            return;
+        }
+
+        m_transparentGraphicsPipelineRef.bindPipeline(_cmdBuffer);
+        m_bindlessSetRef.bind(_cmdBuffer, m_transparentGraphicsPipelineRef.pipelineLayout(), _imageIndex);
+
+        vkCmdDrawIndirectCountKHR(
+            _cmdBuffer,
+            m_transparentIndirectCmdBuffer, 0,
+            m_transparentIndirectCountBuffer, 0,
+            m_transparentMaxDrawCount,
+            sizeof(VkDrawIndirectCommand)
+        );
     }
 } // namespace Mark::RendererVK

@@ -51,12 +51,14 @@ namespace Mark::RendererVK
         VulkanSkybox m_skybox{ m_vulkanCoreRef, &m_vulkanCommandBuffers };
 
         VkSurfaceKHR m_surface{ VK_NULL_HANDLE };
-        VulkanGraphicsPipeline m_graphicsPipeline;
+        VulkanGraphicsPipeline m_opaqueGraphicsPipeline;
+        VulkanGraphicsPipeline m_transparentGraphicsPipeline;
         VulkanBindlessMeshResourceSet m_bindlessSet;
         VulkanWindowQueueHelper m_windowQueueHelper;
         VulkanSwapChain m_swapChain{ m_vulkanCoreRef, m_surface };
         VulkanUniformBuffer m_uniformBuffer{ m_vulkanCoreRef };
-        VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_graphicsPipeline,  m_bindlessSet, m_skybox };
-        VulkanIndirectRenderingHelper m_indirectRenderingHelper{ m_vulkanCoreRef, m_vulkanCommandBuffers };
+        VulkanCommandBuffers m_vulkanCommandBuffers{ m_vulkanCoreRef, m_swapChain, m_opaqueGraphicsPipeline, m_transparentGraphicsPipeline, m_bindlessSet, m_skybox };
+        VulkanIndirectRenderingHelper m_opaqueIndirectRenderingHelper{ m_vulkanCoreRef, m_vulkanCommandBuffers, IndirectDrawPass::Opaque };
+        VulkanIndirectRenderingHelper m_transparentIndirectRenderingHelper{ m_vulkanCoreRef, m_vulkanCommandBuffers, IndirectDrawPass::Transparent };
     };
 } // namespace Mark::RendererVK

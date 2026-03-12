@@ -9,6 +9,53 @@
 
 namespace Mark::RendererVK
 {
+    static PipelineDesc makeOpaquePipelineDesc(std::shared_ptr<VulkanCore> _vkCore, const VulkanSwapChain& _swapChain)
+    {
+        return PipelineDesc{
+            .device = _vkCore->device(),
+            .cache = _vkCore->graphicsPipelineCache(),
+            .vertexShader = _vkCore->shaderCache().getOrCreateFromGLSL(_vkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
+            .fragmentShader = _vkCore->shaderCache().getOrCreateFromGLSL(_vkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
+            .debugName = "WindowToVulkanHandler.Opaque",
+            .renderTargetsDesc {
+                .colourFormats = {_swapChain.surfaceFormat().format},
+                .depthFormat = _vkCore->physicalDevices().selected().m_depthFormat
+            }
+        };
+    }
+    
+    static PipelineDesc makeTransparentPipelineDesc(std::shared_ptr<VulkanCore> _vkCore, const VulkanSwapChain& _swapChain)
+    {
+        return PipelineDesc{
+            .device = _vkCore->device(),
+            .cache = _vkCore->graphicsPipelineCache(),
+            .vertexShader = _vkCore->shaderCache().getOrCreateFromGLSL(_vkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
+            .fragmentShader = _vkCore->shaderCache().getOrCreateFromGLSL(_vkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
+            .debugName = "WindowToVulkanHandler.Transparent",
+            .renderTargetsDesc {
+                .colourFormats = {_swapChain.surfaceFormat().format},
+                .depthFormat = _vkCore->physicalDevices().selected().m_depthFormat
+            },
+            .depthStencilDesc {
+                .depthTestEnable = true,
+                .depthWriteEnable = false
+            },
+            .blendDesc {
+                .attachments = {
+                    PipelineBlendAttachmentDesc{
+                        .enable = true,
+                        .srcColour = VK_BLEND_FACTOR_SRC_ALPHA,
+                        .dstColour = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                        .colourOp = VK_BLEND_OP_ADD,
+                        .srcAlpha = VK_BLEND_FACTOR_ONE,
+                        .dstAlpha = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                        .alphaOp = VK_BLEND_OP_ADD
+                    }
+                }
+            }
+        };
+    }
+
     WindowToVulkanHandler::WindowToVulkanHandler(std::weak_ptr<RendererVK::VulkanCore> _vulkanCoreRef, Platform::Window& _windowRef, VkClearColorValue _clearColour, bool _renderImGui) :
         m_vulkanCoreRef(_vulkanCoreRef), m_windowRef(_windowRef), m_clearColour(_clearColour), m_renderImGui(_renderImGui)
     {
@@ -39,25 +86,16 @@ namespace Mark::RendererVK
             m_windowRef.title().data()
         );
 
-        // Pipeline layout must be created from the bindless set layout
-        m_graphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
+        // Pipeline layouts must be created from the bindless set layout
+        m_opaqueGraphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
+        m_transparentGraphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
 
+        // Initializing basic graphics pipelines
+        m_opaqueGraphicsPipeline.createGraphicsPipeline(makeOpaquePipelineDesc(VkCore, m_swapChain));
+        m_transparentGraphicsPipeline.createGraphicsPipeline(makeTransparentPipelineDesc(VkCore, m_swapChain));
 
-        // ---TEMP: area for initializing basic graphics pipeline ---
-        const PipelineDesc pipelineDesc = {
-            .device = VkCore->device(),
-            .cache = VkCore->graphicsPipelineCache(),
-            .vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
-            .fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
-            .debugName = "WindowToVulkanHandler",
-            .renderTargetsDesc {
-                .colourFormats = {m_swapChain.surfaceFormat().format},
-                .depthFormat = VkCore->physicalDevices().selected().m_depthFormat
-            }
-        };
-        m_graphicsPipeline.createGraphicsPipeline(pipelineDesc);
-
-        m_indirectRenderingHelper.initialize();
+        m_opaqueIndirectRenderingHelper.initialize();
+        m_transparentIndirectRenderingHelper.initialize();
 
         m_vulkanCommandBuffers.createCommandPool();
 
@@ -100,10 +138,13 @@ namespace Mark::RendererVK
         m_uniformBuffer.destroyUniformBuffers(VkCore->device());
 
         // Destroy indirect draw buffers
-        m_indirectRenderingHelper.destroy(VkCore->device());
+        m_opaqueIndirectRenderingHelper.destroy(VkCore->device());
+        m_transparentIndirectRenderingHelper.destroy(VkCore->device());
 
         // Destroy graphics pipeline
-        m_graphicsPipeline.destroyGraphicsPipeline();
+        m_opaqueGraphicsPipeline.destroyGraphicsPipeline();
+        m_transparentGraphicsPipeline.destroyGraphicsPipeline();
+        
 
         // Explicitly destroy swap chain before surface
         m_swapChain.destroySwapChain();
@@ -149,12 +190,18 @@ namespace Mark::RendererVK
         /* TEMP UNIFORM DATA UPDATING FOR TESTING */
         UniformData tempData;
         glm::mat4 skyVP = glm::mat4(1.0f);
+        glm::vec3 cameraPosition{ 0.0f, 0.0f, 0.0f };
+        bool hasCameraPosition = false;
         if (m_cameraController)
         {
             m_cameraController->tick(m_windowRef.handle());
             const glm::mat4 view = m_cameraController->getViewMatrix();
             const glm::mat4 proj = m_cameraController->getProjMatrix();
             tempData.WVP = proj * view;
+
+            const glm::mat4 invView = glm::inverse(view);
+            cameraPosition = glm::vec3(invView[3]);
+            hasCameraPosition = true;
             
             // Remove translation so the skybox doesn't "move" when the camera moves.
             const glm::mat4 viewNoTranslation = glm::mat4(glm::mat3(view));
@@ -167,6 +214,9 @@ namespace Mark::RendererVK
         m_uniformBuffer.updateUniformBuffer(imageIndex, tempData);
 
         m_skybox.update(imageIndex, skyVP);
+
+        // Transparent draw order is view dependent so its rebuilt
+        m_transparentIndirectRenderingHelper.rebuildDrawCommands(m_meshesToDraw, hasCameraPosition ? &cameraPosition : nullptr);
 
         // Submit the command buffer for this image
         if (m_renderImGui && VkCore->imguiHandler().showGUI()) {
@@ -213,34 +263,30 @@ namespace Mark::RendererVK
         // Bindless resource set: recreate pool+sets for new swapchain image count and rewrite descriptors
         m_bindlessSet.recreateForSwapchain(m_swapChain, m_uniformBuffer, &m_meshesToDraw);
         
-        // Refresh pipeline acquisition
-        m_graphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
-
-        // ---TEMP: area for initializing basic graphics pipeline ---
-        const PipelineDesc pipelineDesc = {
-            .device = VkCore->device(),
-            .cache = VkCore->graphicsPipelineCache(),
-            .vertexShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.vert").string().c_str()),
-            .fragmentShader = VkCore->shaderCache().getOrCreateFromGLSL(VkCore->assetPath("Shaders/TriangleTest.frag").string().c_str()),
-            .debugName = "WindowToVulkanHandler",
-            .renderTargetsDesc {
-                .colourFormats = {m_swapChain.surfaceFormat().format},
-                .depthFormat = VkCore->physicalDevices().selected().m_depthFormat
-            }
-        };
-        m_graphicsPipeline.createGraphicsPipeline(pipelineDesc);
+        // Graphics pipeline
+        m_opaqueGraphicsPipeline.destroyGraphicsPipeline();
+        m_transparentGraphicsPipeline.destroyGraphicsPipeline();
+        
+        m_opaqueGraphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
+        m_transparentGraphicsPipeline.setResourceLayout(m_bindlessSet.layout(), m_bindlessSet.layoutHash());
+        
+        m_opaqueGraphicsPipeline.createGraphicsPipeline(makeOpaquePipelineDesc(VkCore, m_swapChain));
+        m_transparentGraphicsPipeline.createGraphicsPipeline(makeTransparentPipelineDesc(VkCore, m_swapChain));
 
         // Command buffers
         m_vulkanCommandBuffers.destroyCommandBuffers();
         m_vulkanCommandBuffers.createCommandPool();
-        m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithGUI());
+        if (m_renderImGui) {
+            m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithGUI());
+        }
         m_vulkanCommandBuffers.createCommandBuffers(m_swapChain.numImages(), m_vulkanCommandBuffers.commandBuffersWithoutGUI());
         m_vulkanCommandBuffers.createCopyCommandBuffer();
 
         m_skybox.recreateForSwapchain(m_swapChain);
 
         // Indirect rendering buffers
-        m_vulkanCommandBuffers.setIndirectDrawBuffers(m_indirectRenderingHelper.indirectCmdBuffer(), m_indirectRenderingHelper.indirectCountBuffer(), m_indirectRenderingHelper.maxDraws());
+        m_vulkanCommandBuffers.setOpaqueIndirectDrawBuffers(m_opaqueIndirectRenderingHelper.indirectCmdBuffer(), m_opaqueIndirectRenderingHelper.indirectCountBuffer(), m_opaqueIndirectRenderingHelper.maxDraws());
+        m_vulkanCommandBuffers.setTransparentIndirectDrawBuffers(m_transparentIndirectRenderingHelper.indirectCmdBuffer(), m_transparentIndirectRenderingHelper.indirectCountBuffer(), m_transparentIndirectRenderingHelper.maxDraws());
 
         m_vulkanCommandBuffers.recordCommandBuffers(m_clearColour);
     }
@@ -262,7 +308,14 @@ namespace Mark::RendererVK
 
     void WindowToVulkanHandler::setMeshVisible(uint32_t _meshIndex, bool _visible)
     {
-        m_indirectRenderingHelper.setMeshVisible(m_meshesToDraw, _meshIndex, _visible);
+        if (_meshIndex >= m_meshesToDraw.size() || !m_meshesToDraw[_meshIndex]) return;
+
+        if (m_meshesToDraw[_meshIndex]->isTransparent()) {
+            m_transparentIndirectRenderingHelper.setMeshVisible(m_meshesToDraw, _meshIndex, _visible);
+        }
+        else {
+            m_opaqueIndirectRenderingHelper.setMeshVisible(m_meshesToDraw, _meshIndex, _visible);
+        }
     }
 
     void WindowToVulkanHandler::removeMesh(uint32_t _meshIndex)
@@ -292,7 +345,8 @@ namespace Mark::RendererVK
         }
 
         // Update indirect draw commands with new mesh
-        m_indirectRenderingHelper.handleDrawCommands(m_meshesToDraw, newMeshIndex);
+        m_opaqueIndirectRenderingHelper.rebuildDrawCommands(m_meshesToDraw);
+        m_transparentIndirectRenderingHelper.rebuildDrawCommands(m_meshesToDraw);
 
         // Re-record command buffers to bind the new descriptor set handles
         m_vulkanCommandBuffers.recordCommandBuffers(m_clearColour);

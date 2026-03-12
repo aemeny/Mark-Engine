@@ -5,10 +5,12 @@
 
 #include "Utils/Mark_Utils.h"
 
+#include <algorithm>
+
 namespace Mark::RendererVK
 {
-    VulkanIndirectRenderingHelper::VulkanIndirectRenderingHelper(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanCommandBuffers& _vulkanCommandBuffersRef) :
-        m_vulkanCoreRef(_vulkanCoreRef), m_vulkanCommandBuffersRef(_vulkanCommandBuffersRef)
+    VulkanIndirectRenderingHelper::VulkanIndirectRenderingHelper(std::weak_ptr<VulkanCore> _vulkanCoreRef, VulkanCommandBuffers& _vulkanCommandBuffersRef, IndirectDrawPass _drawPass) :
+        m_vulkanCoreRef(_vulkanCoreRef), m_vulkanCommandBuffersRef(_vulkanCommandBuffersRef), m_drawPass(_drawPass)
     {}
 
     void VulkanIndirectRenderingHelper::initialize()
@@ -21,24 +23,10 @@ namespace Mark::RendererVK
         destroyIndirectDrawBuffers(_device);
     }
 
-    void VulkanIndirectRenderingHelper::handleDrawCommands(const std::vector<std::shared_ptr<MeshHandler>>& _meshesToDraw, uint32_t _meshIndex)
-    {
-        const size_t numMeshes = _meshesToDraw.size();
-
-        // Ensure visibility tracking matches mesh list size
-        if (m_meshVisible.size() < numMeshes)
-            m_meshVisible.resize(numMeshes, 1);
-
-        buildDrawCommandCPU(_meshesToDraw, _meshIndex);
-        uploadDrawCommand(_meshIndex);
-        uploadDrawCount(numMeshes);
-    }
-
-    void VulkanIndirectRenderingHelper::setMeshVisible(const std::vector<std::shared_ptr<MeshHandler>>& _meshesToDraw, uint32_t _meshIndex, bool _visible)
+    void VulkanIndirectRenderingHelper::setMeshVisible(const std::vector<std::shared_ptr<MeshHandler>>& _meshesToDraw, uint32_t _meshIndex, bool _visible, const glm::vec3* _cameraPosition)
     {
         const size_t numMeshesToDraw = _meshesToDraw.size();
         if (_meshIndex >= numMeshesToDraw) return;
-        if (_meshIndex >= m_maxDraws) return;
 
         auto VkCore = m_vulkanCoreRef.lock();
         if (VkCore) {
@@ -49,8 +37,7 @@ namespace Mark::RendererVK
             m_meshVisible.resize(numMeshesToDraw, 1);
 
         m_meshVisible[_meshIndex] = _visible ? 1 : 0;
-        buildDrawCommandCPU(_meshesToDraw, _meshIndex);
-        uploadDrawCommand(_meshIndex);
+        rebuildDrawCommands(_meshesToDraw, _cameraPosition);
     }
 
     void VulkanIndirectRenderingHelper::createIndirectDrawBuffers()
@@ -92,7 +79,12 @@ namespace Mark::RendererVK
         m_indirectCountBuffer.update(VkCore->device(), &m_drawCount, sizeof(uint32_t));
 
         // Let the command buffer know what to use
-        m_vulkanCommandBuffersRef.setIndirectDrawBuffers(m_indirectCmdBuffer.m_buffer, m_indirectCountBuffer.m_buffer, m_maxDraws);
+        if (m_drawPass == IndirectDrawPass::Opaque) {
+            m_vulkanCommandBuffersRef.setOpaqueIndirectDrawBuffers(m_indirectCmdBuffer.m_buffer, m_indirectCountBuffer.m_buffer, m_maxDraws);
+        }
+        else {
+            m_vulkanCommandBuffersRef.setTransparentIndirectDrawBuffers(m_indirectCmdBuffer.m_buffer, m_indirectCountBuffer.m_buffer, m_maxDraws);
+        }
     }
 
     void VulkanIndirectRenderingHelper::destroyIndirectDrawBuffers(VkDevice _device)
@@ -105,55 +97,112 @@ namespace Mark::RendererVK
         m_drawCount = 0;
     }
 
-    void VulkanIndirectRenderingHelper::buildDrawCommandCPU(const std::vector<std::shared_ptr<MeshHandler>>& _meshesToDraw, uint32_t _meshIndex)
+    bool VulkanIndirectRenderingHelper::meshBelongsInThisPass(const MeshHandler& _mesh) const
     {
-        if (_meshIndex >= m_maxDraws) return;
-        if (_meshIndex >= _meshesToDraw.size()) return;
+        switch (m_drawPass)
+        {
+        case IndirectDrawPass::Opaque:      return _mesh.isOpaque();
+        case IndirectDrawPass::Transparent: return _mesh.isTransparent();
+        default: return false;
+        }
+    }
 
-        const bool visible = (_meshIndex < m_meshVisible.size()) ? (m_meshVisible[_meshIndex] != 0) : true;
-        if (!visible || !_meshesToDraw[_meshIndex]) {
-            m_drawsCPU[_meshIndex] = VkDrawIndirectCommand{ 0, 0, 0, 0 };
-            return;
+    void VulkanIndirectRenderingHelper::rebuildDrawCommands(const std::vector<std::shared_ptr<MeshHandler>>& _meshesToDraw, const glm::vec3* _cameraPosition)
+    {
+        const size_t numMeshes = _meshesToDraw.size();
+        if (m_meshVisible.size() < numMeshes) {
+            m_meshVisible.resize(numMeshes, 1);
         }
 
-        const uint32_t indexCount = _meshesToDraw[_meshIndex]->indexCount();
-        if (indexCount == 0) {
-            m_drawsCPU[_meshIndex] = VkDrawIndirectCommand{ 0, 0, 0, 0 };
-            return;
-        }
+        m_drawMeshIndicesCPU.clear();
+        std::fill(m_drawsCPU.begin(), m_drawsCPU.end(), VkDrawIndirectCommand{ 0, 0, 0, 0 });
 
-        // firstInstance encodes meshIndex -> gl_InstanceIndex
-        m_drawsCPU[_meshIndex] = VkDrawIndirectCommand{
-            .vertexCount = indexCount,
-            .instanceCount = 1,
-            .firstVertex = 0,
-            .firstInstance = _meshIndex
+        struct TransparentCandidate
+        {
+            uint32_t meshIndex;
+            float distanceSq;
         };
-    }
 
-    void VulkanIndirectRenderingHelper::uploadDrawCommand(uint32_t _meshIndex)
-    {
-        auto VkCore = m_vulkanCoreRef.lock();
-        if (!VkCore) return;
-        if (_meshIndex >= m_maxDraws) return;
+        std::vector<TransparentCandidate> transparentCandidates;
 
-        const VkDeviceSize stride = sizeof(VkDrawIndirectCommand);
-        const VkDeviceSize offset = stride * static_cast<VkDeviceSize>(_meshIndex);
-        m_indirectCmdBuffer.updateRange(VkCore->device(), &m_drawsCPU[_meshIndex], sizeof(VkDrawIndirectCommand), offset);
-    }
+        for (uint32_t meshIndex = 0; meshIndex < numMeshes; meshIndex++)
+        {
+            const auto& mesh = _meshesToDraw[meshIndex];
+            const bool visible = (meshIndex < m_meshVisible.size()) ? (m_meshVisible[meshIndex] != 0) : true;
 
-    void VulkanIndirectRenderingHelper::uploadDrawCount(const uint32_t _numMeshes)
-    {
-        auto VkCore = m_vulkanCoreRef.lock();
-        if (!VkCore) return;
+            if (!visible || !mesh) {
+                continue;
+            }
+            if (!meshBelongsInThisPass(*mesh)) {
+                continue;
+            }
+            if (mesh->indexCount() == 0) {
+                continue;
+            }
 
-        if (_numMeshes > m_maxDraws) {
-            MARK_WARN(Utils::Category::Vulkan,
-                "Mesh count (%u) exceeds indirect capacity (%u). Extra meshes will not be drawn.",
-                _numMeshes, m_maxDraws);
+            if (m_drawPass == IndirectDrawPass::Transparent && _cameraPosition != nullptr)
+            {
+                const glm::vec3 delta = mesh->sortPosition() - *_cameraPosition;
+                transparentCandidates.push_back({meshIndex, glm::dot(delta, delta)});
+            }
+            else {
+                m_drawMeshIndicesCPU.push_back(meshIndex);
+            }
         }
 
-        m_drawCount = std::min(_numMeshes, m_maxDraws);
+        if (m_drawPass == IndirectDrawPass::Transparent && _cameraPosition != nullptr)
+        {
+            std::sort(transparentCandidates.begin(), transparentCandidates.end(),
+                [](const TransparentCandidate& _a, const TransparentCandidate& _b)
+                {
+                    return _a.distanceSq > _b.distanceSq; // Back-to-front sorting
+                });
+
+            for (const auto& candidate : transparentCandidates) {
+                m_drawMeshIndicesCPU.push_back(candidate.meshIndex);
+            }
+        }
+
+        m_drawCount = std::min(static_cast<uint32_t>(m_drawMeshIndicesCPU.size()), m_maxDraws);
+        if (m_drawMeshIndicesCPU.size() > m_maxDraws) {
+            MARK_WARN(Utils::Category::Vulkan, "Filtered mesh count (%zu) exceeds indirect capacity (%u). Extra meshes will not be drawn.", m_drawMeshIndicesCPU.size(), m_maxDraws);
+
+        }
+
+        for (uint32_t drawSlot = 0; drawSlot < m_drawCount; drawSlot++)
+        {
+            const uint32_t meshIndex = m_drawMeshIndicesCPU[drawSlot];
+            const uint32_t indexCount = _meshesToDraw[meshIndex]->indexCount();
+
+            m_drawsCPU[drawSlot] = VkDrawIndirectCommand{
+                .vertexCount = indexCount,
+                .instanceCount = 1,
+                .firstVertex = 0,
+                .firstInstance = meshIndex
+            };
+        }
+
+        uploadAllDrawCommands();
+        uploadDrawCount();
+    }
+
+    void VulkanIndirectRenderingHelper::uploadAllDrawCommands()
+    {
+        auto VkCore = m_vulkanCoreRef.lock();
+        if (!VkCore) return;
+
+        m_indirectCmdBuffer.update(
+            VkCore->device(),
+            m_drawsCPU.data(),
+            sizeof(VkDrawIndirectCommand) * static_cast<size_t>(m_maxDraws)
+        );
+    }
+
+    void VulkanIndirectRenderingHelper::uploadDrawCount()
+    {
+        auto VkCore = m_vulkanCoreRef.lock();
+        if (!VkCore) return;
+
         m_indirectCountBuffer.update(VkCore->device(), &m_drawCount, sizeof(uint32_t));
     }
 }
